@@ -7,7 +7,9 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
+	adminhandler "gin-scaffold/api/handler/admin"
 	"gin-scaffold/api/handler"
+	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/config"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
 	"gin-scaffold/middleware"
@@ -15,13 +17,14 @@ import (
 
 // Options 路由依赖。
 type Options struct {
-	Cfg     *config.App
-	JWT     *jwtpkg.Manager
-	Base    *handler.BaseHandler
-	User    *handler.UserHandler
-	WS      *handler.WSHandler
-	SSE     *handler.SSEHandler
-	TraceOn bool
+	Cfg        *config.App
+	JWT        *jwtpkg.Manager
+	Base       *handler.BaseHandler
+	ClientUser *clienthandler.UserHandler
+	AdminUser  *adminhandler.UserHandler
+	WS         *handler.WSHandler
+	SSE        *handler.SSEHandler
+	TraceOn    bool
 }
 
 // Build 构建 *gin.Engine。
@@ -51,7 +54,7 @@ func Build(opts Options) *gin.Engine {
 	r.GET("/health", opts.Base.Health)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	registerAPIV1(r, opts.JWT, opts.Base, opts.User, opts.WS, opts.SSE)
+	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.WS, opts.SSE)
 
 	return r
 }

@@ -1,4 +1,4 @@
-package request
+package clientreq
 
 // UserRegisterRequest 用户注册请求。
 type UserRegisterRequest struct {

@@ -100,11 +100,21 @@ powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target test
 
 - CI 工作流：`.github/workflows/ci.yml`
 - 数据库迁移命令（Gormigrate）：`cmd/migrate`
+- 客户端接口前缀：`/api/v1/client/*`
+- 后台接口前缀：`/api/v1/admin/*`
 - JWT 刷新：`/api/v1/client/auth/refresh`
 - JWT 刷新轮换与重放防护：refresh token 单次使用（基于 Redis jti）
 - JWT 吊销（黑名单）：`/api/v1/client/auth/logout`
 - 管理端 RBAC：`/api/v1/admin/*` 要求 `role=admin` + `db:ping` 权限
 - 环境变量模板：`.env.example`
+
+## 前后台目录约定
+
+- 客户端 handler：`api/handler/client`
+- 后台 handler：`api/handler/admin`
+- 共享用户服务接口：`api/handler/userapi`
+- 客户端 request/response：`api/request/client`、`api/response/client`
+- 后台 request：`api/request/admin`
 
 ## 生产部署与运维文档
 

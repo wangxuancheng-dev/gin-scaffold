@@ -1,4 +1,4 @@
-package request
+package adminreq
 
 // PageQuery 通用分页请求。
 type PageQuery struct {

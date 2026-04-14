@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gin-scaffold/api/response"
+	clientresp "gin-scaffold/api/response/client"
 	"gin-scaffold/internal/model"
 )
 
@@ -23,7 +23,7 @@ func TestFromUser_ShouldMapFields(t *testing.T) {
 		UpdatedAt: now,
 	}
 
-	vo := response.FromUser(u)
+	vo := clientresp.FromUser(u)
 
 	require.Equal(t, int64(1001), vo.ID)
 	require.Equal(t, "tester", vo.Username)

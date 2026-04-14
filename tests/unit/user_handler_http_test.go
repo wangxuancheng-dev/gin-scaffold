@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
-	"gin-scaffold/api/handler"
+	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/internal/pkg/errcode"
 )
 
@@ -23,7 +23,7 @@ func TestUserHandler_Register_BadRequest(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
 
-	h := handler.NewUserHandler(nil)
+	h := clienthandler.NewUserHandler(nil)
 	r := gin.New()
 	r.POST("/users", h.Register)
 
@@ -42,7 +42,7 @@ func TestUserHandler_Login_BadRequest(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
 
-	h := handler.NewUserHandler(nil)
+	h := clienthandler.NewUserHandler(nil)
 	r := gin.New()
 	r.POST("/login", h.Login)
 

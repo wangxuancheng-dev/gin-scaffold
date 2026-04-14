@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  request.LoginRequest:
+  clientreq.LoginRequest:
     properties:
       password:
         maxLength: 64
@@ -14,14 +14,14 @@ definitions:
     - password
     - username
     type: object
-  request.RefreshTokenRequest:
+  clientreq.RefreshTokenRequest:
     properties:
       refresh_token:
         type: string
     required:
     - refresh_token
     type: object
-  request.UserRegisterRequest:
+  clientreq.UserRegisterRequest:
     properties:
       nickname:
         maxLength: 64
@@ -52,71 +52,7 @@ info:
   title: Gin Scaffold API
   version: "1.0"
 paths:
-  /api/v1/client/auth/login:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: 登录参数
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/request.LoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Body'
-      summary: 登录
-      tags:
-      - user
-  /api/v1/client/auth/logout:
-    post:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Body'
-      summary: 登出
-      tags:
-      - user
-  /api/v1/client/auth/refresh:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: 刷新参数
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/request.RefreshTokenRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Body'
-      summary: 刷新令牌
-      tags:
-      - user
-  /api/v1/client/ping:
-    get:
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Body'
-      summary: Ping
-      tags:
-      - base
-  /api/v1/client/users:
+  /api/v1/admin/users:
     get:
       parameters:
       - description: 页码
@@ -134,9 +70,74 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/response.Body'
-      summary: 用户列表
+      summary: 用户列表（后台）
       tags:
-      - user
+      - admin-user
+  /api/v1/client/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 登录参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/clientreq.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 登录
+      tags:
+      - client-user
+  /api/v1/client/auth/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 登出
+      tags:
+      - client-user
+  /api/v1/client/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 刷新参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/clientreq.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 刷新令牌
+      tags:
+      - client-user
+  /api/v1/client/ping:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: Ping
+      tags:
+      - base
+  /api/v1/client/users:
     post:
       consumes:
       - application/json
@@ -146,7 +147,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/request.UserRegisterRequest'
+          $ref: '#/definitions/clientreq.UserRegisterRequest'
       produces:
       - application/json
       responses:
@@ -156,7 +157,7 @@ paths:
             $ref: '#/definitions/response.Body'
       summary: 用户注册
       tags:
-      - user
+      - client-user
   /api/v1/client/users/{id}:
     get:
       parameters:
@@ -174,7 +175,7 @@ paths:
             $ref: '#/definitions/response.Body'
       summary: 用户详情
       tags:
-      - user
+      - client-user
   /api/v1/sse/stream:
     get:
       responses: {}

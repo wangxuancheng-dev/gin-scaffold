@@ -4,16 +4,16 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"gin-scaffold/api/handler"
+	clienthandler "gin-scaffold/api/handler/client"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
 	"gin-scaffold/middleware"
 )
 
-func registerClientRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, base *handler.BaseHandler, user *handler.UserHandler, ws *handler.WSHandler, sse *handler.SSEHandler) {
+func registerClientRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, base *handler.BaseHandler, user *clienthandler.UserHandler, ws *handler.WSHandler, sse *handler.SSEHandler) {
 	client := r.Group("/api/v1/client")
 	{
 		client.GET("/ping", base.Ping)
 		client.POST("/users", user.Register)
-		client.GET("/users", user.List)
 		client.POST("/auth/login", user.Login)
 		client.POST("/auth/refresh", user.Refresh)
 		client.GET("/ws", ws.Handle)

@@ -15,6 +15,39 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/admin/users": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-user"
+                ],
+                "summary": "用户列表（后台）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/client/auth/login": {
             "post": {
                 "consumes": [
@@ -24,7 +57,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "client-user"
                 ],
                 "summary": "登录",
                 "parameters": [
@@ -34,7 +67,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.LoginRequest"
+                            "$ref": "#/definitions/clientreq.LoginRequest"
                         }
                     }
                 ],
@@ -54,7 +87,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "client-user"
                 ],
                 "summary": "登出",
                 "responses": {
@@ -76,7 +109,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "client-user"
                 ],
                 "summary": "刷新令牌",
                 "parameters": [
@@ -86,7 +119,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.RefreshTokenRequest"
+                            "$ref": "#/definitions/clientreq.RefreshTokenRequest"
                         }
                     }
                 ],
@@ -117,37 +150,6 @@ const docTemplate = `{
             }
         },
         "/api/v1/client/users": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "user"
-                ],
-                "summary": "用户列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "每页条数",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Body"
-                        }
-                    }
-                }
-            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -156,7 +158,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "client-user"
                 ],
                 "summary": "用户注册",
                 "parameters": [
@@ -166,7 +168,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.UserRegisterRequest"
+                            "$ref": "#/definitions/clientreq.UserRegisterRequest"
                         }
                     }
                 ],
@@ -186,7 +188,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "client-user"
                 ],
                 "summary": "用户详情",
                 "parameters": [
@@ -258,7 +260,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "request.LoginRequest": {
+        "clientreq.LoginRequest": {
             "type": "object",
             "required": [
                 "password",
@@ -277,7 +279,7 @@ const docTemplate = `{
                 }
             }
         },
-        "request.RefreshTokenRequest": {
+        "clientreq.RefreshTokenRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -288,7 +290,7 @@ const docTemplate = `{
                 }
             }
         },
-        "request.UserRegisterRequest": {
+        "clientreq.UserRegisterRequest": {
             "type": "object",
             "required": [
                 "password",

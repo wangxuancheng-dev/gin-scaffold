@@ -1,4 +1,4 @@
-package request
+package clientreq
 
 // LoginRequest 登录请求体。
 type LoginRequest struct {

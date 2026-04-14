@@ -12,7 +12,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"gin-scaffold/api/handler"
+	adminhandler "gin-scaffold/api/handler/admin"
+	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/internal/model"
 )
 
@@ -58,7 +59,7 @@ func TestUserHandler_List_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	svc := new(mockUserService)
-	h := handler.NewUserHandler(svc)
+	h := adminhandler.NewUserHandler(svc)
 
 	r := gin.New()
 	r.GET("/users", h.List)
@@ -93,7 +94,7 @@ func TestUserHandler_Register_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	svc := new(mockUserService)
-	h := handler.NewUserHandler(svc)
+	h := clienthandler.NewUserHandler(svc)
 
 	r := gin.New()
 	r.POST("/users", h.Register)
@@ -124,7 +125,7 @@ func TestUserHandler_Login_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	svc := new(mockUserService)
-	h := handler.NewUserHandler(svc)
+	h := clienthandler.NewUserHandler(svc)
 
 	r := gin.New()
 	r.POST("/login", h.Login)
@@ -154,7 +155,7 @@ func TestUserHandler_Get_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	svc := new(mockUserService)
-	h := handler.NewUserHandler(svc)
+	h := clienthandler.NewUserHandler(svc)
 
 	r := gin.New()
 	r.GET("/users/:id", h.Get)

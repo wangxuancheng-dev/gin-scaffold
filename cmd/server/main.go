@@ -20,7 +20,9 @@ import (
 	cli "github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
+	adminhandler "gin-scaffold/api/handler/admin"
 	"gin-scaffold/api/handler"
+	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/config"
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
@@ -115,18 +117,20 @@ func runServer(env, profile string) error {
 	sseSvc := service.NewSSEService()
 
 	baseH := &handler.BaseHandler{DB: gdb}
-	userH := handler.NewUserHandler(userSvc)
+	clientUserH := clienthandler.NewUserHandler(userSvc)
+	adminUserH := adminhandler.NewUserHandler(userSvc)
 	wsH := handler.NewWSHandler(wsSvc)
 	sseH := handler.NewSSEHandler(sseSvc)
 
 	engine := routes.Build(routes.Options{
-		Cfg:     cfg,
-		JWT:     jm,
-		Base:    baseH,
-		User:    userH,
-		WS:      wsH,
-		SSE:     sseH,
-		TraceOn: cfg.Trace.Enabled,
+		Cfg:        cfg,
+		JWT:        jm,
+		Base:       baseH,
+		ClientUser: clientUserH,
+		AdminUser:  adminUserH,
+		WS:         wsH,
+		SSE:        sseH,
+		TraceOn:    cfg.Trace.Enabled,
 	})
 
 	addr := fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port)
