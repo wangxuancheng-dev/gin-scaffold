@@ -291,12 +291,11 @@ go run ./cmd/gen crud --module order --table orders
   - `configs/app.yaml`（dev 默认模板）
   - `configs/app.test.yaml`（test 模板）
   - `configs/app.prod.yaml`（prod 模板，仅占位符，不放真实密钥）
-  - `configs/app.local.yaml.example`（本地覆盖模板）
 - **不应提交**：
-  - `configs/app.local.yaml`（本地私有配置）
-  - `.env`（真实密钥/连接串）
+  - `.env.local`（本地私有配置）
+  - `.env`（真实密钥/连接串，除非是纯示例）
 
-仓库已默认忽略：`configs/app.local.yaml`。
+仓库已默认忽略：`.env`（建议本地使用 `.env.local`）。
 
 ## 多套生产系统（Profile）
 
