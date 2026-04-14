@@ -264,9 +264,9 @@ go run ./cmd/gen crud --module order --table orders
 - 管理端 RBAC：`/api/v1/admin/*` 要求 `role=admin` + `db:ping` 权限
 - RBAC 权限来源：数据库 `roles` / `user_roles` / `role_permissions`（无配置兜底）
 - 后台菜单可见性：`menus` + `role_menus`
-- RBAC 数据表：`roles`、`user_roles`、`role_permissions`（见 `migrations/20250102_rbac.up.sql`）
-- 管理员角色初始化：`migrations/20250104_seed_admin_role.up.sql`（按用户名 `admin` 绑定）
-- 管理员账号初始化：`migrations/20250105_seed_admin_user.up.sql`（默认密码 `Admin@123456`，上线后立刻修改）
+- RBAC 数据表：`roles`、`user_roles`、`role_permissions`（见 `migrations/202501011210_create_rbac.up.sql`）
+- 管理员角色初始化：`migrations/202501011230_seed_admin_role.up.sql`（按用户名 `admin` 绑定）
+- 管理员账号初始化：`migrations/202501011240_seed_admin_user.up.sql`（默认密码 `Admin@123456`，上线后立刻修改）
 - 环境变量模板：`.env.example`
 - `metrics.path` 与 `i18n` 配置项已接入运行时行为
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"github.com/joho/godotenv"
@@ -119,11 +121,30 @@ func openDB(driver, dsn string) (*gorm.DB, error) {
 }
 
 func buildMigrator(db *gorm.DB, dir string) *gormigrate.Gormigrate {
-	upPath := filepath.Join(dir, "20250101_init.up.sql")
-	downPath := filepath.Join(dir, "20250101_init.down.sql")
-	migrations := []*gormigrate.Migration{
-		{
-			ID: "20250101_init",
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		panic(fmt.Errorf("read migration dir: %w", err))
+	}
+	upFiles := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if strings.HasSuffix(name, ".up.sql") {
+			upFiles = append(upFiles, name)
+		}
+	}
+	sort.Strings(upFiles)
+
+	migrations := make([]*gormigrate.Migration, 0, len(upFiles))
+	for _, upName := range upFiles {
+		base := strings.TrimSuffix(upName, ".up.sql")
+		upPath := filepath.Join(dir, upName)
+		downPath := filepath.Join(dir, base+".down.sql")
+		mID := base
+		migrations = append(migrations, &gormigrate.Migration{
+			ID: mID,
 			Migrate: func(tx *gorm.DB) error {
 				sqlBytes, err := os.ReadFile(upPath)
 				if err != nil {
@@ -132,13 +153,16 @@ func buildMigrator(db *gorm.DB, dir string) *gormigrate.Gormigrate {
 				return tx.Exec(string(sqlBytes)).Error
 			},
 			Rollback: func(tx *gorm.DB) error {
+				if _, err := os.Stat(downPath); err != nil {
+					return nil
+				}
 				sqlBytes, err := os.ReadFile(downPath)
 				if err != nil {
 					return err
 				}
 				return tx.Exec(string(sqlBytes)).Error
 			},
-		},
+		})
 	}
 	return gormigrate.New(db, gormigrate.DefaultOptions, migrations)
 }

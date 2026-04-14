@@ -4,5 +4,10 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `users` WHERE `username` = 'admin'
 );
 
+INSERT IGNORE INTO `user_roles` (`user_id`, `role`, `created_at`, `updated_at`)
+SELECT `id`, 'admin', NOW(3), NOW(3)
+FROM `users`
+WHERE `username` = 'admin';
+
 -- Default admin password (for first login only): Admin@123456
 -- IMPORTANT: change password immediately after first login.
