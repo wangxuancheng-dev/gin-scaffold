@@ -84,6 +84,12 @@ sudo systemctl status gin-scaffold
 - 迁移失败不要强行继续发版，先回滚代码或修复 migration 后重试
 - 将 migration 版本号与发布时间写入发布记录，便于审计与回滚
 
+如需回滚上一条 migration（只回滚一步）：
+
+```bash
+./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" down
+```
+
 ## 4. 环境变量建议
 
 至少设置以下变量（示例键名）：

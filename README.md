@@ -49,6 +49,12 @@ PostgreSQL 示例（显式传参）：
 go run ./cmd/migrate --env dev --driver postgres --dsn "<your_pg_dsn>" up
 ```
 
+回滚上一次 migration（只回滚最后一步）：
+
+```bash
+go run ./cmd/migrate --env dev down
+```
+
 ### 5) 启动服务
 
 ```bash
