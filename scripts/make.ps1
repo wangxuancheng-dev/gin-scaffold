@@ -3,6 +3,7 @@ param(
     [ValidateSet("help", "tidy", "build", "run", "run-worker", "migrate-up", "migrate-down", "test-unit", "test", "swagger", "clean")]
     [string]$Target,
     [string]$Env = "dev",
+    [string]$Profile = "",
     [string]$Dsn = "",
     [string]$Driver = ""
 )
@@ -15,8 +16,8 @@ switch ($Target) {
         Write-Host "Available targets:"
         Write-Host "  .\scripts\make.ps1 -Target tidy"
         Write-Host "  .\scripts\make.ps1 -Target build"
-        Write-Host "  .\scripts\make.ps1 -Target run -Env dev"
-        Write-Host "  .\scripts\make.ps1 -Target run-worker -Env dev"
+        Write-Host "  .\scripts\make.ps1 -Target run -Env dev -Profile order"
+        Write-Host "  .\scripts\make.ps1 -Target run-worker -Env dev -Profile order"
         Write-Host "  .\scripts\make.ps1 -Target migrate-up -Driver mysql -Dsn <database_dsn>"
         Write-Host "  .\scripts\make.ps1 -Target migrate-down -Driver mysql -Dsn <database_dsn>"
         Write-Host "  .\scripts\make.ps1 -Target test-unit"
@@ -29,8 +30,8 @@ switch ($Target) {
         if (!(Test-Path "bin")) { New-Item -ItemType Directory -Path "bin" | Out-Null }
         go build -o "bin/server.exe" ./cmd/server
     }
-    "run" { go run ./cmd/server server --env $Env }
-    "run-worker" { go run ./cmd/server worker --env $Env }
+    "run" { go run ./cmd/server server --env $Env --profile $Profile }
+    "run-worker" { go run ./cmd/server worker --env $Env --profile $Profile }
     "migrate-up" {
         if ([string]::IsNullOrWhiteSpace($Dsn)) { throw "Dsn is required for migrate-up" }
         if ([string]::IsNullOrWhiteSpace($Driver)) { throw "Driver is required for migrate-up" }

@@ -1,0 +1,18 @@
+# 生产画像示例：order 系统
+# 文件命名规则：app.{env}.{profile}.yaml
+# 启动示例：./bin/server server --env prod --profile order
+
+name: gin-scaffold-order
+
+http:
+  port: 18080
+
+db:
+  dsn: "${ORDER_DB_DSN}"
+
+redis:
+  addr: "${ORDER_REDIS_ADDR}"
+  password: "${ORDER_REDIS_PASSWORD}"
+
+jwt:
+  issuer: "gin-scaffold-order"

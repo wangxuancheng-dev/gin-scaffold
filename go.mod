@@ -18,6 +18,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hibiken/asynq v0.24.1
 	github.com/jinzhu/copier v0.4.0
+	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.20.2
 	github.com/samber/lo v1.53.0
 	github.com/spf13/viper v1.19.0

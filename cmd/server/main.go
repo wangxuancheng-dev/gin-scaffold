@@ -44,25 +44,26 @@ func main() {
 		Usage: "HTTP API 或 Asynq Worker",
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "env", Value: "dev", Usage: "配置环境: dev|test|prod"},
+			&cli.StringFlag{Name: "profile", Value: "", Usage: "配置画像: 多实例标识，如 order/crm"},
 		},
 		Commands: []*cli.Command{
 			{
 				Name:  "server",
 				Usage: "启动 HTTP 服务",
 				Action: func(c *cli.Context) error {
-					return runServer(c.String("env"))
+					return runServer(c.String("env"), c.String("profile"))
 				},
 			},
 			{
 				Name:  "worker",
 				Usage: "启动 Asynq 任务消费者",
 				Action: func(c *cli.Context) error {
-					return runWorker(c.String("env"))
+					return runWorker(c.String("env"), c.String("profile"))
 				},
 			},
 		},
 		Action: func(c *cli.Context) error {
-			return runServer(c.String("env"))
+			return runServer(c.String("env"), c.String("profile"))
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
@@ -71,8 +72,8 @@ func main() {
 	}
 }
 
-func runServer(env string) error {
-	cfg, err := config.Load(env)
+func runServer(env, profile string) error {
+	cfg, err := config.Load(env, profile)
 	if err != nil {
 		return err
 	}
@@ -80,6 +81,7 @@ func runServer(env string) error {
 		return err
 	}
 	defer logger.Sync()
+	printConfigSource("server")
 
 	traceShutdown, err := tracer.Init(context.Background(), &cfg.Trace)
 	if err != nil {
@@ -153,8 +155,8 @@ func runServer(env string) error {
 	return srv.Shutdown(ctx)
 }
 
-func runWorker(env string) error {
-	cfg, err := config.Load(env)
+func runWorker(env, profile string) error {
+	cfg, err := config.Load(env, profile)
 	if err != nil {
 		return err
 	}
@@ -162,6 +164,7 @@ func runWorker(env string) error {
 		return err
 	}
 	defer logger.Sync()
+	printConfigSource("worker")
 
 	srv := asynq.NewServer(
 		asynq.RedisClientOpt{
@@ -190,4 +193,17 @@ func runWorker(env string) error {
 	<-quit
 	srv.Shutdown()
 	return nil
+}
+
+func printConfigSource(component string) {
+	src := config.Source()
+	logger.InfoX(
+		"config source summary",
+		zap.String("component", component),
+		zap.String("env", src.Env),
+		zap.String("profile", src.Profile),
+		zap.Strings("yaml_files", src.YAMLFiles),
+		zap.Strings("dotenv_files", src.DotEnvFiles),
+		zap.String("env_strategy", "runtime env vars have highest priority"),
+	)
 }
