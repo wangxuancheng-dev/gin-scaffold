@@ -1,0 +1,97 @@
+env: dev
+name: gin-scaffold
+
+http:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout_sec: 30
+  write_timeout_sec: 30
+  idle_timeout_sec: 120
+
+log:
+  level: debug
+  dir: ./logs
+  app_file: app.log
+  access_file: access.log
+  error_file: error.log
+  max_size_mb: 100
+  max_backups: 10
+  max_age_days: 14
+  compress: true
+  console: true
+
+db:
+  driver: mysql
+  dsn: "root:root@tcp(mysql:3306)/scaffold?charset=utf8mb4&parseTime=True&loc=Local"
+  replicas: []
+  max_open_conns: 50
+  max_idle_conns: 10
+  conn_max_lifetime_sec: 600
+  conn_max_idle_time_sec: 60
+  slow_threshold_ms: 200
+  log_level: info
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+  pool_size: 20
+  min_idle_conns: 5
+  dial_timeout_sec: 5
+  read_timeout_sec: 3
+  write_timeout_sec: 3
+
+asynq:
+  redis_addr: "redis:6379"
+  redis_password: ""
+  redis_db: 1
+  concurrency: 10
+  strict_priority: false
+
+jwt:
+  secret: "change-me-in-prod"
+  access_expire_min: 120
+  refresh_expire_min: 10080
+  issuer: "gin-scaffold"
+
+metrics:
+  enabled: true
+  path: /metrics
+
+trace:
+  enabled: false
+  endpoint: "http://jaeger:4318/v1/traces"
+  service_name: "gin-scaffold"
+  insecure: true
+
+i18n:
+  default_lang: zh
+  bundle_paths:
+    - ./i18n/active.zh.yaml
+    - ./i18n/active.en.yaml
+
+limiter:
+  ip_rps: 50
+  ip_burst: 100
+  route_rps: 200
+  route_burst: 400
+
+snowflake:
+  node: 1
+
+cors:
+  allow_origins:
+    - "*"
+  allow_methods:
+    - GET
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+    - OPTIONS
+  allow_headers:
+    - "*"
+  expose_headers:
+    - Content-Length
+    - X-Request-ID
+  allow_credentials: false

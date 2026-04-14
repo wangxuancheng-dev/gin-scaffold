@@ -1,0 +1,43 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: scaffold
+    ports:
+      - "3306:3306"
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    command: ["server", "--env", "dev"]
+    environment:
+      GIN_MODE: release
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./i18n:/app/i18n:ro
+
+  worker:
+    build: .
+    depends_on:
+      - redis
+    command: ["worker", "--env", "dev"]
+    volumes:
+      - ./configs:/app/configs:ro

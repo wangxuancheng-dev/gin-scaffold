@@ -1,0 +1,12 @@
+- id: success
+  translation: "success"
+- id: invalid_param
+  translation: "invalid parameter"
+- id: unauthorized
+  translation: "unauthorized"
+- id: internal_error
+  translation: "internal error"
+- id: user_not_found
+  translation: "user not found"
+- id: user_exists
+  translation: "user already exists"

@@ -1,0 +1,100 @@
+env: prod
+name: gin-scaffold
+
+http:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout_sec: 30
+  write_timeout_sec: 30
+  idle_timeout_sec: 120
+
+log:
+  level: info
+  dir: /var/log/app
+  app_file: app.log
+  access_file: access.log
+  error_file: error.log
+  max_size_mb: 200
+  max_backups: 30
+  max_age_days: 30
+  compress: true
+  console: false
+
+db:
+  driver: mysql
+  dsn: "${DB_DSN}"
+  replicas: []
+  max_open_conns: 100
+  max_idle_conns: 20
+  conn_max_lifetime_sec: 600
+  conn_max_idle_time_sec: 120
+  slow_threshold_ms: 300
+  log_level: warn
+
+redis:
+  addr: "${REDIS_ADDR}"
+  password: "${REDIS_PASSWORD}"
+  db: 0
+  pool_size: 50
+  min_idle_conns: 10
+  dial_timeout_sec: 5
+  read_timeout_sec: 3
+  write_timeout_sec: 3
+
+asynq:
+  redis_addr: "${REDIS_ADDR}"
+  redis_password: "${REDIS_PASSWORD}"
+  redis_db: 1
+  concurrency: 20
+  strict_priority: false
+
+jwt:
+  secret: "${JWT_SECRET}"
+  access_expire_min: 60
+  refresh_expire_min: 4320
+  issuer: "gin-scaffold"
+
+metrics:
+  enabled: true
+  path: /metrics
+
+trace:
+  enabled: true
+  endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+  service_name: "gin-scaffold"
+  insecure: false
+
+i18n:
+  default_lang: zh
+  bundle_paths:
+    - ./i18n/active.zh.yaml
+    - ./i18n/active.en.yaml
+
+limiter:
+  ip_rps: 30
+  ip_burst: 60
+  route_rps: 100
+  route_burst: 200
+
+snowflake:
+  node: 1
+
+cors:
+  allow_origins:
+    - "https://example.com"
+  allow_methods:
+    - GET
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+    - OPTIONS
+  allow_headers:
+    - Authorization
+    - Content-Type
+    - Accept-Language
+    - X-Request-ID
+  expose_headers:
+    - Content-Length
+    - X-Request-ID
+  allow_credentials: true

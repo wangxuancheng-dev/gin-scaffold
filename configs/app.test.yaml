@@ -1,0 +1,97 @@
+env: test
+name: gin-scaffold-test
+
+http:
+  host: "127.0.0.1"
+  port: 18080
+  read_timeout_sec: 15
+  write_timeout_sec: 15
+  idle_timeout_sec: 60
+
+log:
+  level: info
+  dir: ./logs
+  app_file: app.log
+  access_file: access.log
+  error_file: error.log
+  max_size_mb: 50
+  max_backups: 5
+  max_age_days: 7
+  compress: true
+  console: true
+
+db:
+  driver: mysql
+  dsn: "root:root@tcp(127.0.0.1:3306)/scaffold_test?charset=utf8mb4&parseTime=True&loc=Local"
+  replicas: []
+  max_open_conns: 20
+  max_idle_conns: 5
+  conn_max_lifetime_sec: 300
+  conn_max_idle_time_sec: 60
+  slow_threshold_ms: 200
+  log_level: warn
+
+redis:
+  addr: "127.0.0.1:6379"
+  password: ""
+  db: 0
+  pool_size: 10
+  min_idle_conns: 2
+  dial_timeout_sec: 3
+  read_timeout_sec: 3
+  write_timeout_sec: 3
+
+asynq:
+  redis_addr: "127.0.0.1:6379"
+  redis_password: ""
+  redis_db: 2
+  concurrency: 5
+  strict_priority: false
+
+jwt:
+  secret: "test-secret"
+  access_expire_min: 60
+  refresh_expire_min: 4320
+  issuer: "gin-scaffold-test"
+
+metrics:
+  enabled: true
+  path: /metrics
+
+trace:
+  enabled: false
+  endpoint: "http://127.0.0.1:4318/v1/traces"
+  service_name: "gin-scaffold-test"
+  insecure: true
+
+i18n:
+  default_lang: zh
+  bundle_paths:
+    - ./i18n/active.zh.yaml
+    - ./i18n/active.en.yaml
+
+limiter:
+  ip_rps: 100
+  ip_burst: 200
+  route_rps: 500
+  route_burst: 800
+
+snowflake:
+  node: 1
+
+cors:
+  allow_origins:
+    - "*"
+  allow_methods:
+    - GET
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+    - OPTIONS
+  allow_headers:
+    - "*"
+  expose_headers:
+    - Content-Length
+    - X-Request-ID
+  allow_credentials: false

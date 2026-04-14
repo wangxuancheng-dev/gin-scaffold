@@ -1,0 +1,11 @@
+/bin/
+/dist/
+/logs/
+*.exe
+*.test
+.env
+configs/app.local.yaml
+.idea/
+.vscode/
+coverage.out
+/docs/*.json
