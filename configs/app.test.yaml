@@ -22,7 +22,7 @@ log:
 
 db:
   driver: mysql
-  dsn: "root:root@tcp(127.0.0.1:3306)/scaffold_test?charset=utf8mb4&parseTime=True&loc=Local"
+  dsn: "root:root@tcp(127.0.0.1:3306)/scaffold_test?charset=utf8mb4&parseTime=True&loc=UTC"
   replicas: []
   max_open_conns: 20
   max_idle_conns: 5

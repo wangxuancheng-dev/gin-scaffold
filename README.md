@@ -24,7 +24,7 @@ go mod tidy
 
 ```env
 APP_ENV=dev
-DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=Local
+DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=UTC
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret
@@ -35,10 +35,19 @@ JWT_SECRET=replace-with-your-own-secret
 ### 4) 执行数据库迁移
 
 ```bash
-go run ./cmd/migrate -driver mysql -dsn "root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=Local" up
+go run ./cmd/migrate --env dev up
 ```
 
-如果你用 PostgreSQL，把 `-driver` 和 `-dsn` 改成 pg 对应参数即可。
+说明：
+
+- `cmd/migrate` 在 `--env dev` 下会自动加载 `.env/.env.local`，并读取 `DB_DSN`
+- 如需临时覆盖可显式传 `--dsn`
+
+PostgreSQL 示例（显式传参）：
+
+```bash
+go run ./cmd/migrate --env dev --driver postgres --dsn "<your_pg_dsn>" up
+```
 
 ### 5) 启动服务
 
@@ -74,14 +83,14 @@ go mod tidy
 # 2) 准备本地配置（按需修改 DB/Redis/JWT）
 @"
 APP_ENV=dev
-DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=Local
+DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=UTC
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret
 "@ | Set-Content -Path .env.local -Encoding UTF8
 
 # 3) 执行迁移（MySQL 示例）
-go run ./cmd/migrate -driver mysql -dsn "root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=Local" up
+go run ./cmd/migrate --env dev up
 
 # 4) 启动服务
 go run ./cmd/server server --env dev
@@ -112,7 +121,7 @@ cp .env.example .env.local
 # 按你的 docker-compose 实际端口和账号改 DB_DSN/REDIS_ADDR
 
 # 3) 执行数据库迁移
-go run ./cmd/migrate -driver mysql -dsn "<your_mysql_dsn>" up
+go run ./cmd/migrate --env dev up
 
 # 4) 启动服务
 go run ./cmd/server server --env dev
@@ -122,7 +131,7 @@ Windows（PowerShell）可用：
 
 ```powershell
 docker-compose up -d mysql redis
-go run ./cmd/migrate -driver mysql -dsn "<your_mysql_dsn>" up
+go run ./cmd/migrate --env dev up
 go run ./cmd/server server --env dev
 ```
 
@@ -146,6 +155,8 @@ go run ./cmd/server server --env dev
 
 加载顺序按上面从前到后合并，且**不会覆盖已有系统环境变量**。  
 因此多人开发时，建议每个人只维护自己的 `.env.local`，不改 `configs/app.yaml`。
+
+时间建议：数据库统一使用 UTC（例如 MySQL DSN 用 `loc=UTC`），展示层再按业务时区（如北京时间）转换。
 
 `test/prod` 建议由 CI、容器或部署平台直接注入环境变量，不依赖 `.env` 文件。
 

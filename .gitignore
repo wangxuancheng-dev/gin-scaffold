@@ -4,6 +4,7 @@
 *.exe
 *.test
 .env
+.env.local
 .idea/
 .vscode/
 coverage.out

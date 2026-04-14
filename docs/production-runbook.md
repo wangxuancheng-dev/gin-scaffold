@@ -81,6 +81,11 @@ sudo systemctl status gin-scaffold
 
 - `OTEL_EXPORTER_OTLP_ENDPOINT=...`
 
+时区建议：
+
+- 数据库存储统一 UTC（例如 MySQL DSN 使用 `loc=UTC`）
+- API/前端展示时再转换到业务时区（如 `Asia/Shanghai`）
+
 ## 5. 健康检查与巡检
 
 - 存活检查：`GET /livez`
