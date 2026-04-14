@@ -2,18 +2,128 @@
 
 企业级 Go 脚手架（Gin + GORM + Redis + Asynq + Swagger + 可观测性）。
 
-## 快速开始
+## 快速开始（新同学建议按这个走）
+
+### 1) 环境准备
+
+- Go：`1.22+`
+- MySQL 或 PostgreSQL（本地可用 Docker）
+- Redis
+
+### 2) 拉代码并安装依赖
 
 ```bash
+git clone <your_repo_url>
+cd gin-scaffold
 go mod tidy
-go build -o bin/server ./cmd/server
-./bin/server server --env dev
 ```
+
+### 3) 准备本地配置（推荐）
+
+新建 `.env.local`（不要提交到 Git），至少配置：
+
+```env
+APP_ENV=dev
+DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=Local
+REDIS_ADDR=127.0.0.1:6379
+REDIS_PASSWORD=
+JWT_SECRET=replace-with-your-own-secret
+```
+
+> `dev` 环境会自动加载 `.env*` 系列文件，且不会覆盖你已设置的系统环境变量。
+
+### 4) 执行数据库迁移
+
+```bash
+go run ./cmd/migrate -driver mysql -dsn "root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=Local" up
+```
+
+如果你用 PostgreSQL，把 `-driver` 和 `-dsn` 改成 pg 对应参数即可。
+
+### 5) 启动服务
+
+```bash
+go run ./cmd/server server --env dev
+```
+
+### 6) 本地验证
+
+- 健康检查：`http://localhost:8080/livez`
+- 就绪检查：`http://localhost:8080/readyz`
+- Swagger：`http://localhost:8080/swagger/index.html`
+
+### 7) 常用导出接口示例
+
+- CSV（默认）：
+  - `GET /api/v1/admin/users/export?fields=id,username,nickname`
+- XLSX：
+  - `GET /api/v1/admin/users/export?export_format=xlsx&fields=id,username,role`
+- 当前页导出：
+  - `GET /api/v1/admin/users/export?export_scope=page&page=1&page_size=20`
+- 大数据调优：
+  - `GET /api/v1/admin/users/export?export_limit=1000000&export_batch_size=2000`
+
+### 8) Windows 一键跑通（PowerShell）
+
+如果你在 Windows 下开发，可直接执行下面命令：
+
+```powershell
+# 1) 安装依赖
+go mod tidy
+
+# 2) 准备本地配置（按需修改 DB/Redis/JWT）
+@"
+APP_ENV=dev
+DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=Local
+REDIS_ADDR=127.0.0.1:6379
+REDIS_PASSWORD=
+JWT_SECRET=replace-with-your-own-secret
+"@ | Set-Content -Path .env.local -Encoding UTF8
+
+# 3) 执行迁移（MySQL 示例）
+go run ./cmd/migrate -driver mysql -dsn "root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=Local" up
+
+# 4) 启动服务
+go run ./cmd/server server --env dev
+```
+
+启动后访问：
+
+- `http://localhost:8080/livez`
+- `http://localhost:8080/readyz`
+- `http://localhost:8080/swagger/index.html`
 
 ## Docker 一键启动
 
 ```bash
 docker-compose up -d
+```
+
+### Docker 零配置本地开发（推荐给新同学）
+
+如果你本机没有安装 MySQL/Redis，可直接用 Docker 跑依赖：
+
+```bash
+# 1) 启动基础依赖（MySQL/Redis）
+docker-compose up -d mysql redis
+
+# 2) 配置本地环境变量（示例）
+cp .env.example .env.local
+# 按你的 docker-compose 实际端口和账号改 DB_DSN/REDIS_ADDR
+
+# 3) 执行数据库迁移
+go run ./cmd/migrate -driver mysql -dsn "<your_mysql_dsn>" up
+
+# 4) 启动服务
+go run ./cmd/server server --env dev
+```
+
+Windows（PowerShell）可用：
+
+```powershell
+docker-compose up -d mysql redis
+go run ./cmd/migrate -driver mysql -dsn "<your_mysql_dsn>" up
+go run ./cmd/server server --env dev
 ```
 
 ## 核心访问地址
