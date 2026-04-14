@@ -19,6 +19,7 @@
 ## 3. 基础设施与进程
 
 - [ ] 数据库可连接且账号权限正确
+- [ ] 线上 migration 已执行并记录版本：`go run ./cmd/migrate --env prod --driver mysql --dsn "$DB_DSN" up`
 - [ ] Redis 可连接且密码正确
 - [ ] `systemd` 服务文件已更新：`/etc/systemd/system/gin-scaffold.service`
 - [ ] 执行 `sudo systemctl daemon-reload`

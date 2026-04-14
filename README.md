@@ -288,6 +288,8 @@ go run ./cmd/gen crud --module order --table orders
 - 生产环境变量模板：`deploy/.env.prod.example`
 - 生产环境变量自检脚本：`scripts/deploy/check-prod-env.sh`
 
+> 生产发布前请先执行数据库迁移（详见运行手册“线上数据库迁移”小节），再进行服务重启与流量切换。
+
 推荐生产部署路径：
 
 1. 按运行手册准备 `configs/app.prod.yaml` 和服务器本地 `.env.prod`

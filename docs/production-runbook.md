@@ -67,6 +67,21 @@ sudo systemctl status gin-scaffold
 - 修改域名、证书路径、内网白名单网段
 - 执行 `nginx -t && systemctl reload nginx`
 
+6) 执行线上数据库迁移（发布前）
+
+```bash
+# 推荐：在目标机器上执行，使用 prod 配置来源
+go run ./cmd/migrate --env prod --driver mysql --dsn "$DB_DSN" up
+```
+
+迁移建议：
+
+- 先在预发/影子库验证 migration 可执行与耗时
+- 优先采用“先扩后缩”（expand/contract）策略，避免一次性破坏式变更
+- 避免高峰期执行重型 DDL（大表加索引、改列类型等）
+- 迁移失败不要强行继续发版，先回滚代码或修复 migration 后重试
+- 将 migration 版本号与发布时间写入发布记录，便于审计与回滚
+
 ## 4. 环境变量建议
 
 至少设置以下变量（示例键名）：
