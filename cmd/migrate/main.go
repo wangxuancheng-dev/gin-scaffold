@@ -150,7 +150,7 @@ func buildMigrator(db *gorm.DB, dir string) *gormigrate.Gormigrate {
 				if err != nil {
 					return err
 				}
-				return tx.Exec(string(sqlBytes)).Error
+				return execSQLStatements(tx, string(sqlBytes))
 			},
 			Rollback: func(tx *gorm.DB) error {
 				if _, err := os.Stat(downPath); err != nil {
@@ -160,9 +160,56 @@ func buildMigrator(db *gorm.DB, dir string) *gormigrate.Gormigrate {
 				if err != nil {
 					return err
 				}
-				return tx.Exec(string(sqlBytes)).Error
+				return execSQLStatements(tx, string(sqlBytes))
 			},
 		})
 	}
 	return gormigrate.New(db, gormigrate.DefaultOptions, migrations)
+}
+
+func execSQLStatements(tx *gorm.DB, script string) error {
+	for _, stmt := range splitSQLStatements(script) {
+		if err := tx.Exec(stmt).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func splitSQLStatements(script string) []string {
+	var (
+		out      []string
+		buf      strings.Builder
+		inSingle bool
+		inDouble bool
+		prev     rune
+	)
+	for _, r := range script {
+		switch r {
+		case '\'':
+			if !inDouble && prev != '\\' {
+				inSingle = !inSingle
+			}
+		case '"':
+			if !inSingle && prev != '\\' {
+				inDouble = !inDouble
+			}
+		case ';':
+			if !inSingle && !inDouble {
+				s := strings.TrimSpace(buf.String())
+				if s != "" {
+					out = append(out, s)
+				}
+				buf.Reset()
+				prev = r
+				continue
+			}
+		}
+		buf.WriteRune(r)
+		prev = r
+	}
+	if s := strings.TrimSpace(buf.String()); s != "" {
+		out = append(out, s)
+	}
+	return out
 }
