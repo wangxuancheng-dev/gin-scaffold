@@ -98,6 +98,37 @@ powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target test
 
 更多示例见 `Makefile.win`。
 
+## CRUD 自动生成（v1）
+
+当前提供了一个基础生成器，适合快速起模块骨架（单表 + admin CRUD）：
+
+```bash
+go run ./cmd/gen crud --module order --table orders
+```
+
+可选参数：
+
+- `--table`：自定义表名，默认 `<module>s`
+- `--force`：覆盖已存在文件
+
+会生成以下目录骨架（按当前分层约定）：
+
+- `internal/model`
+- `internal/dao`
+- `internal/service`
+- `internal/service/port`
+- `api/request/admin`
+- `api/handler/admin`
+- `routes/admin_<module>_router.go`
+
+生成后还需要你手动完成：
+
+1. 补齐生成 handler 里的 request -> model 字段映射
+2. 编写对应 migration SQL（建表/索引/约束）
+3. 在 RBAC 表里增加模块权限并分配角色
+
+> v2 已支持自动注入：会自动更新 `bootstrap`、`routes/router.go`、`routes/api_router.go`、`routes/admin_router.go`。
+
 ## 生产化增强已内置
 
 - CI 工作流：`.github/workflows/ci.yml`
