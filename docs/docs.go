@@ -15,33 +15,19 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/auth/login": {
+        "/api/v1/client/auth/login": {
             "post": {
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
-                    "application/json",
                     "application/json"
                 ],
                 "tags": [
-                    "user",
                     "user"
                 ],
                 "summary": "登录",
                 "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "每页条数",
-                        "name": "page_size",
-                        "in": "query"
-                    },
                     {
                         "description": "登录参数",
                         "name": "body",
@@ -62,7 +48,59 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/ping": {
+        "/api/v1/client/auth/logout": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "登出",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/client/auth/refresh": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "刷新令牌",
+                "parameters": [
+                    {
+                        "description": "刷新参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.RefreshTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/client/ping": {
             "get": {
                 "tags": [
                     "base"
@@ -78,29 +116,15 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/sse/stream": {
+        "/api/v1/client/users": {
             "get": {
-                "tags": [
-                    "realtime"
-                ],
-                "summary": "SSE 演示",
-                "responses": {}
-            }
-        },
-        "/api/v1/users": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
-                    "application/json",
                     "application/json"
                 ],
                 "tags": [
-                    "user",
                     "user"
                 ],
-                "summary": "登录",
+                "summary": "用户列表",
                 "parameters": [
                     {
                         "type": "integer",
@@ -113,15 +137,6 @@ const docTemplate = `{
                         "description": "每页条数",
                         "name": "page_size",
                         "in": "query"
-                    },
-                    {
-                        "description": "登录参数",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.LoginRequest"
-                        }
                     }
                 ],
                 "responses": {
@@ -165,7 +180,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/users/{id}": {
+        "/api/v1/client/users/{id}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -191,6 +206,15 @@ const docTemplate = `{
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/sse/stream": {
+            "get": {
+                "tags": [
+                    "realtime"
+                ],
+                "summary": "SSE 演示",
+                "responses": {}
             }
         },
         "/api/v1/ws": {
@@ -250,6 +274,17 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 32,
                     "minLength": 3
+                }
+            }
+        },
+        "request.RefreshTokenRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
                 }
             }
         },

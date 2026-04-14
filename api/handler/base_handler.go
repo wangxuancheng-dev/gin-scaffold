@@ -55,7 +55,7 @@ func (h *BaseHandler) Health(c *gin.Context) {
 // @Summary Ping
 // @Tags base
 // @Success 200 {object} response.Body
-// @Router /api/v1/ping [get]
+// @Router /api/v1/client/ping [get]
 func (h *BaseHandler) Ping(c *gin.Context) {
 	response.OK(c, gin.H{"pong": true})
 }

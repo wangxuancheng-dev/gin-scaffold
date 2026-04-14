@@ -100,15 +100,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target test
 
 - CI 工作流：`.github/workflows/ci.yml`
 - 数据库迁移命令（Gormigrate）：`cmd/migrate`
-- JWT 刷新：`/api/v1/auth/refresh`
+- JWT 刷新：`/api/v1/client/auth/refresh`
 - JWT 刷新轮换与重放防护：refresh token 单次使用（基于 Redis jti）
-- JWT 吊销（黑名单）：`/api/v1/auth/logout`
+- JWT 吊销（黑名单）：`/api/v1/client/auth/logout`
 - 管理端 RBAC：`/api/v1/admin/*` 要求 `role=admin` + `db:ping` 权限
 - 环境变量模板：`.env.example`
 
 ## 生产部署与运维文档
 
 - 生产运行手册（单机/小规模）：`docs/production-runbook.md`
+- 上线前检查清单：`docs/checklist.md`
 - systemd 服务模板：`deploy/systemd/gin-scaffold.service.example`
 - Nginx 反向代理模板：`deploy/nginx/gin-scaffold.conf.example`
 - Nginx 快速操作说明：`deploy/nginx/README.md`

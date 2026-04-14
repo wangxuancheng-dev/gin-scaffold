@@ -45,7 +45,7 @@ func NewUserHandler(s UserServiceAPI) *UserHandler {
 // @Produce json
 // @Param body body request.UserRegisterRequest true "注册参数"
 // @Success 200 {object} response.Body
-// @Router /api/v1/users [post]
+// @Router /api/v1/client/users [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var req request.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -75,7 +75,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 // @Produce json
 // @Param id path int true "用户ID"
 // @Success 200 {object} response.Body
-// @Router /api/v1/users/{id} [get]
+// @Router /api/v1/client/users/{id} [get]
 func (h *UserHandler) Get(c *gin.Context) {
 	var uri request.UserIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
@@ -102,7 +102,7 @@ func (h *UserHandler) Get(c *gin.Context) {
 // @Produce json
 // @Param body body request.LoginRequest true "登录参数"
 // @Success 200 {object} response.Body
-// @Router /api/v1/auth/login [post]
+// @Router /api/v1/client/auth/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req request.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -133,7 +133,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 // @Produce json
 // @Param body body request.RefreshTokenRequest true "刷新参数"
 // @Success 200 {object} response.Body
-// @Router /api/v1/auth/refresh [post]
+// @Router /api/v1/client/auth/refresh [post]
 func (h *UserHandler) Refresh(c *gin.Context) {
 	var req request.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -158,7 +158,7 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 // @Tags user
 // @Produce json
 // @Success 200 {object} response.Body
-// @Router /api/v1/auth/logout [post]
+// @Router /api/v1/client/auth/logout [post]
 func (h *UserHandler) Logout(c *gin.Context) {
 	claims, ok := middleware.Claims(c)
 	if !ok || claims == nil || claims.ExpiresAt == nil {
@@ -184,7 +184,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 // @Param page query int false "页码"
 // @Param page_size query int false "每页条数"
 // @Success 200 {object} response.Body
-// @Router /api/v1/users [get]
+// @Router /api/v1/client/users [get]
 func (h *UserHandler) List(c *gin.Context) {
 	var q request.PageQuery
 	_ = c.ShouldBindQuery(&q)
