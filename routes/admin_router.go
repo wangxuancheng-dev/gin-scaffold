@@ -17,6 +17,7 @@ func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandl
 	admin.Use(middleware.JWTAuth(jwtMgr))
 	admin.Use(middleware.RequireRoles("admin"))
 	admin.GET("/users", middleware.RequirePermission("user:rw"), user.List)
+	admin.GET("/users/export", middleware.RequirePermission("user:rw"), user.Export)
 	admin.GET("/menus", middleware.RequirePermission("menu:read"), menu.ListMine)
 	admin.GET("/dbping", middleware.RequirePermission("db:ping"), ops.DBPing)
 }

@@ -4,6 +4,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -53,17 +54,50 @@ func (d *UserDAO) GetByUsernameWithDeleted(ctx context.Context, name string) (*m
 	return &u, nil
 }
 
+func (d *UserDAO) applyFilters(tx *gorm.DB, q model.UserQuery) *gorm.DB {
+	if q.Username != "" {
+		tx = tx.Where("username LIKE ?", "%"+q.Username+"%")
+	}
+	if q.Nickname != "" {
+		tx = tx.Where("nickname LIKE ?", "%"+q.Nickname+"%")
+	}
+	return tx
+}
+
 // List 分页列表。
-func (d *UserDAO) List(ctx context.Context, offset, limit int) ([]model.User, int64, error) {
+func (d *UserDAO) List(ctx context.Context, q model.UserQuery, offset, limit int) ([]model.User, int64, error) {
+	tx := d.applyFilters(d.db.WithContext(ctx).Model(&model.User{}), q)
 	var total int64
-	if err := d.db.WithContext(ctx).Model(&model.User{}).Count(&total).Error; err != nil {
+	if err := tx.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	var rows []model.User
-	if err := d.db.WithContext(ctx).Order("id desc").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
+	if err := d.applyFilters(d.db.WithContext(ctx), q).Order("id desc").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
 	return rows, total, nil
+}
+
+// ListForExport 导出列表（不返回 total）。
+func (d *UserDAO) ListForExport(ctx context.Context, q model.UserQuery, limit int) ([]model.User, error) {
+	var rows []model.User
+	if err := d.applyFilters(d.db.WithContext(ctx), q).Order("id desc").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// ListAfterID 按主键增量扫描，适合大数据导出。
+func (d *UserDAO) ListAfterID(ctx context.Context, q model.UserQuery, lastID int64, limit int) ([]model.User, error) {
+	tx := d.applyFilters(d.db.WithContext(ctx), q)
+	if lastID > 0 {
+		tx = tx.Where("id > ?", lastID)
+	}
+	var rows []model.User
+	if err := tx.Order("id asc").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 // BindRole 绑定用户角色（若已存在则跳过）。
@@ -130,4 +164,33 @@ func (d *UserDAO) GetPrimaryRole(ctx context.Context, userID int64) (string, err
 		return "", err
 	}
 	return row.Role, nil
+}
+
+// GetPrimaryRoles 批量查询用户主角色（每用户 user_roles.id 最早一条）。
+func (d *UserDAO) GetPrimaryRoles(ctx context.Context, userIDs []int64) (map[int64]string, error) {
+	out := make(map[int64]string, len(userIDs))
+	if len(userIDs) == 0 {
+		return out, nil
+	}
+	sub := d.db.WithContext(ctx).
+		Table("user_roles").
+		Select("user_id, MIN(id) AS min_id").
+		Where("deleted_at IS NULL AND user_id IN ?", userIDs).
+		Group("user_id")
+
+	var rows []struct {
+		UserID int64
+		Role   string
+	}
+	if err := d.db.WithContext(ctx).
+		Table("user_roles ur").
+		Select("ur.user_id, ur.role").
+		Joins("JOIN (?) t ON ur.user_id = t.user_id AND ur.id = t.min_id", sub).
+		Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("batch get roles: %w", err)
+	}
+	for _, r := range rows {
+		out[r.UserID] = r.Role
+	}
+	return out, nil
 }

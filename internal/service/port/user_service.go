@@ -13,5 +13,12 @@ type UserService interface {
 	Login(ctx context.Context, username, password string) (string, error)
 	LoginWithRefresh(ctx context.Context, username, password string) (string, string, error)
 	RefreshAccess(ctx context.Context, refreshToken string) (string, string, error)
-	List(ctx context.Context, page, pageSize int) ([]model.User, int64, error)
+	List(ctx context.Context, q model.UserQuery, page, pageSize int) ([]model.User, int64, error)
+	StreamExport(
+		ctx context.Context,
+		q model.UserQuery,
+		page, pageSize, limit, batchSize int,
+		pageOnly, withRole bool,
+		consume func(model.UserExportRow) error,
+	) error
 }

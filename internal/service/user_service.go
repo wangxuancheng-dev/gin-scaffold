@@ -27,8 +27,10 @@ type UserRepo interface {
 	GetByID(ctx context.Context, id int64) (*model.User, error)
 	GetByUsername(ctx context.Context, name string) (*model.User, error)
 	GetByUsernameWithDeleted(ctx context.Context, name string) (*model.User, error)
-	List(ctx context.Context, offset, limit int) ([]model.User, int64, error)
+	List(ctx context.Context, q model.UserQuery, offset, limit int) ([]model.User, int64, error)
+	ListAfterID(ctx context.Context, q model.UserQuery, lastID int64, limit int) ([]model.User, error)
 	GetPrimaryRole(ctx context.Context, userID int64) (string, error)
+	GetPrimaryRoles(ctx context.Context, userIDs []int64) (map[int64]string, error)
 }
 
 // UserService 用户业务。
@@ -116,7 +118,7 @@ func (s *UserService) GetByID(ctx context.Context, id int64) (*model.User, error
 }
 
 // List 用户分页。
-func (s *UserService) List(ctx context.Context, page, pageSize int) ([]model.User, int64, error) {
+func (s *UserService) List(ctx context.Context, q model.UserQuery, page, pageSize int) ([]model.User, int64, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -124,7 +126,7 @@ func (s *UserService) List(ctx context.Context, page, pageSize int) ([]model.Use
 		pageSize = 20
 	}
 	offset := (page - 1) * pageSize
-	rows, total, err := s.dao.List(ctx, offset, pageSize)
+	rows, total, err := s.dao.List(ctx, q, offset, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -132,6 +134,91 @@ func (s *UserService) List(ctx context.Context, page, pageSize int) ([]model.Use
 		rows[i].Password = ""
 	}
 	return rows, total, nil
+}
+
+// StreamExport 流式导出，按批次扫描并回调消费导出行。
+func (s *UserService) StreamExport(
+	ctx context.Context,
+	q model.UserQuery,
+	page, pageSize, limit, batchSize int,
+	pageOnly, withRole bool,
+	consume func(model.UserExportRow) error,
+) error {
+	if batchSize <= 0 || batchSize > 5000 {
+		batchSize = 1000
+	}
+	if pageOnly {
+		rows, _, err := s.List(ctx, q, page, pageSize)
+		if err != nil {
+			return err
+		}
+		return s.emitExportRows(ctx, rows, withRole, consume)
+	}
+
+	if limit <= 0 || limit > 10_000_000 {
+		limit = 100_000
+	}
+
+	var (
+		lastID int64
+		sent   int
+	)
+	for sent < limit {
+		size := batchSize
+		remain := limit - sent
+		if remain < size {
+			size = remain
+		}
+		rows, err := s.dao.ListAfterID(ctx, q, lastID, size)
+		if err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		if err := s.emitExportRows(ctx, rows, withRole, consume); err != nil {
+			return err
+		}
+		lastID = rows[len(rows)-1].ID
+		sent += len(rows)
+	}
+	return nil
+}
+
+func (s *UserService) emitExportRows(
+	ctx context.Context,
+	users []model.User,
+	withRole bool,
+	consume func(model.UserExportRow) error,
+) error {
+	roles := map[int64]string{}
+	if withRole {
+		ids := make([]int64, 0, len(users))
+		for _, u := range users {
+			ids = append(ids, u.ID)
+		}
+		m, err := s.dao.GetPrimaryRoles(ctx, ids)
+		if err != nil {
+			return err
+		}
+		roles = m
+	}
+	for _, u := range users {
+		row := model.UserExportRow{
+			ID:        u.ID,
+			Username:  u.Username,
+			Nickname:  u.Nickname,
+			CreatedAt: u.CreatedAt,
+			Role:      roles[u.ID],
+		}
+		if row.Role == "" {
+			row.Role = "user"
+		}
+		if err := consume(row); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Login 校验密码并签发访问令牌。

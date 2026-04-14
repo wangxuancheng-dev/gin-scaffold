@@ -72,8 +72,10 @@ go test ./...
 ```bash
 make tidy
 make build
-make run ENV=dev PROFILE=order
-make run-worker ENV=dev PROFILE=order
+make run ENV=dev
+# make run ENV=dev PROFILE=order
+make run-worker ENV=dev
+# make run-worker ENV=dev PROFILE=order
 make migrate-up DRIVER=mysql DSN="<database_dsn>"
 make migrate-down DRIVER=mysql DSN="<database_dsn>"
 make test-unit

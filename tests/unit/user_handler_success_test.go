@@ -48,10 +48,21 @@ func (m *mockUserService) RefreshAccess(ctx context.Context, refreshToken string
 	return args.String(0), args.String(1), args.Error(2)
 }
 
-func (m *mockUserService) List(ctx context.Context, page, pageSize int) ([]model.User, int64, error) {
-	args := m.Called(ctx, page, pageSize)
+func (m *mockUserService) List(ctx context.Context, q model.UserQuery, page, pageSize int) ([]model.User, int64, error) {
+	args := m.Called(ctx, q, page, pageSize)
 	rows, _ := args.Get(0).([]model.User)
 	return rows, args.Get(1).(int64), args.Error(2)
+}
+
+func (m *mockUserService) StreamExport(
+	ctx context.Context,
+	q model.UserQuery,
+	page, pageSize, limit, batchSize int,
+	pageOnly, withRole bool,
+	consume func(model.UserExportRow) error,
+) error {
+	args := m.Called(ctx, q, page, pageSize, limit, batchSize, pageOnly, withRole, consume)
+	return args.Error(0)
 }
 
 func TestUserHandler_List_Success(t *testing.T) {
@@ -64,7 +75,7 @@ func TestUserHandler_List_Success(t *testing.T) {
 	r := gin.New()
 	r.GET("/users", h.List)
 
-	svc.On("List", mock.Anything, 0, 0).Return([]model.User{
+	svc.On("List", mock.Anything, mock.AnythingOfType("model.UserQuery"), 0, 0).Return([]model.User{
 		{ID: 1, Username: "u1", Nickname: "N1"},
 		{ID: 2, Username: "u2", Nickname: "N2"},
 	}, int64(2), nil).Once()
@@ -178,5 +189,41 @@ func TestUserHandler_Get_Success(t *testing.T) {
 	require.True(t, ok)
 	require.EqualValues(t, 100, data["id"])
 	require.Equal(t, "alice", data["username"])
+	svc.AssertExpectations(t)
+}
+
+func TestUserHandler_Export_Success(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	svc := new(mockUserService)
+	h := adminhandler.NewUserHandler(svc)
+
+	r := gin.New()
+	r.GET("/users/export", h.Export)
+
+	svc.On(
+		"StreamExport",
+		mock.Anything,
+		model.UserQuery{Username: "ali", Nickname: ""},
+		1,
+		20,
+		200,
+		1000,
+		true,
+		true,
+		mock.Anything,
+	).Run(func(args mock.Arguments) {
+		cb, _ := args.Get(8).(func(model.UserExportRow) error)
+		_ = cb(model.UserExportRow{ID: 1, Username: "alice", Nickname: "Alice", Role: "admin"})
+	}).Return(nil).Once()
+
+	req := httptest.NewRequest(http.MethodGet, "/users/export?username=ali&export_scope=page&page=1&page_size=20&export_limit=200&fields=id,username,role", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), "id,username,role")
+	require.Contains(t, w.Body.String(), "1,alice,admin")
 	svc.AssertExpectations(t)
 }

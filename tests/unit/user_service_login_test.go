@@ -54,15 +54,27 @@ func (m *mockUserRepo) GetByUsernameWithDeleted(ctx context.Context, name string
 	return u, args.Error(1)
 }
 
-func (m *mockUserRepo) List(ctx context.Context, offset, limit int) ([]model.User, int64, error) {
-	args := m.Called(ctx, offset, limit)
+func (m *mockUserRepo) List(ctx context.Context, q model.UserQuery, offset, limit int) ([]model.User, int64, error) {
+	args := m.Called(ctx, q, offset, limit)
 	rows, _ := args.Get(0).([]model.User)
 	return rows, args.Get(1).(int64), args.Error(2)
+}
+
+func (m *mockUserRepo) ListAfterID(ctx context.Context, q model.UserQuery, lastID int64, limit int) ([]model.User, error) {
+	args := m.Called(ctx, q, lastID, limit)
+	rows, _ := args.Get(0).([]model.User)
+	return rows, args.Error(1)
 }
 
 func (m *mockUserRepo) GetPrimaryRole(ctx context.Context, userID int64) (string, error) {
 	args := m.Called(ctx, userID)
 	return args.String(0), args.Error(1)
+}
+
+func (m *mockUserRepo) GetPrimaryRoles(ctx context.Context, userIDs []int64) (map[int64]string, error) {
+	args := m.Called(ctx, userIDs)
+	rows, _ := args.Get(0).(map[int64]string)
+	return rows, args.Error(1)
 }
 
 func TestUserServiceLogin_Success(t *testing.T) {
