@@ -16,6 +16,7 @@
 ```text
 /opt/gin-scaffold/
   bin/server
+  bin/migrate
   configs/app.yaml
   configs/app.prod.yaml
   .env.prod
@@ -31,6 +32,7 @@
 
 ```bash
 go build -o bin/server ./cmd/server
+go build -o bin/migrate ./cmd/migrate
 ```
 
 2) 准备服务器配置文件
@@ -70,8 +72,8 @@ sudo systemctl status gin-scaffold
 6) 执行线上数据库迁移（发布前）
 
 ```bash
-# 推荐：在目标机器上执行，使用 prod 配置来源
-go run ./cmd/migrate --env prod --driver mysql --dsn "$DB_DSN" up
+# 推荐：执行已上传的迁移二进制（线上无需 Go 环境）
+./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" up
 ```
 
 迁移建议：

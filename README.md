@@ -289,6 +289,7 @@ go run ./cmd/gen crud --module order --table orders
 - 生产环境变量自检脚本：`scripts/deploy/check-prod-env.sh`
 
 > 生产发布前请先执行数据库迁移（详见运行手册“线上数据库迁移”小节），再进行服务重启与流量切换。
+> 建议与 `server` 一起构建并上传 `migrate` 二进制（`go build -o bin/migrate ./cmd/migrate`），线上直接执行迁移命令，避免依赖 Go 运行环境。
 
 推荐生产部署路径：
 
