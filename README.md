@@ -107,12 +107,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target test
 - JWT 吊销（黑名单）：`/api/v1/client/auth/logout`
 - 管理端 RBAC：`/api/v1/admin/*` 要求 `role=admin` + `db:ping` 权限
 - 环境变量模板：`.env.example`
+- `metrics.path` 与 `i18n` 配置项已接入运行时行为
 
 ## 前后台目录约定
 
 - 客户端 handler：`api/handler/client`
 - 后台 handler：`api/handler/admin`
-- 共享用户服务接口：`api/handler/userapi`
+- 共享用户服务接口：`internal/service/port`
 - 客户端 request/response：`api/request/client`、`api/response/client`
 - 后台 request：`api/request/admin`
 

@@ -67,8 +67,8 @@ trace:
 i18n:
   default_lang: zh
   bundle_paths:
-    - ./i18n/active.zh.yaml
-    - ./i18n/active.en.yaml
+    - ./i18n/zh.yaml
+    - ./i18n/en.yaml
 
 limiter:
   ip_rps: 50

@@ -8,6 +8,7 @@ const (
 	Unauthorized  = 401
 	Forbidden     = 403
 	NotFound      = 404
+	TooManyReq    = 429
 	InternalError = 500
 
 	// 业务用户模块 1xxxx
@@ -21,6 +22,8 @@ const (
 	KeySuccess      = "success"
 	KeyInvalidParam = "invalid_param"
 	KeyUnauthorized = "unauthorized"
+	KeyForbidden    = "forbidden"
+	KeyRateLimited  = "rate_limited"
 	KeyInternal     = "internal_error"
 	KeyUserNotFound = "user_not_found"
 	KeyUserExists   = "user_exists"

@@ -6,21 +6,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
 
-	"gin-scaffold/api/handler/userapi"
 	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/response"
 	clientresp "gin-scaffold/api/response/client"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
+	"gin-scaffold/internal/service/port"
 )
 
 // UserHandler 后台用户接口。
 type UserHandler struct {
-	svc userapi.Service
+	svc port.UserService
 }
 
 // NewUserHandler 构造后台用户 handler。
-func NewUserHandler(s userapi.Service) *UserHandler {
+func NewUserHandler(s port.UserService) *UserHandler {
 	return &UserHandler{svc: s}
 }
 

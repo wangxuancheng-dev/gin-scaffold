@@ -80,7 +80,7 @@ func RequireRoles(roles ...string) gin.HandlerFunc {
 				return
 			}
 		}
-		response.FailHTTP(c, http.StatusForbidden, errcode.Forbidden, errcode.KeyUnauthorized, "forbidden")
+		response.FailHTTP(c, http.StatusForbidden, errcode.Forbidden, errcode.KeyForbidden, "forbidden")
 		c.Abort()
 	}
 }
@@ -96,7 +96,7 @@ func RequirePermission(permission string) gin.HandlerFunc {
 		}
 		policy, ok := rolePermissions[claims.Role]
 		if !ok || !policy[permission] {
-			response.FailHTTP(c, http.StatusForbidden, errcode.Forbidden, errcode.KeyUnauthorized, "forbidden")
+			response.FailHTTP(c, http.StatusForbidden, errcode.Forbidden, errcode.KeyForbidden, "forbidden")
 			c.Abort()
 			return
 		}

@@ -10,20 +10,20 @@ import (
 	clientreq "gin-scaffold/api/request/client"
 	"gin-scaffold/api/response"
 	clientresp "gin-scaffold/api/response/client"
-	"gin-scaffold/api/handler/userapi"
 	"gin-scaffold/internal/pkg/errcode"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
+	"gin-scaffold/internal/service/port"
 	"gin-scaffold/internal/pkg/validator"
 	"gin-scaffold/middleware"
 )
 
 // UserHandler 客户端用户接口。
 type UserHandler struct {
-	svc userapi.Service
+	svc port.UserService
 }
 
 // NewUserHandler 构造客户端用户 handler。
-func NewUserHandler(s userapi.Service) *UserHandler {
+func NewUserHandler(s port.UserService) *UserHandler {
 	return &UserHandler{svc: s}
 }
 

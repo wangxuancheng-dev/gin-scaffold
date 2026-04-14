@@ -25,7 +25,7 @@ func Limiter(ipRPS float64, ipBurst int, routeRPS float64, routeBurst int) gin.H
 			return
 		}
 		if !globalLimiter.AllowIP(c.ClientIP()) {
-			response.FailHTTP(c, http.StatusTooManyRequests, errcode.BadRequest, errcode.KeyInvalidParam, "too many requests")
+			response.FailHTTP(c, http.StatusTooManyRequests, errcode.TooManyReq, errcode.KeyRateLimited, "too many requests")
 			c.Abort()
 			return
 		}
@@ -34,7 +34,7 @@ func Limiter(ipRPS float64, ipBurst int, routeRPS float64, routeBurst int) gin.H
 			key = c.Request.Method + " " + c.Request.URL.Path
 		}
 		if !globalLimiter.AllowRoute(key) {
-			response.FailHTTP(c, http.StatusTooManyRequests, errcode.BadRequest, errcode.KeyInvalidParam, "route rate limited")
+			response.FailHTTP(c, http.StatusTooManyRequests, errcode.TooManyReq, errcode.KeyRateLimited, "route rate limited")
 			c.Abort()
 			return
 		}

@@ -1,4 +1,4 @@
-package userapi
+package port
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"gin-scaffold/internal/model"
 )
 
-// Service 定义用户业务能力，供客户端与后台 handler 复用。
-type Service interface {
+// UserService 定义用户业务能力，供客户端与后台 handler 复用。
+type UserService interface {
 	Register(ctx context.Context, username, password, nickname string) (*model.User, error)
 	GetByID(ctx context.Context, id int64) (*model.User, error)
 	Login(ctx context.Context, username, password string) (string, error)

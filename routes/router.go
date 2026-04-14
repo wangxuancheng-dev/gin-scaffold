@@ -7,8 +7,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
-	adminhandler "gin-scaffold/api/handler/admin"
 	"gin-scaffold/api/handler"
+	adminhandler "gin-scaffold/api/handler/admin"
 	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/config"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
@@ -22,6 +22,7 @@ type Options struct {
 	Base       *handler.BaseHandler
 	ClientUser *clienthandler.UserHandler
 	AdminUser  *adminhandler.UserHandler
+	AdminOps   *adminhandler.OpsHandler
 	WS         *handler.WSHandler
 	SSE        *handler.SSEHandler
 	TraceOn    bool
@@ -34,7 +35,7 @@ func Build(opts Options) *gin.Engine {
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recovery())
 	r.Use(middleware.AccessLog())
-	r.Use(middleware.I18n())
+	r.Use(middleware.I18n(&opts.Cfg.I18n))
 	r.Use(middleware.CORS(&opts.Cfg.CORS))
 	if opts.Cfg != nil {
 		r.Use(middleware.Limiter(
@@ -48,13 +49,13 @@ func Build(opts Options) *gin.Engine {
 		r.Use(otelgin.Middleware(opts.Cfg.Name))
 	}
 	if opts.Cfg != nil && opts.Cfg.Metrics.Enabled {
-		middleware.Metrics(r, "gin")
+		middleware.Metrics(r, "gin", opts.Cfg.Metrics.Path)
 	}
 
 	r.GET("/health", opts.Base.Health)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.WS, opts.SSE)
+	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.AdminOps, opts.WS, opts.SSE)
 
 	return r
 }

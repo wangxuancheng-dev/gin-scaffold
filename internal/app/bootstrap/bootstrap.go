@@ -1,0 +1,170 @@
+package bootstrap
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/gin-gonic/gin"
+	"github.com/hibiken/asynq"
+
+	adminhandler "gin-scaffold/api/handler/admin"
+	"gin-scaffold/api/handler"
+	clienthandler "gin-scaffold/api/handler/client"
+	"gin-scaffold/config"
+	"gin-scaffold/internal/dao"
+	"gin-scaffold/internal/job"
+	jobhandler "gin-scaffold/internal/job/handler"
+	jwtpkg "gin-scaffold/internal/pkg/jwt"
+	"gin-scaffold/internal/pkg/snowflake"
+	websocketpkg "gin-scaffold/internal/pkg/websocket"
+	"gin-scaffold/internal/service"
+	"gin-scaffold/pkg/db"
+	"gin-scaffold/pkg/logger"
+	"gin-scaffold/pkg/redis"
+	"gin-scaffold/pkg/tracer"
+	"gin-scaffold/routes"
+)
+
+type ServerDeps struct {
+	Cfg     *config.App
+	Engine  *gin.Engine
+	cleanup func(context.Context)
+}
+
+func (d *ServerDeps) Cleanup(ctx context.Context) {
+	if d == nil || d.cleanup == nil {
+		return
+	}
+	d.cleanup(ctx)
+}
+
+type WorkerDeps struct {
+	Cfg     *config.App
+	Server  *asynq.Server
+	Mux     *asynq.ServeMux
+	cleanup func(context.Context)
+}
+
+func (d *WorkerDeps) Cleanup(ctx context.Context) {
+	if d == nil || d.cleanup == nil {
+		return
+	}
+	d.cleanup(ctx)
+}
+
+func InitServer(env, profile string) (*ServerDeps, error) {
+	cfg, err := config.Load(env, profile)
+	if err != nil {
+		return nil, err
+	}
+	if err := logger.Init(&cfg.Log); err != nil {
+		return nil, err
+	}
+
+	cleanups := make([]func(context.Context), 0, 4)
+	cleanups = append(cleanups, func(context.Context) { logger.Sync() })
+
+	traceShutdown, err := tracer.Init(context.Background(), &cfg.Trace)
+	if err != nil {
+		runCleanups(context.Background(), cleanups)
+		return nil, err
+	}
+	cleanups = append(cleanups, func(ctx context.Context) { _ = traceShutdown(ctx) })
+
+	gdb, err := db.Init(&cfg.DB)
+	if err != nil {
+		runCleanups(context.Background(), cleanups)
+		return nil, fmt.Errorf("database: %w", err)
+	}
+	if err := redis.Init(&cfg.Redis); err != nil {
+		runCleanups(context.Background(), cleanups)
+		return nil, fmt.Errorf("redis: %w", err)
+	}
+	if err := snowflake.Init(cfg.Snowflake.Node); err != nil {
+		runCleanups(context.Background(), cleanups)
+		return nil, fmt.Errorf("snowflake: %w", err)
+	}
+
+	var q *job.Client
+	if cfg.Asynq.RedisAddr != "" {
+		q = job.NewClient(cfg.Asynq.RedisAddr, cfg.Asynq.RedisPassword, cfg.Asynq.RedisDB)
+		cleanups = append(cleanups, func(context.Context) { _ = q.Close() })
+	}
+
+	jm := jwtpkg.NewManager(&cfg.JWT)
+	userDAO := dao.NewUserDAO(gdb)
+	userSvc := service.NewUserService(userDAO, q, jm)
+	hub := websocketpkg.NewHub()
+	wsSvc := service.NewWSService(hub)
+	sseSvc := service.NewSSEService()
+
+	baseH := &handler.BaseHandler{DB: gdb}
+	clientUserH := clienthandler.NewUserHandler(userSvc)
+	adminUserH := adminhandler.NewUserHandler(userSvc)
+	adminOpsH := adminhandler.NewOpsHandler()
+	wsH := handler.NewWSHandler(wsSvc)
+	sseH := handler.NewSSEHandler(sseSvc)
+
+	engine := routes.Build(routes.Options{
+		Cfg:        cfg,
+		JWT:        jm,
+		Base:       baseH,
+		ClientUser: clientUserH,
+		AdminUser:  adminUserH,
+		AdminOps:   adminOpsH,
+		WS:         wsH,
+		SSE:        sseH,
+		TraceOn:    cfg.Trace.Enabled,
+	})
+
+	return &ServerDeps{
+		Cfg:    cfg,
+		Engine: engine,
+		cleanup: func(ctx context.Context) {
+			runCleanups(ctx, cleanups)
+		},
+	}, nil
+}
+
+func InitWorker(env, profile string) (*WorkerDeps, error) {
+	cfg, err := config.Load(env, profile)
+	if err != nil {
+		return nil, err
+	}
+	if err := logger.Init(&cfg.Log); err != nil {
+		return nil, err
+	}
+
+	cleanups := []func(context.Context){
+		func(context.Context) { logger.Sync() },
+	}
+
+	srv := asynq.NewServer(
+		asynq.RedisClientOpt{
+			Addr:     cfg.Asynq.RedisAddr,
+			Password: cfg.Asynq.RedisPassword,
+			DB:       cfg.Asynq.RedisDB,
+		},
+		asynq.Config{
+			Concurrency:    cfg.Asynq.Concurrency,
+			StrictPriority: cfg.Asynq.StrictPriority,
+		},
+	)
+	mux := asynq.NewServeMux()
+	mux.Handle(job.TypeWelcomeEmail, jobhandler.WelcomeHandler{})
+
+	return &WorkerDeps{
+		Cfg:    cfg,
+		Server: srv,
+		Mux:    mux,
+		cleanup: func(ctx context.Context) {
+			runCleanups(ctx, cleanups)
+		},
+	}, nil
+}
+
+func runCleanups(ctx context.Context, funcs []func(context.Context)) {
+	for i := len(funcs) - 1; i >= 0; i-- {
+		funcs[i](ctx)
+	}
+}

@@ -1,17 +1,14 @@
 package routes
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 
 	adminhandler "gin-scaffold/api/handler/admin"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
 	"gin-scaffold/middleware"
-	"gin-scaffold/pkg/db"
 )
 
-func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler) {
+func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler, ops *adminhandler.OpsHandler) {
 	if jwtMgr == nil {
 		return
 	}
@@ -21,20 +18,5 @@ func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandl
 	admin.Use(middleware.RequireRoles("admin"))
 	admin.Use(middleware.RequirePermission("db:ping"))
 	admin.GET("/users", user.List)
-	admin.GET("/dbping", func(c *gin.Context) {
-		if db.DB() == nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"db": "not configured"})
-			return
-		}
-		sqlDB, err := db.DB().DB()
-		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"err": err.Error()})
-			return
-		}
-		if err := sqlDB.PingContext(c.Request.Context()); err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"err": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"db": "ok"})
-	})
+	admin.GET("/dbping", ops.DBPing)
 }

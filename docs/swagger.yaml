@@ -52,6 +52,18 @@ info:
   title: Gin Scaffold API
   version: "1.0"
 paths:
+  /api/v1/admin/dbping:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 数据库连通性检查（后台）
+      tags:
+      - admin-ops
   /api/v1/admin/users:
     get:
       parameters:

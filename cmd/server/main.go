@@ -16,26 +16,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hibiken/asynq"
 	cli "github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
-	adminhandler "gin-scaffold/api/handler/admin"
-	"gin-scaffold/api/handler"
-	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/config"
-	"gin-scaffold/internal/dao"
-	"gin-scaffold/internal/job"
-	jobhandler "gin-scaffold/internal/job/handler"
-	jwtpkg "gin-scaffold/internal/pkg/jwt"
-	"gin-scaffold/internal/pkg/snowflake"
-	websocketpkg "gin-scaffold/internal/pkg/websocket"
-	"gin-scaffold/internal/service"
-	"gin-scaffold/pkg/db"
+	"gin-scaffold/internal/app/bootstrap"
 	"gin-scaffold/pkg/logger"
-	"gin-scaffold/pkg/redis"
-	"gin-scaffold/pkg/tracer"
-	"gin-scaffold/routes"
 
 	_ "gin-scaffold/docs"
 )
@@ -75,71 +61,19 @@ func main() {
 }
 
 func runServer(env, profile string) error {
-	cfg, err := config.Load(env, profile)
+	deps, err := bootstrap.InitServer(env, profile)
 	if err != nil {
 		return err
 	}
-	if err := logger.Init(&cfg.Log); err != nil {
-		return err
-	}
-	defer logger.Sync()
+	defer deps.Cleanup(context.Background())
 	printConfigSource("server")
-
-	traceShutdown, err := tracer.Init(context.Background(), &cfg.Trace)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = traceShutdown(context.Background()) }()
-
-	gdb, err := db.Init(&cfg.DB)
-	if err != nil {
-		return fmt.Errorf("database: %w", err)
-	}
-	if err := redis.Init(&cfg.Redis); err != nil {
-		return fmt.Errorf("redis: %w", err)
-	}
-	if err := snowflake.Init(cfg.Snowflake.Node); err != nil {
-		return fmt.Errorf("snowflake: %w", err)
-	}
-
-	var q *job.Client
-	if cfg.Asynq.RedisAddr != "" {
-		q = job.NewClient(cfg.Asynq.RedisAddr, cfg.Asynq.RedisPassword, cfg.Asynq.RedisDB)
-		defer func() { _ = q.Close() }()
-	}
-
-	jm := jwtpkg.NewManager(&cfg.JWT)
-
-	userDAO := dao.NewUserDAO(gdb)
-	userSvc := service.NewUserService(userDAO, q, jm)
-	hub := websocketpkg.NewHub()
-	wsSvc := service.NewWSService(hub)
-	sseSvc := service.NewSSEService()
-
-	baseH := &handler.BaseHandler{DB: gdb}
-	clientUserH := clienthandler.NewUserHandler(userSvc)
-	adminUserH := adminhandler.NewUserHandler(userSvc)
-	wsH := handler.NewWSHandler(wsSvc)
-	sseH := handler.NewSSEHandler(sseSvc)
-
-	engine := routes.Build(routes.Options{
-		Cfg:        cfg,
-		JWT:        jm,
-		Base:       baseH,
-		ClientUser: clientUserH,
-		AdminUser:  adminUserH,
-		WS:         wsH,
-		SSE:        sseH,
-		TraceOn:    cfg.Trace.Enabled,
-	})
-
-	addr := fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port)
+	addr := fmt.Sprintf("%s:%d", deps.Cfg.HTTP.Host, deps.Cfg.HTTP.Port)
 	srv := &http.Server{
 		Addr:         addr,
-		Handler:      engine,
-		ReadTimeout:  time.Duration(cfg.HTTP.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.HTTP.WriteTimeout) * time.Second,
-		IdleTimeout:  time.Duration(cfg.HTTP.IdleTimeout) * time.Second,
+		Handler:      deps.Engine,
+		ReadTimeout:  time.Duration(deps.Cfg.HTTP.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(deps.Cfg.HTTP.WriteTimeout) * time.Second,
+		IdleTimeout:  time.Duration(deps.Cfg.HTTP.IdleTimeout) * time.Second,
 	}
 
 	go func() {
@@ -160,33 +94,16 @@ func runServer(env, profile string) error {
 }
 
 func runWorker(env, profile string) error {
-	cfg, err := config.Load(env, profile)
+	deps, err := bootstrap.InitWorker(env, profile)
 	if err != nil {
 		return err
 	}
-	if err := logger.Init(&cfg.Log); err != nil {
-		return err
-	}
-	defer logger.Sync()
+	defer deps.Cleanup(context.Background())
 	printConfigSource("worker")
 
-	srv := asynq.NewServer(
-		asynq.RedisClientOpt{
-			Addr:     cfg.Asynq.RedisAddr,
-			Password: cfg.Asynq.RedisPassword,
-			DB:       cfg.Asynq.RedisDB,
-		},
-		asynq.Config{
-			Concurrency:    cfg.Asynq.Concurrency,
-			StrictPriority: cfg.Asynq.StrictPriority,
-		},
-	)
-	mux := asynq.NewServeMux()
-	mux.Handle(job.TypeWelcomeEmail, jobhandler.WelcomeHandler{})
-
 	go func() {
-		logger.InfoX("asynq worker started", zap.String("redis", cfg.Asynq.RedisAddr))
-		if err := srv.Run(mux); err != nil {
+		logger.InfoX("asynq worker started", zap.String("redis", deps.Cfg.Asynq.RedisAddr))
+		if err := deps.Server.Run(deps.Mux); err != nil {
 			logger.ErrorX("asynq server error", zap.Error(err))
 			os.Exit(1)
 		}
@@ -195,7 +112,7 @@ func runWorker(env, profile string) error {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	srv.Shutdown()
+	deps.Server.Shutdown()
 	return nil
 }
 
