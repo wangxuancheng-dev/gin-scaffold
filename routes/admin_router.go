@@ -8,7 +8,7 @@ import (
 	"gin-scaffold/middleware"
 )
 
-func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler, ops *adminhandler.OpsHandler) {
+func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler, menu *adminhandler.MenuHandler, ops *adminhandler.OpsHandler) {
 	if jwtMgr == nil {
 		return
 	}
@@ -16,7 +16,7 @@ func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandl
 	admin := r.Group("/api/v1/admin")
 	admin.Use(middleware.JWTAuth(jwtMgr))
 	admin.Use(middleware.RequireRoles("admin"))
-	admin.Use(middleware.RequirePermission("db:ping"))
-	admin.GET("/users", user.List)
-	admin.GET("/dbping", ops.DBPing)
+	admin.GET("/users", middleware.RequirePermission("user:rw"), user.List)
+	admin.GET("/menus", middleware.RequirePermission("menu:read"), menu.ListMine)
+	admin.GET("/dbping", middleware.RequirePermission("db:ping"), ops.DBPing)
 }

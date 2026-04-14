@@ -64,6 +64,18 @@ paths:
       summary: 数据库连通性检查（后台）
       tags:
       - admin-ops
+  /api/v1/admin/menus:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 菜单列表（后台）
+      tags:
+      - admin-menu
   /api/v1/admin/users:
     get:
       parameters:
@@ -208,7 +220,7 @@ paths:
       - realtime
   /health:
     get:
-      description: 返回各依赖状态
+      description: 等价于 /readyz
       produces:
       - application/json
       responses:
@@ -217,7 +229,34 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: 健康检查
+      summary: 健康检查（兼容）
+      tags:
+      - base
+  /livez:
+    get:
+      description: 仅检测应用进程自身是否存活
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 存活检查
+      tags:
+      - base
+  /readyz:
+    get:
+      description: 返回依赖组件就绪状态
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 就绪检查
       tags:
       - base
 swagger: "2.0"

@@ -22,9 +22,13 @@ import (
 // UserRepo 定义 UserService 依赖的数据访问接口，便于单元测试注入 mock。
 type UserRepo interface {
 	Create(ctx context.Context, u *model.User) error
+	BindRole(ctx context.Context, userID int64, role string) error
+	Restore(ctx context.Context, id int64, hashedPassword, nickname string) (*model.User, error)
 	GetByID(ctx context.Context, id int64) (*model.User, error)
 	GetByUsername(ctx context.Context, name string) (*model.User, error)
+	GetByUsernameWithDeleted(ctx context.Context, name string) (*model.User, error)
 	List(ctx context.Context, offset, limit int) ([]model.User, int64, error)
+	GetPrimaryRole(ctx context.Context, userID int64) (string, error)
 }
 
 // UserService 用户业务。
@@ -50,12 +54,32 @@ func (s *UserService) Register(ctx context.Context, username, password, nickname
 	if err != nil {
 		return nil, err
 	}
+	if existed, err := s.dao.GetByUsernameWithDeleted(ctx, username); err == nil {
+		// Same username exists as soft-deleted record: restore it.
+		if existed.DeletedAt.Valid {
+			restored, err := s.dao.Restore(ctx, existed.ID, string(hash), nickname)
+			if err != nil {
+				return nil, err
+			}
+			if err := s.dao.BindRole(ctx, restored.ID, "user"); err != nil {
+				return nil, err
+			}
+			restored.Password = ""
+			return restored, nil
+		}
+		return nil, errcode.New(errcode.UserExists, errcode.KeyUserExists)
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
 	u := &model.User{
 		Username: username,
 		Password: string(hash),
 		Nickname: nickname,
 	}
 	if err := s.dao.Create(ctx, u); err != nil {
+		return nil, err
+	}
+	if err := s.dao.BindRole(ctx, u.ID, "user"); err != nil {
 		return nil, err
 	}
 	if s.queue != nil {
@@ -125,7 +149,11 @@ func (s *UserService) Login(ctx context.Context, username, password string) (acc
 	if s.jwt == nil {
 		return "", errcode.New(errcode.InternalError, errcode.KeyInternal)
 	}
-	token, err := s.jwt.IssueAccess(u.ID, "user")
+	role, err := s.getPrimaryRole(ctx, u.ID)
+	if err != nil {
+		return "", err
+	}
+	token, err := s.jwt.IssueAccess(u.ID, role)
 	if err != nil {
 		return "", err
 	}
@@ -147,7 +175,11 @@ func (s *UserService) LoginWithRefresh(ctx context.Context, username, password s
 	if s.jwt == nil {
 		return "", "", errcode.New(errcode.InternalError, errcode.KeyInternal)
 	}
-	access, err := s.jwt.IssueAccess(u.ID, "user")
+	role, err := s.getPrimaryRole(ctx, u.ID)
+	if err != nil {
+		return "", "", err
+	}
+	access, err := s.jwt.IssueAccess(u.ID, role)
 	if err != nil {
 		return "", "", err
 	}
@@ -184,7 +216,11 @@ func (s *UserService) RefreshAccess(ctx context.Context, refreshToken string) (s
 		}
 		return "", "", err
 	}
-	access, err := s.jwt.IssueAccess(u.ID, "user")
+	role, err := s.getPrimaryRole(ctx, u.ID)
+	if err != nil {
+		return "", "", err
+	}
+	access, err := s.jwt.IssueAccess(u.ID, role)
 	if err != nil {
 		return "", "", err
 	}
@@ -200,4 +236,19 @@ func (s *UserService) RefreshAccess(ctx context.Context, refreshToken string) (s
 		return "", "", err
 	}
 	return access, newRefresh, nil
+}
+
+func (s *UserService) getPrimaryRole(ctx context.Context, userID int64) (string, error) {
+	role, err := s.dao.GetPrimaryRole(ctx, userID)
+	if err == nil && role != "" {
+		return role, nil
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// Keep backward compatibility for users without role binding yet.
+		return "user", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return "user", nil
 }

@@ -9,7 +9,7 @@
 - 运行方式：单机 Linux + `systemd`
 - 配置来源：`configs/app.prod.yaml` + 系统环境变量（推荐 `EnvironmentFile`）
 - 进程管理：`systemd` 自启动 + 自动重启
-- 可观测性：应用日志 + `/health` + `/metrics`
+- 可观测性：应用日志 + `/livez` + `/readyz` + `/metrics`
 
 ## 2. 目录建议
 
@@ -83,14 +83,15 @@ sudo systemctl status gin-scaffold
 
 ## 5. 健康检查与巡检
 
-- 健康检查：`GET /health`
+- 存活检查：`GET /livez`
+- 就绪检查：`GET /readyz`
 - 指标：`GET /metrics`
 - Swagger：生产建议限制访问来源或仅内网开放
 
 每次发布后至少检查：
 
 1) `systemctl status gin-scaffold` 是否正常
-2) `/health` 返回是否成功
+2) `/readyz` 返回是否成功（依赖就绪）
 3) 核心接口 smoke test 是否通过
 
 ## 6. 发布与回滚

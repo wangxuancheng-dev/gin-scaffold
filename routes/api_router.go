@@ -3,8 +3,8 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 
-	adminhandler "gin-scaffold/api/handler/admin"
 	"gin-scaffold/api/handler"
+	adminhandler "gin-scaffold/api/handler/admin"
 	clienthandler "gin-scaffold/api/handler/client"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
 )
@@ -16,10 +16,11 @@ func registerAPIV1(
 	base *handler.BaseHandler,
 	clientUser *clienthandler.UserHandler,
 	adminUser *adminhandler.UserHandler,
+	adminMenu *adminhandler.MenuHandler,
 	adminOps *adminhandler.OpsHandler,
 	ws *handler.WSHandler,
 	sse *handler.SSEHandler,
 ) {
 	registerClientRoutes(r, jwtMgr, base, clientUser, ws, sse)
-	registerAdminRoutes(r, jwtMgr, adminUser, adminOps)
+	registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps)
 }

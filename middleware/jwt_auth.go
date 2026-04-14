@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 
@@ -13,14 +15,21 @@ import (
 
 const ctxClaims = "jwt_claims"
 
-var rolePermissions = map[string]map[string]bool{
-	"admin": {
-		"db:ping": true,
-		"user:rw": true,
-	},
-	"user": {
-		"user:read": true,
-	},
+var (
+	rbacMu            sync.RWMutex
+	permissionChecker PermissionChecker
+)
+
+// PermissionChecker 支持将权限判断委托到数据库/权限服务。
+type PermissionChecker interface {
+	HasPermission(ctx context.Context, userID int64, role, permission string) (bool, error)
+}
+
+// SetPermissionChecker 设置自定义权限检查器（如基于数据表的 RBAC）。
+func SetPermissionChecker(checker PermissionChecker) {
+	rbacMu.Lock()
+	defer rbacMu.Unlock()
+	permissionChecker = checker
 }
 
 // JWTAuth 校验 Authorization Bearer 访问令牌。
@@ -94,8 +103,24 @@ func RequirePermission(permission string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		policy, ok := rolePermissions[claims.Role]
-		if !ok || !policy[permission] {
+		rbacMu.RLock()
+		checker := permissionChecker
+		rbacMu.RUnlock()
+
+		if checker == nil {
+			response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, "permission checker not configured")
+			c.Abort()
+			return
+		}
+
+		allowed, err := checker.HasPermission(c.Request.Context(), claims.UserID, claims.Role, permission)
+		if err != nil {
+			response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+			c.Abort()
+			return
+		}
+
+		if !allowed {
 			response.FailHTTP(c, http.StatusForbidden, errcode.Forbidden, errcode.KeyForbidden, "forbidden")
 			c.Abort()
 			return

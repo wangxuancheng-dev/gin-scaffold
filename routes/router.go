@@ -22,6 +22,7 @@ type Options struct {
 	Base       *handler.BaseHandler
 	ClientUser *clienthandler.UserHandler
 	AdminUser  *adminhandler.UserHandler
+	AdminMenu  *adminhandler.MenuHandler
 	AdminOps   *adminhandler.OpsHandler
 	WS         *handler.WSHandler
 	SSE        *handler.SSEHandler
@@ -52,10 +53,12 @@ func Build(opts Options) *gin.Engine {
 		middleware.Metrics(r, "gin", opts.Cfg.Metrics.Path)
 	}
 
+	r.GET("/livez", opts.Base.Livez)
+	r.GET("/readyz", opts.Base.Readyz)
 	r.GET("/health", opts.Base.Health)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.AdminOps, opts.WS, opts.SSE)
+	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.AdminMenu, opts.AdminOps, opts.WS, opts.SSE)
 
 	return r
 }

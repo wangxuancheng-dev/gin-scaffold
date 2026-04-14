@@ -34,6 +34,25 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/menus": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-menu"
+                ],
+                "summary": "菜单列表（后台）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/users": {
             "get": {
                 "produces": [
@@ -258,14 +277,55 @@ const docTemplate = `{
         },
         "/health": {
             "get": {
-                "description": "返回各依赖状态",
+                "description": "等价于 /readyz",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "base"
                 ],
-                "summary": "健康检查",
+                "summary": "健康检查（兼容）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/livez": {
+            "get": {
+                "description": "仅检测应用进程自身是否存活",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "base"
+                ],
+                "summary": "存活检查",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz": {
+            "get": {
+                "description": "返回依赖组件就绪状态",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "base"
+                ],
+                "summary": "就绪检查",
                 "responses": {
                     "200": {
                         "description": "OK",

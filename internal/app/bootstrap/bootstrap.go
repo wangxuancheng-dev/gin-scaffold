@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 
-	adminhandler "gin-scaffold/api/handler/admin"
 	"gin-scaffold/api/handler"
+	adminhandler "gin-scaffold/api/handler/admin"
 	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/config"
 	"gin-scaffold/internal/dao"
@@ -18,6 +18,8 @@ import (
 	"gin-scaffold/internal/pkg/snowflake"
 	websocketpkg "gin-scaffold/internal/pkg/websocket"
 	"gin-scaffold/internal/service"
+	"gin-scaffold/internal/service/authz"
+	"gin-scaffold/middleware"
 	"gin-scaffold/pkg/db"
 	"gin-scaffold/pkg/logger"
 	"gin-scaffold/pkg/redis"
@@ -93,7 +95,11 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 
 	jm := jwtpkg.NewManager(&cfg.JWT)
 	userDAO := dao.NewUserDAO(gdb)
+	menuDAO := dao.NewMenuDAO(gdb)
+	authzDAO := dao.NewAuthzDAO(gdb)
+	middleware.SetPermissionChecker(authz.NewDBPermissionChecker(authzDAO))
 	userSvc := service.NewUserService(userDAO, q, jm)
+	menuSvc := service.NewMenuService(menuDAO)
 	hub := websocketpkg.NewHub()
 	wsSvc := service.NewWSService(hub)
 	sseSvc := service.NewSSEService()
@@ -101,6 +107,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	baseH := &handler.BaseHandler{DB: gdb}
 	clientUserH := clienthandler.NewUserHandler(userSvc)
 	adminUserH := adminhandler.NewUserHandler(userSvc)
+	adminMenuH := adminhandler.NewMenuHandler(menuSvc)
 	adminOpsH := adminhandler.NewOpsHandler()
 	wsH := handler.NewWSHandler(wsSvc)
 	sseH := handler.NewSSEHandler(sseSvc)
@@ -111,6 +118,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		Base:       baseH,
 		ClientUser: clientUserH,
 		AdminUser:  adminUserH,
+		AdminMenu:  adminMenuH,
 		AdminOps:   adminOpsH,
 		WS:         wsH,
 		SSE:        sseH,

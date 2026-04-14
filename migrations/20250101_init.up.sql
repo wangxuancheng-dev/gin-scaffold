@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `nickname` VARCHAR(64) DEFAULT '',
   `created_at` DATETIME(3) NULL,
   `updated_at` DATETIME(3) NULL,
+  `deleted_at` DATETIME(3) NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_users_username` (`username`)
+  UNIQUE KEY `uk_users_username` (`username`),
+  KEY `idx_users_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

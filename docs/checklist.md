@@ -35,7 +35,7 @@
 
 ## 5. 上线后即时巡检
 
-- [ ] `GET /health` 返回成功
+- [ ] `GET /livez` 与 `GET /readyz` 返回成功
 - [ ] 核心业务接口 smoke 测试通过
 - [ ] `GET /metrics` 可按预期访问（白名单内可访问）
 - [ ] 观察 10~15 分钟日志，无明显 5xx/panic/连接错误
@@ -54,6 +54,6 @@
 - [ ] 至少执行受影响模块测试（或最小 smoke 测试）
 - [ ] 二进制构建成功：`go build -o bin/server ./cmd/server`
 - [ ] 环境变量自检通过：`sh scripts/deploy/check-prod-env.sh /opt/gin-scaffold/.env.prod`
-- [ ] 发布后立即验证：`/health` + 1~2 个核心接口
+- [ ] 发布后立即验证：`/readyz` + 1~2 个核心接口
 - [ ] 连续观察 10 分钟日志，无 5xx/panic 明显异常
 - [ ] 回滚版本与负责人已明确，必要时可 1 分钟内回退
