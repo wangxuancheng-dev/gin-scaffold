@@ -76,7 +76,7 @@ sudo systemctl status gin-scaffold
 ./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" up
 ```
 
-说明：未显式传 `--dir` 时，迁移目录会按驱动自动选择（`migrations/mysql` 或 `migrations/postgres`，MySQL 兼容回退 `migrations`）。未传 `--session-time-zone` 时，优先读环境变量 **`TIME_ZONE`**，否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移 SQL 中 `NOW()` 语义一致。
+说明：未显式传 `--dir` 时，迁移目录会按驱动自动选择（`migrations/mysql` 或 `migrations/postgres`，MySQL 兼容回退 `migrations`）。未传 `--time-zone` 时，优先读环境变量 **`TIME_ZONE`**，否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移 SQL 中 `NOW()` 语义一致。
 
 迁移建议：
 
@@ -92,10 +92,10 @@ sudo systemctl status gin-scaffold
 ./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" down
 ```
 
-如需覆盖会话时区（与 `configs` 中 `db.session_time_zone` 独立，仅影响该次 CLI）：
+如需覆盖会话时区（与 `configs` 中 `db.time_zone` 独立，仅影响该次 CLI）：
 
 ```bash
-./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" --session-time-zone "UTC" up
+./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" --time-zone "UTC" up
 ```
 
 ## 4. 环境变量建议
@@ -111,12 +111,12 @@ sudo systemctl status gin-scaffold
 可选：
 
 - `OTEL_EXPORTER_OTLP_ENDPOINT=...`
-- `TIME_ZONE`（如 `UTC`；供 `cmd/migrate` 与 Viper 覆盖 `db.session_time_zone`）
+- `TIME_ZONE`（如 `UTC`；供 `cmd/migrate` 与 Viper 覆盖 `db.time_zone`）
 
 时区建议：
 
-- 应用：`configs` 中 `db.session_time_zone` 默认 `UTC`，并在连接后执行会话时区；GORM 自动时间戳与该时区对齐；可用环境变量 **`TIME_ZONE`** 覆盖
-- MySQL：DSN 仍建议 `loc=UTC`（Go 端解析）；容器/实例层建议 `default_time_zone` 与之一致（本仓库 `docker-compose` 已对 MySQL 设置 `--default-time-zone=+00:00`）
+- 应用：`configs` 中 `db.time_zone` 默认 `UTC`，并在连接后执行会话时区；GORM 自动时间戳与该时区对齐；可用环境变量 **`TIME_ZONE`** 覆盖
+- MySQL：DSN 不必手写 `loc=`，应用与 `cmd/migrate` 会按 `TIME_ZONE` / `db.time_zone` 注入驱动 Loc；容器/实例层建议 `default_time_zone` 与之一致（本仓库 `docker-compose` 已对 MySQL 设置 `--default-time-zone=+00:00`）
 - API/前端展示时再转换到业务时区（如 `Asia/Shanghai`）
 
 ## 5. 健康检查与巡检

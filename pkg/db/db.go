@@ -32,19 +32,24 @@ func Init(cfg *config.DBConfig) (*gorm.DB, error) {
 			Colorful:                  false,
 		},
 	)
+	tz := NormalizeTimeZone(cfg.TimeZone)
+	loc, err := LocationForTimeZone(tz)
+	if err != nil {
+		return nil, fmt.Errorf("db: time_zone: %w", err)
+	}
+
 	var dialector gorm.Dialector
 	switch cfg.Driver {
 	case "postgres", "pg":
 		dialector = postgres.Open(cfg.DSN)
 	case "mysql", "":
-		dialector = mysql.Open(cfg.DSN)
+		mysqlDSN, err := NormalizeMySQLDSN(cfg.DSN, loc)
+		if err != nil {
+			return nil, err
+		}
+		dialector = mysql.Open(mysqlDSN)
 	default:
 		return nil, fmt.Errorf("db: unsupported driver %s", cfg.Driver)
-	}
-	sessionTZ := NormalizeSessionTimeZone(cfg.SessionTimeZone)
-	loc, err := LocationForSessionTimeZone(sessionTZ)
-	if err != nil {
-		return nil, fmt.Errorf("db: session_time_zone: %w", err)
 	}
 	db, err := gorm.Open(dialector, &gorm.Config{
 		Logger:  gormLog,
@@ -53,8 +58,8 @@ func Init(cfg *config.DBConfig) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gorm open: %w", err)
 	}
-	if err = ApplySessionTimeZone(db, cfg.Driver, sessionTZ); err != nil {
-		return nil, fmt.Errorf("db: set session time zone: %w", err)
+	if err = ApplyTimeZone(db, cfg.Driver, tz); err != nil {
+		return nil, fmt.Errorf("db: set time zone: %w", err)
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
@@ -72,7 +77,11 @@ func Init(cfg *config.DBConfig) (*gorm.DB, error) {
 			case "postgres", "pg":
 				replicas = append(replicas, postgres.Open(rep))
 			default:
-				replicas = append(replicas, mysql.Open(rep))
+				repDSN, err := NormalizeMySQLDSN(rep, loc)
+				if err != nil {
+					return nil, fmt.Errorf("mysql replica dsn: %w", err)
+				}
+				replicas = append(replicas, mysql.Open(repDSN))
 			}
 		}
 		if err := db.Use(dbresolver.Register(dbresolver.Config{

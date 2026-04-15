@@ -26,7 +26,7 @@ func main() {
 			&cli.StringFlag{Name: "profile", Usage: "optional profile used by .env.<env>.<profile>"},
 			&cli.StringFlag{Name: "driver", Value: "mysql", Usage: "mysql|postgres"},
 			&cli.StringFlag{Name: "dsn", Usage: "database dsn, fallback to DB_DSN env"},
-			&cli.StringFlag{Name: "session-time-zone", Usage: "session TZ: mysql SET time_zone / pg SET TIME ZONE; env TIME_ZONE; default UTC"},
+			&cli.StringFlag{Name: "time-zone", Usage: "mysql SET time_zone / pg SET TIME ZONE; env TIME_ZONE; default UTC"},
 			&cli.StringFlag{Name: "dir", Usage: "migration directory, default auto: ./migrations/<driver>"},
 		},
 		Commands: []*cli.Command{
@@ -35,7 +35,7 @@ func main() {
 				Action: func(c *cli.Context) error {
 					loadDotEnv(c.String("env"), c.String("profile"))
 					driver := normalizeDriver(c.String("driver"))
-					db, err := openDB(driver, resolveDSN(c.String("dsn")), resolveSessionTimeZone(c.String("session-time-zone")))
+					db, err := openDB(driver, resolveDSN(c.String("dsn")), resolveTimeZone(c.String("time-zone")))
 					if err != nil {
 						return err
 					}
@@ -56,7 +56,7 @@ func main() {
 				Action: func(c *cli.Context) error {
 					loadDotEnv(c.String("env"), c.String("profile"))
 					driver := normalizeDriver(c.String("driver"))
-					db, err := openDB(driver, resolveDSN(c.String("dsn")), resolveSessionTimeZone(c.String("session-time-zone")))
+					db, err := openDB(driver, resolveDSN(c.String("dsn")), resolveTimeZone(c.String("time-zone")))
 					if err != nil {
 						return err
 					}
@@ -87,7 +87,7 @@ func resolveDSN(flagDSN string) string {
 	return os.Getenv("DB_DSN")
 }
 
-func resolveSessionTimeZone(cliVal string) string {
+func resolveTimeZone(cliVal string) string {
 	if strings.TrimSpace(cliVal) != "" {
 		return strings.TrimSpace(cliVal)
 	}
@@ -148,9 +148,19 @@ func openDB(driver, dsn, sessionTZ string) (*gorm.DB, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("empty dsn: use --dsn or set DB_DSN")
 	}
+	tzNorm := scaffolddb.NormalizeTimeZone(sessionTZ)
+	loc, err := scaffolddb.LocationForTimeZone(tzNorm)
+	if err != nil {
+		return nil, err
+	}
+
 	var dialector gorm.Dialector
 	switch driver {
 	case "mysql":
+		dsn, err = scaffolddb.NormalizeMySQLDSN(dsn, loc)
+		if err != nil {
+			return nil, err
+		}
 		dialector = mysql.Open(dsn)
 	case "postgres":
 		dialector = postgres.Open(dsn)
@@ -168,8 +178,8 @@ func openDB(driver, dsn, sessionTZ string) (*gorm.DB, error) {
 	if err = sqlDB.Ping(); err != nil {
 		return nil, err
 	}
-	if err = scaffolddb.ApplySessionTimeZone(db, driver, sessionTZ); err != nil {
-		return nil, fmt.Errorf("set session time zone: %w", err)
+	if err = scaffolddb.ApplyTimeZone(db, driver, sessionTZ); err != nil {
+		return nil, fmt.Errorf("set time zone: %w", err)
 	}
 	return db, nil
 }

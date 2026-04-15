@@ -24,7 +24,7 @@ go mod tidy
 
 ```env
 APP_ENV=dev
-DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=UTC
+DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True
 TIME_ZONE=UTC
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
@@ -42,8 +42,9 @@ go run ./cmd/migrate --env dev up
 说明：
 
 - `cmd/migrate` 在 `--env dev` 下会自动加载 `.env/.env.local`，并读取 `DB_DSN`
+- MySQL 的 `DB_DSN` **不必再写 `loc=`**：`parseTime` 仍建议保留；驱动 **`Loc`** 与 **`TIME_ZONE` / `--time-zone`** 一致，由代码注入（与 HTTP 服务行为相同）
 - 如需临时覆盖可显式传 `--dsn`
-- 数据库**会话时区**：未传 `--session-time-zone` 时读环境变量 **`TIME_ZONE`**（如 `UTC`、`Asia/Shanghai`、`+08:00`），否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移里 `NOW()` 一致；应用侧见 `configs` 的 `db.session_time_zone`（同样可用 **`TIME_ZONE`** 覆盖）。HTTP/Worker 启动时会把进程 **`time.Local`** 设成与该配置一致，**Gin 里没有单独时区开关**，普通 **`time.Now()`**、日志时间等与 **GORM 自动时间戳** 同一套时区语义
+- 数据库**会话时区**：未传 `--time-zone` 时读环境变量 **`TIME_ZONE`**（如 `UTC`、`Asia/Shanghai`、`+08:00`），否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移里 `NOW()` 一致；应用侧见 `configs` 的 **`db.time_zone`**（同样可用 **`TIME_ZONE`** 覆盖）。HTTP/Worker 启动时会把进程 **`time.Local`** 设成与该配置一致，**Gin 里没有单独时区开关**，普通 **`time.Now()`**、日志时间等与 **GORM 自动时间戳** 同一套时区语义
 - 迁移目录默认按驱动自动选择：
   - MySQL: `migrations/mysql`（兼容回退 `migrations`）
   - PostgreSQL: `migrations/postgres`
@@ -94,7 +95,7 @@ go mod tidy
 # 2) 准备本地配置（按需修改 DB/Redis/JWT）
 @"
 APP_ENV=dev
-DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=UTC
+DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True
 TIME_ZONE=UTC
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
@@ -168,7 +169,7 @@ go run ./cmd/server server --env dev
 加载顺序按上面从前到后合并，且**不会覆盖已有系统环境变量**。  
 因此多人开发时，建议每个人只维护自己的 `.env.local`，不改 `configs/app.yaml`。
 
-时间建议：数据库统一使用 UTC（例如 MySQL DSN 用 `loc=UTC`），展示层再按业务时区（如北京时间）转换。
+时间建议：MySQL 连接串不必再写 `loc=`，驱动 Loc 与 `TIME_ZONE` / `db.time_zone` 一致；存库与展示策略仍建议在业务层约定（常见为库内 UTC、接口再转本地）。
 
 `test/prod` 建议由 CI、容器或部署平台直接注入环境变量，不依赖 `.env` 文件。
 

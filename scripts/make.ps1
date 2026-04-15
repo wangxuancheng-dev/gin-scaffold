@@ -35,11 +35,11 @@ switch ($Target) {
     "run-worker" { go run ./cmd/server worker --env $Env --profile $Profile }
     "migrate-up" {
         if ([string]::IsNullOrWhiteSpace($Dsn)) { throw "Dsn is required for migrate-up" }
-        go run ./cmd/migrate up --driver $Driver --dsn $Dsn --session-time-zone $TimeZone
+        go run ./cmd/migrate up --driver $Driver --dsn $Dsn --time-zone $TimeZone
     }
     "migrate-down" {
         if ([string]::IsNullOrWhiteSpace($Dsn)) { throw "Dsn is required for migrate-down" }
-        go run ./cmd/migrate down --driver $Driver --dsn $Dsn --session-time-zone $TimeZone
+        go run ./cmd/migrate down --driver $Driver --dsn $Dsn --time-zone $TimeZone
     }
     "test-unit" { go test ./tests/unit/... }
     "test" { go test ./... }

@@ -37,10 +37,10 @@ run-worker:
 	go run $(CMD_DIR) worker --env $(ENV) --profile $(PROFILE)
 
 migrate-up:
-	go run ./cmd/migrate up --driver "$(DRIVER)" --dsn "$(DSN)" --session-time-zone "$(TIME_ZONE)"
+	go run ./cmd/migrate up --driver "$(DRIVER)" --dsn "$(DSN)" --time-zone "$(TIME_ZONE)"
 
 migrate-down:
-	go run ./cmd/migrate down --driver "$(DRIVER)" --dsn "$(DSN)" --session-time-zone "$(TIME_ZONE)"
+	go run ./cmd/migrate down --driver "$(DRIVER)" --dsn "$(DSN)" --time-zone "$(TIME_ZONE)"
 
 test-unit:
 	go test ./tests/unit/...

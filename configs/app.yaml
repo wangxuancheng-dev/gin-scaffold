@@ -22,8 +22,8 @@ log:
 
 db:
   driver: mysql
-  dsn: "root:root@tcp(mysql:3306)/scaffold?charset=utf8mb4&parseTime=True&loc=UTC"
-  session_time_zone: "UTC"
+  dsn: "root:root@tcp(mysql:3306)/scaffold?charset=utf8mb4&parseTime=True"
+  time_zone: "UTC"
   replicas: []
   max_open_conns: 50
   max_idle_conns: 10
