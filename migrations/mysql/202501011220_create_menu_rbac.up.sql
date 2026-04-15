@@ -25,14 +25,14 @@ CREATE TABLE IF NOT EXISTS `role_menus` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `menus` (`id`, `name`, `path`, `perm_code`, `sort`, `created_at`, `updated_at`) VALUES
-  (1, '用户管理', '/admin/users', 'user:rw', 10, NOW(3), NOW(3)),
-  (2, '系统状态', '/admin/system', 'db:ping', 20, NOW(3), NOW(3)),
-  (3, '菜单管理', '/admin/menus', 'menu:read', 30, NOW(3), NOW(3));
+  (1, '用户管理', '/admin/users', 'user:rw', 10, NOW(), NOW()),
+  (2, '系统状态', '/admin/system', 'db:ping', 20, NOW(), NOW()),
+  (3, '菜单管理', '/admin/menus', 'menu:read', 30, NOW(), NOW());
 
 INSERT IGNORE INTO `role_menus` (`role`, `menu_id`, `created_at`, `updated_at`) VALUES
-  ('admin', 1, NOW(3), NOW(3)),
-  ('admin', 2, NOW(3), NOW(3)),
-  ('admin', 3, NOW(3), NOW(3));
+  ('admin', 1, NOW(), NOW()),
+  ('admin', 2, NOW(), NOW()),
+  ('admin', 3, NOW(), NOW());
 
 INSERT IGNORE INTO `role_permissions` (`role`, `permission`, `created_at`, `updated_at`) VALUES
-  ('admin', 'menu:read', NOW(3), NOW(3));
+  ('admin', 'menu:read', NOW(), NOW());

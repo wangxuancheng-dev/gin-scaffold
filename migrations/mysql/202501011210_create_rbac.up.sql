@@ -35,10 +35,10 @@ CREATE TABLE IF NOT EXISTS `role_permissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `roles` (`code`, `name`, `created_at`, `updated_at`) VALUES
-  ('admin', '管理员', NOW(3), NOW(3)),
-  ('user', '普通用户', NOW(3), NOW(3));
+  ('admin', '管理员', NOW(), NOW()),
+  ('user', '普通用户', NOW(), NOW());
 
 INSERT IGNORE INTO `role_permissions` (`role`, `permission`, `created_at`, `updated_at`) VALUES
-  ('admin', 'db:ping', NOW(3), NOW(3)),
-  ('admin', 'user:rw', NOW(3), NOW(3)),
-  ('user', 'user:read', NOW(3), NOW(3));
+  ('admin', 'db:ping', NOW(), NOW()),
+  ('admin', 'user:rw', NOW(), NOW()),
+  ('user', 'user:read', NOW(), NOW());
