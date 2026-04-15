@@ -42,6 +42,9 @@ go run ./cmd/migrate --env dev up
 
 - `cmd/migrate` 在 `--env dev` 下会自动加载 `.env/.env.local`，并读取 `DB_DSN`
 - 如需临时覆盖可显式传 `--dsn`
+- 迁移目录默认按驱动自动选择：
+  - MySQL: `migrations/mysql`（兼容回退 `migrations`）
+  - PostgreSQL: `migrations/postgres`
 
 PostgreSQL 示例（显式传参）：
 
@@ -270,9 +273,9 @@ go run ./cmd/gen crud --module order --table orders
 - 管理端 RBAC：`/api/v1/admin/*` 要求 `role=admin` + `db:ping` 权限
 - RBAC 权限来源：数据库 `roles` / `user_roles` / `role_permissions`（无配置兜底）
 - 后台菜单可见性：`menus` + `role_menus`
-- RBAC 数据表：`roles`、`user_roles`、`role_permissions`（见 `migrations/202501011210_create_rbac.up.sql`）
-- 管理员角色初始化：`migrations/202501011230_seed_admin_role.up.sql`（按用户名 `admin` 绑定）
-- 管理员账号初始化：`migrations/202501011240_seed_admin_user.up.sql`（默认密码 `Admin@123456`，上线后立刻修改）
+- RBAC 数据表：`roles`、`user_roles`、`role_permissions`（见 `migrations/mysql/202501011210_create_rbac.up.sql`）
+- 管理员角色初始化：`migrations/mysql/202501011230_seed_admin_role.up.sql`（按用户名 `admin` 绑定）
+- 管理员账号初始化：`migrations/mysql/202501011240_seed_admin_user.up.sql`（默认密码 `Admin@123456`，上线后立刻修改）
 - 环境变量模板：`.env.example`
 - `metrics.path` 与 `i18n` 配置项已接入运行时行为
 

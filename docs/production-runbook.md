@@ -76,6 +76,8 @@ sudo systemctl status gin-scaffold
 ./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" up
 ```
 
+说明：未显式传 `--dir` 时，迁移目录会按驱动自动选择（`migrations/mysql` 或 `migrations/postgres`，MySQL 兼容回退 `migrations`）。
+
 迁移建议：
 
 - 先在预发/影子库验证 migration 可执行与耗时

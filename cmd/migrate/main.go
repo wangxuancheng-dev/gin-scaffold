@@ -24,18 +24,23 @@ func main() {
 			&cli.StringFlag{Name: "profile", Usage: "optional profile used by .env.<env>.<profile>"},
 			&cli.StringFlag{Name: "driver", Value: "mysql", Usage: "mysql|postgres"},
 			&cli.StringFlag{Name: "dsn", Usage: "database dsn, fallback to DB_DSN env"},
-			&cli.StringFlag{Name: "dir", Value: "./migrations", Usage: "migration directory"},
+			&cli.StringFlag{Name: "dir", Usage: "migration directory, default auto: ./migrations/<driver>"},
 		},
 		Commands: []*cli.Command{
 			{
 				Name: "up",
 				Action: func(c *cli.Context) error {
 					loadDotEnv(c.String("env"), c.String("profile"))
-					db, err := openDB(c.String("driver"), resolveDSN(c.String("dsn")))
+					driver := normalizeDriver(c.String("driver"))
+					db, err := openDB(driver, resolveDSN(c.String("dsn")))
 					if err != nil {
 						return err
 					}
-					m := buildMigrator(db, c.String("dir"))
+					dir, err := resolveMigrationDir(c.String("dir"), driver)
+					if err != nil {
+						return err
+					}
+					m := buildMigrator(db, dir)
 					if err = m.Migrate(); err != nil {
 						return err
 					}
@@ -47,11 +52,16 @@ func main() {
 				Name: "down",
 				Action: func(c *cli.Context) error {
 					loadDotEnv(c.String("env"), c.String("profile"))
-					db, err := openDB(c.String("driver"), resolveDSN(c.String("dsn")))
+					driver := normalizeDriver(c.String("driver"))
+					db, err := openDB(driver, resolveDSN(c.String("dsn")))
 					if err != nil {
 						return err
 					}
-					m := buildMigrator(db, c.String("dir"))
+					dir, err := resolveMigrationDir(c.String("dir"), driver)
+					if err != nil {
+						return err
+					}
+					m := buildMigrator(db, dir)
 					if err = m.RollbackLast(); err != nil {
 						return err
 					}
@@ -72,6 +82,34 @@ func resolveDSN(flagDSN string) string {
 		return flagDSN
 	}
 	return os.Getenv("DB_DSN")
+}
+
+func normalizeDriver(driver string) string {
+	switch strings.ToLower(strings.TrimSpace(driver)) {
+	case "pg":
+		return "postgres"
+	case "postgres":
+		return "postgres"
+	default:
+		return "mysql"
+	}
+}
+
+func resolveMigrationDir(dirFlag, driver string) (string, error) {
+	if strings.TrimSpace(dirFlag) != "" {
+		return dirFlag, nil
+	}
+	candidate := filepath.Join("migrations", driver)
+	if st, err := os.Stat(candidate); err == nil && st.IsDir() {
+		return candidate, nil
+	}
+	// Backward compatibility: existing projects may still store mysql sql in ./migrations.
+	if driver == "mysql" {
+		if st, err := os.Stat("migrations"); err == nil && st.IsDir() {
+			return "migrations", nil
+		}
+	}
+	return "", fmt.Errorf("migration dir not found for driver=%s, expected: %s", driver, candidate)
 }
 
 func loadDotEnv(env, profile string) {
