@@ -26,6 +26,7 @@ type Options struct {
 	AdminUser  *adminhandler.UserHandler
 	AdminMenu  *adminhandler.MenuHandler
 	AdminOps   *adminhandler.OpsHandler
+	AdminTask  *adminhandler.TaskHandler
 	WS         *handler.WSHandler
 	SSE        *handler.SSEHandler
 	TraceOn    bool
@@ -78,7 +79,7 @@ func Build(opts Options) *gin.Engine {
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.AdminMenu, opts.AdminOps, opts.WS, opts.SSE)
+	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.AdminMenu, opts.AdminOps, opts.AdminTask, opts.WS, opts.SSE)
 
 	return r
 }

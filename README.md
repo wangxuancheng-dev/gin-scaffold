@@ -55,6 +55,11 @@ go run ./cmd/migrate --env dev up
 - 支持自定义日志通道：
   - 在 `log.channels` 下按名称配置 `level`、`rotation_mode`（`file` 可选；可覆写 `max_size_mb/max_backups/max_age_days/compress`）
   - 代码中可用 `logger.Channel("<channel_name>", "<file_name>")` 动态指定文件名（未配置时自动回退主日志器）
+- 支持 cron 示例任务（`robfig/cron/v3`）：
+  - 配置在 `scheduler`：`enabled`、`with_seconds`、`log_retention_days`、`lock_enabled`、`lock_ttl_seconds`、`lock_prefix`
+  - 调度规则来自数据库任务表（每条任务有独立 `spec` 与 `command`）
+  - 执行日志写入 `scheduled_task_logs`，可通过后台接口查询；支持按保留天数自动清理
+  - 多实例部署时通过 Redis 分布式锁防止同一任务被多台服务器重复执行（并带本机防重入）
 - 如需临时覆盖可显式传 `--dsn`
 - 数据库**会话时区**：未传 `--time-zone` 时读环境变量 **`TIME_ZONE`**（如 `UTC`、`Asia/Shanghai`、`+08:00`），否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移里 `NOW()` 一致；应用侧见 `configs` 的 **`db.time_zone`**（同样可用 **`TIME_ZONE`** 覆盖）。HTTP/Worker 启动时会把进程 **`time.Local`** 设成与该配置一致，**Gin 里没有单独时区开关**，普通 **`time.Now()`**、日志时间等与 **GORM 自动时间戳** 同一套时区语义
 - 迁移目录默认按驱动自动选择：
@@ -299,6 +304,13 @@ go run ./cmd/gen crud --module order --table orders
   - `PUT /api/v1/admin/users/{id}`：`user:update`
   - `DELETE /api/v1/admin/users/{id}`：`user:delete`
   - `GET /api/v1/admin/users/export`：`user:export`
+- 任务中心权限矩阵：
+  - `GET /api/v1/admin/tasks`、`GET /api/v1/admin/tasks/{id}/logs`：`task:read`
+  - `POST /api/v1/admin/tasks`：`task:create`
+  - `PUT /api/v1/admin/tasks/{id}`：`task:update`
+  - `DELETE /api/v1/admin/tasks/{id}`：`task:delete`
+  - `POST /api/v1/admin/tasks/{id}/toggle`：`task:toggle`
+  - `POST /api/v1/admin/tasks/{id}/run`：`task:run`
 - 管理员角色初始化：`migrations/mysql/seed/202501011230_seed_admin_role.up.sql`（按用户名 `admin` 绑定）
 - 管理员账号初始化：`migrations/mysql/seed/202501011240_seed_admin_user.up.sql`（默认密码 `Admin@123456`，上线后立刻修改）
 - 环境变量模板：`.env.example`

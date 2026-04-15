@@ -9,5 +9,11 @@ INSERT IGNORE INTO `role_permissions` (`role`, `permission`, `created_at`, `upda
   ('admin', 'user:update', NOW(), NOW()),
   ('admin', 'user:delete', NOW(), NOW()),
   ('admin', 'user:export', NOW(), NOW()),
+  ('admin', 'task:read', NOW(), NOW()),
+  ('admin', 'task:create', NOW(), NOW()),
+  ('admin', 'task:update', NOW(), NOW()),
+  ('admin', 'task:delete', NOW(), NOW()),
+  ('admin', 'task:toggle', NOW(), NOW()),
+  ('admin', 'task:run', NOW(), NOW()),
   ('admin', 'menu:read', NOW(), NOW()),
   ('user', 'user:read', NOW(), NOW());

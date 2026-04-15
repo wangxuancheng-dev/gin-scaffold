@@ -14,6 +14,7 @@ import (
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
 	jobhandler "gin-scaffold/internal/job/handler"
+	"gin-scaffold/internal/job/scheduler"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
 	"gin-scaffold/internal/pkg/snowflake"
 	websocketpkg "gin-scaffold/internal/pkg/websocket"
@@ -99,11 +100,13 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	jm := jwtpkg.NewManager(&cfg.JWT)
 	userDAO := dao.NewUserDAO(gdb)
 	menuDAO := dao.NewMenuDAO(gdb)
+	taskDAO := dao.NewScheduledTaskDAO(gdb)
 	authzDAO := dao.NewAuthzDAO(gdb)
 	middleware.SetPermissionChecker(authz.NewDBPermissionChecker(authzDAO, cfg.RBAC.SuperAdminUserID))
 	middleware.SetSuperAdminUserID(cfg.RBAC.SuperAdminUserID)
 	userSvc := service.NewUserService(userDAO, q, jm, cfg.RBAC.SuperAdminUserID)
 	menuSvc := service.NewMenuService(menuDAO)
+	taskSvc := service.NewScheduledTaskService(taskDAO)
 	hub := websocketpkg.NewHub()
 	wsSvc := service.NewWSService(hub)
 	sseSvc := service.NewSSEService()
@@ -113,8 +116,16 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	adminUserH := adminhandler.NewUserHandler(userSvc)
 	adminMenuH := adminhandler.NewMenuHandler(menuSvc)
 	adminOpsH := adminhandler.NewOpsHandler()
+	adminTaskH := adminhandler.NewTaskHandler(taskSvc)
 	wsH := handler.NewWSHandler(wsSvc)
 	sseH := handler.NewSSEHandler(sseSvc)
+
+	stopTaskScheduler, err := scheduler.StartTaskScheduler(taskSvc, cfg.Scheduler)
+	if err != nil {
+		runCleanups(context.Background(), cleanups)
+		return nil, fmt.Errorf("task scheduler: %w", err)
+	}
+	cleanups = append(cleanups, func(context.Context) { stopTaskScheduler() })
 
 	engine := routes.Build(routes.Options{
 		Cfg:        cfg,
@@ -124,6 +135,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		AdminUser:  adminUserH,
 		AdminMenu:  adminMenuH,
 		AdminOps:   adminOpsH,
+		AdminTask:  adminTaskH,
 		WS:         wsH,
 		SSE:        sseH,
 		TraceOn:    cfg.Trace.Enabled,

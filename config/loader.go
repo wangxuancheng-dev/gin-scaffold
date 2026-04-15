@@ -145,6 +145,8 @@ func bindEnvKeys(v *viper.Viper) {
 		"limiter.ip_rps", "limiter.ip_burst", "limiter.route_rps", "limiter.route_burst",
 		"snowflake.node",
 		"rbac.super_admin_user_id",
+		"scheduler.enabled", "scheduler.with_seconds", "scheduler.log_retention_days",
+		"scheduler.lock_enabled", "scheduler.lock_ttl_seconds", "scheduler.lock_prefix",
 	}
 	for _, k := range keys {
 		_ = v.BindEnv(k)

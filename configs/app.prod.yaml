@@ -107,3 +107,11 @@ cors:
 
 rbac:
   super_admin_user_id: 1
+
+scheduler:
+  enabled: false
+  with_seconds: false
+  log_retention_days: 30
+  lock_enabled: true
+  lock_ttl_seconds: 300
+  lock_prefix: "scheduler:task:lock:"

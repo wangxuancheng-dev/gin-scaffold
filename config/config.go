@@ -19,6 +19,7 @@ type App struct {
 	Snowflake SnowflakeConfig `mapstructure:"snowflake"`
 	CORS      CORSConfig      `mapstructure:"cors"`
 	RBAC      RBACConfig      `mapstructure:"rbac"`
+	Scheduler SchedulerConfig `mapstructure:"scheduler"`
 }
 
 // HTTPConfig HTTP 服务监听与超时配置。
@@ -148,4 +149,14 @@ type CORSConfig struct {
 // RBACConfig 权限相关配置。
 type RBACConfig struct {
 	SuperAdminUserID int64 `mapstructure:"super_admin_user_id"`
+}
+
+// SchedulerConfig cron 定时任务配置（robfig/cron）。
+type SchedulerConfig struct {
+	Enabled          bool   `mapstructure:"enabled"`            // 是否启用数据库任务调度器
+	WithSeconds      bool   `mapstructure:"with_seconds"`       // 是否启用秒级字段（6 段）
+	LogRetentionDays int    `mapstructure:"log_retention_days"` // 任务执行日志保留天数，<=0 表示不清理
+	LockEnabled      bool   `mapstructure:"lock_enabled"`       // 多实例防重：是否启用 Redis 分布式锁
+	LockTTLSeconds   int    `mapstructure:"lock_ttl_seconds"`   // 分布式锁 TTL（秒）
+	LockPrefix       string `mapstructure:"lock_prefix"`        // 分布式锁 key 前缀
 }

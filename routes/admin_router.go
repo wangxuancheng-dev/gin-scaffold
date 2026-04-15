@@ -8,7 +8,7 @@ import (
 	"gin-scaffold/middleware"
 )
 
-func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler, menu *adminhandler.MenuHandler, ops *adminhandler.OpsHandler) {
+func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler, menu *adminhandler.MenuHandler, ops *adminhandler.OpsHandler, task *adminhandler.TaskHandler) {
 	if jwtMgr == nil {
 		return
 	}
@@ -24,4 +24,11 @@ func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandl
 	admin.GET("/users/export", middleware.RequirePermission("user:export"), user.Export)
 	admin.GET("/menus", middleware.RequirePermission("menu:read"), menu.ListMine)
 	admin.GET("/dbping", middleware.RequirePermission("db:ping"), ops.DBPing)
+	admin.GET("/tasks", middleware.RequirePermission("task:read"), task.List)
+	admin.POST("/tasks", middleware.RequirePermission("task:create"), task.Create)
+	admin.PUT("/tasks/:id", middleware.RequirePermission("task:update"), task.Update)
+	admin.DELETE("/tasks/:id", middleware.RequirePermission("task:delete"), task.Delete)
+	admin.POST("/tasks/:id/toggle", middleware.RequirePermission("task:toggle"), task.Toggle)
+	admin.POST("/tasks/:id/run", middleware.RequirePermission("task:run"), task.RunNow)
+	admin.GET("/tasks/:id/logs", middleware.RequirePermission("task:read"), task.Logs)
 }
