@@ -13,7 +13,7 @@ RUN apk add --no-cache ca-certificates tzdata
 COPY --from=build /out/server /app/server
 COPY configs /app/configs
 COPY i18n /app/i18n
-ENV TZ=Asia/Shanghai
+ENV TZ=UTC
 WORKDIR /app
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]

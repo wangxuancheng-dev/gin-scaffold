@@ -4,6 +4,11 @@ CMD_DIR := ./cmd/server
 ENV ?= dev
 PROFILE ?=
 
+DRIVER ?= mysql
+TIME_ZONE ?= UTC
+TZ ?= UTC
+export TZ
+
 .PHONY: help tidy build run run-worker migrate-up migrate-down test test-unit swagger clean
 
 help:
@@ -12,8 +17,8 @@ help:
 	@echo "  make build        - build server binary"
 	@echo "  make run          - run HTTP server (ENV=dev/test/prod PROFILE=order)"
 	@echo "  make run-worker   - run Asynq worker (ENV/PROFILE)"
-	@echo "  make migrate-up   - run DB migration up (set DSN)"
-	@echo "  make migrate-down - run DB migration down one step (set DSN)"
+	@echo "  make migrate-up   - run DB migration up (set DSN; optional DRIVER, TIME_ZONE for DB session; shell TZ defaults to UTC)"
+	@echo "  make migrate-down - run DB migration down one step (set DSN; optional DRIVER, TIME_ZONE for DB session; shell TZ defaults to UTC)"
 	@echo "  make test-unit    - run tests under tests/unit"
 	@echo "  make test         - run all tests"
 	@echo "  make swagger      - generate swagger docs"
@@ -32,10 +37,10 @@ run-worker:
 	go run $(CMD_DIR) worker --env $(ENV) --profile $(PROFILE)
 
 migrate-up:
-	go run ./cmd/migrate up --driver "$(DRIVER)" --dsn "$(DSN)"
+	go run ./cmd/migrate up --driver "$(DRIVER)" --dsn "$(DSN)" --session-time-zone "$(TIME_ZONE)"
 
 migrate-down:
-	go run ./cmd/migrate down --driver "$(DRIVER)" --dsn "$(DSN)"
+	go run ./cmd/migrate down --driver "$(DRIVER)" --dsn "$(DSN)" --session-time-zone "$(TIME_ZONE)"
 
 test-unit:
 	go test ./tests/unit/...

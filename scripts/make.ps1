@@ -5,7 +5,8 @@ param(
     [string]$Env = "dev",
     [string]$Profile = "",
     [string]$Dsn = "",
-    [string]$Driver = ""
+    [string]$Driver = "mysql",
+    [string]$TimeZone = "UTC"
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,8 +19,8 @@ switch ($Target) {
         Write-Host "  .\scripts\make.ps1 -Target build"
         Write-Host "  .\scripts\make.ps1 -Target run -Env dev -Profile order"
         Write-Host "  .\scripts\make.ps1 -Target run-worker -Env dev -Profile order"
-        Write-Host "  .\scripts\make.ps1 -Target migrate-up -Driver mysql -Dsn <database_dsn>"
-        Write-Host "  .\scripts\make.ps1 -Target migrate-down -Driver mysql -Dsn <database_dsn>"
+        Write-Host "  .\scripts\make.ps1 -Target migrate-up -Dsn <database_dsn> [-Driver mysql] [-TimeZone UTC]"
+        Write-Host "  .\scripts\make.ps1 -Target migrate-down -Dsn <database_dsn> [-Driver mysql] [-TimeZone UTC]"
         Write-Host "  .\scripts\make.ps1 -Target test-unit"
         Write-Host "  .\scripts\make.ps1 -Target test"
         Write-Host "  .\scripts\make.ps1 -Target swagger"
@@ -34,13 +35,11 @@ switch ($Target) {
     "run-worker" { go run ./cmd/server worker --env $Env --profile $Profile }
     "migrate-up" {
         if ([string]::IsNullOrWhiteSpace($Dsn)) { throw "Dsn is required for migrate-up" }
-        if ([string]::IsNullOrWhiteSpace($Driver)) { throw "Driver is required for migrate-up" }
-        go run ./cmd/migrate up --driver $Driver --dsn $Dsn
+        go run ./cmd/migrate up --driver $Driver --dsn $Dsn --session-time-zone $TimeZone
     }
     "migrate-down" {
         if ([string]::IsNullOrWhiteSpace($Dsn)) { throw "Dsn is required for migrate-down" }
-        if ([string]::IsNullOrWhiteSpace($Driver)) { throw "Driver is required for migrate-down" }
-        go run ./cmd/migrate down --driver $Driver --dsn $Dsn
+        go run ./cmd/migrate down --driver $Driver --dsn $Dsn --session-time-zone $TimeZone
     }
     "test-unit" { go test ./tests/unit/... }
     "test" { go test ./... }

@@ -41,11 +41,20 @@ func Init(cfg *config.DBConfig) (*gorm.DB, error) {
 	default:
 		return nil, fmt.Errorf("db: unsupported driver %s", cfg.Driver)
 	}
+	sessionTZ := NormalizeSessionTimeZone(cfg.SessionTimeZone)
+	loc, err := LocationForSessionTimeZone(sessionTZ)
+	if err != nil {
+		return nil, fmt.Errorf("db: session_time_zone: %w", err)
+	}
 	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: gormLog,
+		Logger:  gormLog,
+		NowFunc: func() time.Time { return time.Now().In(loc) },
 	})
 	if err != nil {
 		return nil, fmt.Errorf("gorm open: %w", err)
+	}
+	if err = ApplySessionTimeZone(db, cfg.Driver, sessionTZ); err != nil {
+		return nil, fmt.Errorf("db: set session time zone: %w", err)
 	}
 	sqlDB, err := db.DB()
 	if err != nil {

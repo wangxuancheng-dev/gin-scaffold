@@ -6,7 +6,7 @@ services:
       MYSQL_DATABASE: scaffold
     ports:
       - "3306:3306"
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--default-time-zone=+00:00"]
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
       interval: 5s
@@ -30,6 +30,7 @@ services:
     command: ["server", "--env", "dev"]
     environment:
       GIN_MODE: release
+      TZ: UTC
     volumes:
       - ./configs:/app/configs:ro
       - ./i18n:/app/i18n:ro
@@ -39,5 +40,7 @@ services:
     depends_on:
       - redis
     command: ["worker", "--env", "dev"]
+    environment:
+      TZ: UTC
     volumes:
       - ./configs:/app/configs:ro

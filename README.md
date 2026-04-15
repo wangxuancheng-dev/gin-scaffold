@@ -25,6 +25,7 @@ go mod tidy
 ```env
 APP_ENV=dev
 DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=UTC
+TIME_ZONE=UTC
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret
@@ -42,6 +43,7 @@ go run ./cmd/migrate --env dev up
 
 - `cmd/migrate` 在 `--env dev` 下会自动加载 `.env/.env.local`，并读取 `DB_DSN`
 - 如需临时覆盖可显式传 `--dsn`
+- 数据库**会话时区**：未传 `--session-time-zone` 时读环境变量 **`TIME_ZONE`**（如 `UTC`、`Asia/Shanghai`、`+08:00`），否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移里 `NOW()` 一致；应用侧见 `configs` 的 `db.session_time_zone`（同样可用 **`TIME_ZONE`** 覆盖）。HTTP/Worker 启动时会把进程 **`time.Local`** 设成与该配置一致，**Gin 里没有单独时区开关**，普通 **`time.Now()`**、日志时间等与 **GORM 自动时间戳** 同一套时区语义
 - 迁移目录默认按驱动自动选择：
   - MySQL: `migrations/mysql`（兼容回退 `migrations`）
   - PostgreSQL: `migrations/postgres`
@@ -93,6 +95,7 @@ go mod tidy
 @"
 APP_ENV=dev
 DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True&loc=UTC
+TIME_ZONE=UTC
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret
@@ -223,7 +226,7 @@ make swagger
 powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target tidy
 powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target build
 powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target run -Env dev -Profile order
-powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target migrate-up -Driver mysql -Dsn "<database_dsn>"
+powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target migrate-up -Dsn "<database_dsn>"
 powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target test-unit
 powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target test
 ```

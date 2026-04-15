@@ -59,6 +59,9 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := db.SyncProcessLocalToSessionTimeZone(cfg.DB.SessionTimeZone); err != nil {
+		return nil, fmt.Errorf("time.Local (align with db.session_time_zone / TIME_ZONE): %w", err)
+	}
 	if err := logger.Init(&cfg.Log); err != nil {
 		return nil, err
 	}
@@ -138,6 +141,9 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 	cfg, err := config.Load(env, profile)
 	if err != nil {
 		return nil, err
+	}
+	if err := db.SyncProcessLocalToSessionTimeZone(cfg.DB.SessionTimeZone); err != nil {
+		return nil, fmt.Errorf("time.Local (align with db.session_time_zone / TIME_ZONE): %w", err)
 	}
 	if err := logger.Init(&cfg.Log); err != nil {
 		return nil, err

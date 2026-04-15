@@ -145,6 +145,8 @@ func bindEnvKeys(v *viper.Viper) {
 	for _, k := range keys {
 		_ = v.BindEnv(k)
 	}
+	// 与 OS 习惯一致：用 TIME_ZONE（如 UTC、Asia/Shanghai），不用 DB_SESSION_TIME_ZONE
+	_ = v.BindEnv("db.session_time_zone", "TIME_ZONE")
 }
 
 func resolveConfigFile(name string) (string, bool) {

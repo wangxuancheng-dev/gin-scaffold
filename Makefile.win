@@ -5,8 +5,8 @@
 #   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target build
 #   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target run -Env dev
 #   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target run-worker -Env dev
-#   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target migrate-up -Driver mysql -Dsn "<database_dsn>"
-#   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target migrate-down -Driver mysql -Dsn "<database_dsn>"
+#   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target migrate-up -Dsn "<database_dsn>" [-TimeZone UTC]
+#   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target migrate-down -Dsn "<database_dsn>" [-TimeZone UTC]
 #   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target test-unit
 #   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target test
 #   powershell -ExecutionPolicy Bypass -File .\scripts\make.ps1 -Target swagger

@@ -46,6 +46,7 @@ type LogConfig struct {
 type DBConfig struct {
 	Driver             string   `mapstructure:"driver"` // mysql | postgres
 	DSN                string   `mapstructure:"dsn"`
+	SessionTimeZone    string   `mapstructure:"session_time_zone"` // MySQL: SET time_zone；PostgreSQL: SET TIME ZONE；空则 UTC；可用环境变量 TIME_ZONE 覆盖
 	Replicas           []string `mapstructure:"replicas"`
 	MaxOpenConns       int      `mapstructure:"max_open_conns"`
 	MaxIdleConns       int      `mapstructure:"max_idle_conns"`
