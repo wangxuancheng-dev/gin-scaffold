@@ -30,11 +30,20 @@ type ScheduledTaskRepo interface {
 }
 
 type ScheduledTaskService struct {
-	dao ScheduledTaskRepo
+	dao       ScheduledTaskRepo
+	onChanged func()
 }
 
 func NewScheduledTaskService(dao ScheduledTaskRepo) *ScheduledTaskService {
-	return &ScheduledTaskService{dao: dao}
+	return &ScheduledTaskService{dao: dao, onChanged: func() {}}
+}
+
+func (s *ScheduledTaskService) SetOnChanged(fn func()) {
+	if fn == nil {
+		s.onChanged = func() {}
+		return
+	}
+	s.onChanged = fn
 }
 
 func (s *ScheduledTaskService) List(ctx context.Context, page, pageSize int) ([]model.ScheduledTask, int64, error) {
@@ -66,6 +75,7 @@ func (s *ScheduledTaskService) Create(ctx context.Context, name, spec, command s
 	if err := s.dao.Create(ctx, task); err != nil {
 		return nil, err
 	}
+	s.onChanged()
 	return task, nil
 }
 
@@ -105,6 +115,7 @@ func (s *ScheduledTaskService) Update(ctx context.Context, id int64, name, spec,
 	if err := s.dao.Update(ctx, task); err != nil {
 		return nil, err
 	}
+	s.onChanged()
 	return task, nil
 }
 
@@ -118,7 +129,11 @@ func normalizeConcurrencyPolicy(v string) string {
 }
 
 func (s *ScheduledTaskService) Delete(ctx context.Context, id int64) error {
-	return s.dao.Delete(ctx, id)
+	if err := s.dao.Delete(ctx, id); err != nil {
+		return err
+	}
+	s.onChanged()
+	return nil
 }
 
 func (s *ScheduledTaskService) SetEnabled(ctx context.Context, id int64, enabled bool) error {
@@ -128,7 +143,11 @@ func (s *ScheduledTaskService) SetEnabled(ctx context.Context, id int64, enabled
 		}
 		return err
 	}
-	return s.dao.SetEnabled(ctx, id, enabled)
+	if err := s.dao.SetEnabled(ctx, id, enabled); err != nil {
+		return err
+	}
+	s.onChanged()
+	return nil
 }
 
 func (s *ScheduledTaskService) RunNow(ctx context.Context, id int64) error {

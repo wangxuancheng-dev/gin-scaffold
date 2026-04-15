@@ -29,13 +29,14 @@ type taskScheduler struct {
 	entries       map[int64]cron.EntryID
 	running       map[int64]struct{}
 	stopCh        chan struct{}
+	syncNowCh     chan struct{}
 }
 
-func StartTaskScheduler(svc *service.ScheduledTaskService, cfg config.SchedulerConfig) (func(), error) {
+func StartTaskScheduler(svc *service.ScheduledTaskService, cfg config.SchedulerConfig) (func(), func(), error) {
 	enabled := cfg.Enabled
 	withSeconds := cfg.WithSeconds
 	if svc == nil || !enabled {
-		return func() {}, nil
+		return func() {}, func() {}, nil
 	}
 	lockTTL := time.Duration(cfg.LockTTLSeconds) * time.Second
 	if lockTTL <= 0 {
@@ -61,14 +62,15 @@ func StartTaskScheduler(svc *service.ScheduledTaskService, cfg config.SchedulerC
 		entries:       map[int64]cron.EntryID{},
 		running:       map[int64]struct{}{},
 		stopCh:        make(chan struct{}),
+		syncNowCh:     make(chan struct{}, 1),
 	}
 	if err := ts.sync(context.Background()); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	c.Start()
 	go ts.loopSync()
 	logger.InfoX("db task scheduler started", zap.Bool("with_seconds", withSeconds))
-	return ts.stop, nil
+	return ts.stop, ts.notifySync, nil
 }
 
 func (s *taskScheduler) loopSync() {
@@ -80,6 +82,10 @@ func (s *taskScheduler) loopSync() {
 			if purgeErr := s.svc.PurgeLogs(context.Background(), s.retentionDays); purgeErr != nil {
 				logger.ErrorX("purge task logs failed", zap.Error(purgeErr))
 			}
+			if err := s.sync(context.Background()); err != nil {
+				logger.ErrorX("sync scheduled tasks failed", zap.Error(err))
+			}
+		case <-s.syncNowCh:
 			if err := s.sync(context.Background()); err != nil {
 				logger.ErrorX("sync scheduled tasks failed", zap.Error(err))
 			}
@@ -136,6 +142,13 @@ func (s *taskScheduler) stop() {
 	ctx := s.cron.Stop()
 	<-ctx.Done()
 	logger.InfoX("db task scheduler stopped")
+}
+
+func (s *taskScheduler) notifySync() {
+	select {
+	case s.syncNowCh <- struct{}{}:
+	default:
+	}
 }
 
 func (s *taskScheduler) executeWithGuards(taskID int64, policy string) error {

@@ -120,11 +120,12 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	wsH := handler.NewWSHandler(wsSvc)
 	sseH := handler.NewSSEHandler(sseSvc)
 
-	stopTaskScheduler, err := scheduler.StartTaskScheduler(taskSvc, cfg.Scheduler)
+	stopTaskScheduler, notifyTaskScheduler, err := scheduler.StartTaskScheduler(taskSvc, cfg.Scheduler)
 	if err != nil {
 		runCleanups(context.Background(), cleanups)
 		return nil, fmt.Errorf("task scheduler: %w", err)
 	}
+	taskSvc.SetOnChanged(notifyTaskScheduler)
 	cleanups = append(cleanups, func(context.Context) { stopTaskScheduler() })
 
 	engine := routes.Build(routes.Options{
