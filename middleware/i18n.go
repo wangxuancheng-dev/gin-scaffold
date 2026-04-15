@@ -2,7 +2,9 @@ package middleware
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gin-scaffold/config"
@@ -10,6 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/text/language"
 )
+
+type conciseMessage struct {
+	ID          string `json:"id"`
+	Translation string `json:"translation"`
+}
 
 // I18n 注册 gin-contrib/i18n，支持通过配置指定默认语言与可用语言包。
 func I18n(cfg *config.I18nConfig) gin.HandlerFunc {
@@ -55,8 +62,36 @@ func I18n(cfg *config.I18nConfig) gin.HandlerFunc {
 			FormatBundleFile: "json",
 			RootPath:         rootPath,
 			AcceptLanguage:   acceptLang,
-			UnmarshalFunc:    json.Unmarshal,
+			UnmarshalFunc:    unmarshalI18nJSON,
 			Loader:           nil,
 		}),
 	)
+}
+
+func unmarshalI18nJSON(data []byte, v any) error {
+	trimmed := strings.TrimSpace(string(data))
+	if !strings.HasPrefix(trimmed, "{") {
+		return fmt.Errorf("i18n json must be object format, e.g. {\"success\":\"ok\"}")
+	}
+	kv := map[string]string{}
+	if err := json.Unmarshal(data, &kv); err != nil {
+		return err
+	}
+	items := make([]conciseMessage, 0, len(kv))
+	keys := make([]string, 0, len(kv))
+	for k := range kv {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		items = append(items, conciseMessage{
+			ID:          k,
+			Translation: kv[k],
+		})
+	}
+	b, err := json.Marshal(items)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, v)
 }

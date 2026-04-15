@@ -2,6 +2,8 @@
 package routes
 
 import (
+	"net"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -67,6 +69,10 @@ func Build(opts Options) *gin.Engine {
 	if opts.Cfg != nil && opts.Cfg.Debug {
 		// 仅调试环境：用于验证 Recovery 与日志链路。
 		r.GET("/debug/panic", func(c *gin.Context) {
+			if !isLoopbackClient(c.ClientIP()) {
+				c.AbortWithStatus(404)
+				return
+			}
 			panic("debug panic endpoint")
 		})
 	}
@@ -75,4 +81,9 @@ func Build(opts Options) *gin.Engine {
 	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.AdminMenu, opts.AdminOps, opts.WS, opts.SSE)
 
 	return r
+}
+
+func isLoopbackClient(ip string) bool {
+	parsed := net.ParseIP(ip)
+	return parsed != nil && parsed.IsLoopback()
 }
