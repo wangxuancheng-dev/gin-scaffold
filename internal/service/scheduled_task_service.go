@@ -41,7 +41,7 @@ func (s *ScheduledTaskService) List(ctx context.Context, page, pageSize int) ([]
 	return s.dao.List(ctx, page, pageSize)
 }
 
-func (s *ScheduledTaskService) Create(ctx context.Context, name, spec, command string, timeoutSec int, enabled bool) (*model.ScheduledTask, error) {
+func (s *ScheduledTaskService) Create(ctx context.Context, name, spec, command string, timeoutSec int, concurrencyPolicy string, enabled bool) (*model.ScheduledTask, error) {
 	name = strings.TrimSpace(name)
 	spec = strings.TrimSpace(spec)
 	command = strings.TrimSpace(command)
@@ -54,12 +54,14 @@ func (s *ScheduledTaskService) Create(ctx context.Context, name, spec, command s
 	if timeoutSec > 3600 {
 		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
 	}
+	concurrencyPolicy = normalizeConcurrencyPolicy(concurrencyPolicy)
 	task := &model.ScheduledTask{
-		Name:       name,
-		Spec:       spec,
-		Command:    command,
-		TimeoutSec: timeoutSec,
-		Enabled:    enabled,
+		Name:              name,
+		Spec:              spec,
+		Command:           command,
+		TimeoutSec:        timeoutSec,
+		ConcurrencyPolicy: concurrencyPolicy,
+		Enabled:           enabled,
 	}
 	if err := s.dao.Create(ctx, task); err != nil {
 		return nil, err
@@ -67,7 +69,7 @@ func (s *ScheduledTaskService) Create(ctx context.Context, name, spec, command s
 	return task, nil
 }
 
-func (s *ScheduledTaskService) Update(ctx context.Context, id int64, name, spec, command *string, timeoutSec *int, enabled *bool) (*model.ScheduledTask, error) {
+func (s *ScheduledTaskService) Update(ctx context.Context, id int64, name, spec, command *string, timeoutSec *int, concurrencyPolicy *string, enabled *bool) (*model.ScheduledTask, error) {
 	task, err := s.dao.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -90,16 +92,29 @@ func (s *ScheduledTaskService) Update(ctx context.Context, id int64, name, spec,
 	if timeoutSec != nil {
 		task.TimeoutSec = *timeoutSec
 	}
+	if concurrencyPolicy != nil {
+		task.ConcurrencyPolicy = normalizeConcurrencyPolicy(*concurrencyPolicy)
+	}
 	if task.Name == "" || task.Spec == "" || task.Command == "" {
 		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
 	}
 	if task.TimeoutSec <= 0 || task.TimeoutSec > 3600 {
 		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
 	}
+	task.ConcurrencyPolicy = normalizeConcurrencyPolicy(task.ConcurrencyPolicy)
 	if err := s.dao.Update(ctx, task); err != nil {
 		return nil, err
 	}
 	return task, nil
+}
+
+func normalizeConcurrencyPolicy(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "allow":
+		return "allow"
+	default:
+		return "forbid"
+	}
 }
 
 func (s *ScheduledTaskService) Delete(ctx context.Context, id int64) error {

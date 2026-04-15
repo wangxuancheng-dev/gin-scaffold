@@ -113,10 +113,12 @@ func (s *taskScheduler) sync(ctx context.Context) error {
 		}
 		taskID := t.ID
 		spec := t.Spec
+		policy := strings.ToLower(strings.TrimSpace(t.ConcurrencyPolicy))
 		entryID, err := s.cron.AddFunc(spec, func() {
-			if runErr := s.executeWithGuards(taskID); runErr != nil {
+			if runErr := s.executeWithGuards(taskID, policy); runErr != nil {
 				logger.Channel("daily", "task_scheduler.log").Error("execute scheduled task failed",
 					zap.Int64("task_id", taskID),
+					zap.String("concurrency_policy", policy),
 					zap.Error(runErr),
 				)
 			}
@@ -136,15 +138,19 @@ func (s *taskScheduler) stop() {
 	logger.InfoX("db task scheduler stopped")
 }
 
-func (s *taskScheduler) executeWithGuards(taskID int64) error {
+func (s *taskScheduler) executeWithGuards(taskID int64, policy string) error {
+	if policy == "allow" {
+		return s.svc.ExecuteTaskByID(context.Background(), taskID)
+	}
 	if !s.enterLocal(taskID) {
 		return nil
 	}
 	defer s.leaveLocal(taskID)
 
 	unlock := func() {}
+	stopRenew := func() {}
 	if s.lockEnabled {
-		u, ok, err := s.acquireDistributedLock(context.Background(), taskID)
+		u, renewStop, ok, err := s.acquireDistributedLock(context.Background(), taskID)
 		if err != nil {
 			return err
 		}
@@ -152,7 +158,9 @@ func (s *taskScheduler) executeWithGuards(taskID int64) error {
 			return nil
 		}
 		unlock = u
+		stopRenew = renewStop
 	}
+	defer stopRenew()
 	defer unlock()
 
 	return s.svc.ExecuteTaskByID(context.Background(), taskID)
@@ -174,20 +182,21 @@ func (s *taskScheduler) leaveLocal(taskID int64) {
 	s.mu.Unlock()
 }
 
-func (s *taskScheduler) acquireDistributedLock(ctx context.Context, taskID int64) (func(), bool, error) {
+func (s *taskScheduler) acquireDistributedLock(ctx context.Context, taskID int64) (func(), func(), bool, error) {
 	rc := appredis.Client()
 	if rc == nil {
-		return nil, false, fmt.Errorf("scheduler lock enabled but redis client is nil")
+		return nil, nil, false, fmt.Errorf("scheduler lock enabled but redis client is nil")
 	}
 	key := fmt.Sprintf("%s%d", s.lockPrefix, taskID)
 	token := uuid.NewString()
 	ok, err := rc.SetNX(ctx, key, token, s.lockTTL).Result()
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	if !ok {
-		return nil, false, nil
+		return nil, nil, false, nil
 	}
+	stopRenew := s.startLockRenewal(key, token)
 	unlock := func() {
 		// Compare-and-delete to avoid releasing others' lock.
 		_, _ = rc.Eval(ctx, `
@@ -197,5 +206,42 @@ end
 return 0
 `, []string{key}, token).Result()
 	}
-	return unlock, true, nil
+	return unlock, stopRenew, true, nil
+}
+
+func (s *taskScheduler) startLockRenewal(key, token string) func() {
+	rc := appredis.Client()
+	if rc == nil {
+		return func() {}
+	}
+	interval := s.lockTTL / 3
+	if interval < 5*time.Second {
+		interval = 5 * time.Second
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				// Compare-and-pexpire: only renew if lock token still belongs to this node.
+				_, err := rc.Eval(ctx, `
+if redis.call("get", KEYS[1]) == ARGV[1] then
+	return redis.call("pexpire", KEYS[1], ARGV[2])
+end
+return 0
+`, []string{key}, token, fmt.Sprintf("%d", s.lockTTL.Milliseconds())).Result()
+				if err != nil {
+					logger.Channel("daily", "task_scheduler.log").Warn("renew task lock failed",
+						zap.String("key", key),
+						zap.Error(err),
+					)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return cancel
 }

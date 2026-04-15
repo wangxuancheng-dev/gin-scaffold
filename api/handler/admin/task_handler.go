@@ -44,13 +44,17 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	}
 	enabled := true
 	timeoutSec := 30
+	concurrencyPolicy := "forbid"
 	if req.Enabled != nil {
 		enabled = *req.Enabled
 	}
 	if req.TimeoutSec != nil {
 		timeoutSec = *req.TimeoutSec
 	}
-	row, err := h.svc.Create(c.Request.Context(), req.Name, req.Spec, req.Command, timeoutSec, enabled)
+	if req.ConcurrencyPolicy != nil {
+		concurrencyPolicy = *req.ConcurrencyPolicy
+	}
+	row, err := h.svc.Create(c.Request.Context(), req.Name, req.Spec, req.Command, timeoutSec, concurrencyPolicy, enabled)
 	if err != nil {
 		h.failWithErr(c, err)
 		return
@@ -73,7 +77,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
 		return
 	}
-	row, err := h.svc.Update(c.Request.Context(), uri.ID, req.Name, req.Spec, req.Command, req.TimeoutSec, req.Enabled)
+	row, err := h.svc.Update(c.Request.Context(), uri.ID, req.Name, req.Spec, req.Command, req.TimeoutSec, req.ConcurrencyPolicy, req.Enabled)
 	if err != nil {
 		h.failWithErr(c, err)
 		return
