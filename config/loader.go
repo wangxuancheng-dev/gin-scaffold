@@ -141,6 +141,7 @@ func bindEnvKeys(v *viper.Viper) {
 		"i18n.default_lang",
 		"limiter.ip_rps", "limiter.ip_burst", "limiter.route_rps", "limiter.route_burst",
 		"snowflake.node",
+		"rbac.super_admin_user_id",
 	}
 	for _, k := range keys {
 		_ = v.BindEnv(k)

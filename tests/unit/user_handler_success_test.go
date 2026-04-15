@@ -15,6 +15,7 @@ import (
 	adminhandler "gin-scaffold/api/handler/admin"
 	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/internal/model"
+	"gin-scaffold/internal/pkg/errcode"
 )
 
 type mockUserService struct {
@@ -62,6 +63,23 @@ func (m *mockUserService) StreamExport(
 	consume func(model.UserExportRow) error,
 ) error {
 	args := m.Called(ctx, q, page, pageSize, limit, batchSize, pageOnly, withRole, consume)
+	return args.Error(0)
+}
+
+func (m *mockUserService) AdminCreate(ctx context.Context, username, password, nickname, role string) (*model.User, error) {
+	args := m.Called(ctx, username, password, nickname, role)
+	u, _ := args.Get(0).(*model.User)
+	return u, args.Error(1)
+}
+
+func (m *mockUserService) AdminUpdate(ctx context.Context, id int64, nickname, password, role *string) (*model.User, error) {
+	args := m.Called(ctx, id, nickname, password, role)
+	u, _ := args.Get(0).(*model.User)
+	return u, args.Error(1)
+}
+
+func (m *mockUserService) AdminDelete(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
@@ -225,5 +243,29 @@ func TestUserHandler_Export_Success(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Contains(t, w.Body.String(), "id,username,role")
 	require.Contains(t, w.Body.String(), "1,alice,admin")
+	svc.AssertExpectations(t)
+}
+
+func TestUserHandler_Delete_SuperAdminProtected(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	svc := new(mockUserService)
+	h := adminhandler.NewUserHandler(svc)
+
+	r := gin.New()
+	r.DELETE("/users/:id", h.Delete)
+
+	svc.On("AdminDelete", mock.Anything, int64(1)).Return(errcode.New(errcode.Forbidden, errcode.KeySuperAdminProtected)).Once()
+
+	req := httptest.NewRequest(http.MethodDelete, "/users/1", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusForbidden, w.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	require.EqualValues(t, errcode.Forbidden, body["code"])
+	require.Equal(t, "super admin cannot be deleted", body["msg"])
 	svc.AssertExpectations(t)
 }

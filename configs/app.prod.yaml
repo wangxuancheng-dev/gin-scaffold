@@ -99,3 +99,6 @@ cors:
     - Content-Length
     - X-Request-ID
   allow_credentials: true
+
+rbac:
+  super_admin_user_id: 1

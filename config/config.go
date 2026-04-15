@@ -17,6 +17,7 @@ type App struct {
 	Limiter   LimiterConfig   `mapstructure:"limiter"`
 	Snowflake SnowflakeConfig `mapstructure:"snowflake"`
 	CORS      CORSConfig      `mapstructure:"cors"`
+	RBAC      RBACConfig      `mapstructure:"rbac"`
 }
 
 // HTTPConfig HTTP 服务监听与超时配置。
@@ -125,4 +126,9 @@ type CORSConfig struct {
 	AllowHeaders     []string `mapstructure:"allow_headers"`
 	ExposeHeaders    []string `mapstructure:"expose_headers"`
 	AllowCredentials bool     `mapstructure:"allow_credentials"`
+}
+
+// RBACConfig 权限相关配置。
+type RBACConfig struct {
+	SuperAdminUserID int64 `mapstructure:"super_admin_user_id"`
 }

@@ -31,18 +31,95 @@ type UserRepo interface {
 	ListAfterID(ctx context.Context, q model.UserQuery, lastID int64, limit int) ([]model.User, error)
 	GetPrimaryRole(ctx context.Context, userID int64) (string, error)
 	GetPrimaryRoles(ctx context.Context, userIDs []int64) (map[int64]string, error)
+	Update(ctx context.Context, id int64, nickname *string, hashedPassword *string) (*model.User, error)
+	SoftDelete(ctx context.Context, id int64) error
+	SetRole(ctx context.Context, userID int64, role string) error
 }
 
 // UserService 用户业务。
 type UserService struct {
-	dao   UserRepo
-	queue *job.Client
-	jwt   *jwtpkg.Manager
+	dao              UserRepo
+	queue            *job.Client
+	jwt              *jwtpkg.Manager
+	superAdminUserID int64
 }
 
 // NewUserService 构造。
-func NewUserService(d UserRepo, q *job.Client, j *jwtpkg.Manager) *UserService {
-	return &UserService{dao: d, queue: q, jwt: j}
+func NewUserService(d UserRepo, q *job.Client, j *jwtpkg.Manager, superAdminUserID int64) *UserService {
+	return &UserService{dao: d, queue: q, jwt: j, superAdminUserID: superAdminUserID}
+}
+
+// AdminCreate 后台创建用户并绑定角色。
+func (s *UserService) AdminCreate(ctx context.Context, username, password, nickname, role string) (*model.User, error) {
+	if role == "" {
+		role = "user"
+	}
+	if _, err := s.dao.GetByUsername(ctx, username); err == nil {
+		return nil, errcode.New(errcode.UserExists, errcode.KeyUserExists)
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	u := &model.User{
+		Username: username,
+		Password: string(hash),
+		Nickname: nickname,
+	}
+	if err := s.dao.Create(ctx, u); err != nil {
+		return nil, err
+	}
+	if err := s.dao.SetRole(ctx, u.ID, role); err != nil {
+		return nil, err
+	}
+	u.Password = ""
+	return u, nil
+}
+
+// AdminUpdate 后台更新用户（昵称/密码/角色）。
+func (s *UserService) AdminUpdate(ctx context.Context, id int64, nickname, password, role *string) (*model.User, error) {
+	if _, err := s.dao.GetByID(ctx, id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errcode.New(errcode.UserNotFound, errcode.KeyUserNotFound)
+		}
+		return nil, err
+	}
+	var hashed *string
+	if password != nil {
+		h, err := bcrypt.GenerateFromPassword([]byte(*password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		hv := string(h)
+		hashed = &hv
+	}
+	u, err := s.dao.Update(ctx, id, nickname, hashed)
+	if err != nil {
+		return nil, err
+	}
+	if role != nil && *role != "" {
+		if err := s.dao.SetRole(ctx, id, *role); err != nil {
+			return nil, err
+		}
+	}
+	u.Password = ""
+	return u, nil
+}
+
+// AdminDelete 后台删除用户（软删除）。
+func (s *UserService) AdminDelete(ctx context.Context, id int64) error {
+	if s.superAdminUserID > 0 && id == s.superAdminUserID {
+		return errcode.New(errcode.Forbidden, errcode.KeySuperAdminProtected)
+	}
+	if _, err := s.dao.GetByID(ctx, id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errcode.New(errcode.UserNotFound, errcode.KeyUserNotFound)
+		}
+		return err
+	}
+	return s.dao.SoftDelete(ctx, id)
 }
 
 // Register 注册并异步发送欢迎任务。

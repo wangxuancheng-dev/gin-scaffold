@@ -2,6 +2,7 @@ package adminhandler
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -18,6 +19,7 @@ import (
 	clientresp "gin-scaffold/api/response/client"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
+	"gin-scaffold/internal/pkg/validator"
 	"gin-scaffold/internal/service/port"
 )
 
@@ -51,6 +53,137 @@ func (h *UserHandler) List(c *gin.Context) {
 		return clientresp.FromUser(&u)
 	})
 	response.OK(c, gin.H{"total": total, "list": list})
+}
+
+// Get 用户详情（后台）。
+// @Summary 用户详情（后台）
+// @Tags admin-user
+// @Produce json
+// @Param id path int true "用户ID"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/users/{id} [get]
+func (h *UserHandler) Get(c *gin.Context) {
+	var uri adminreq.UserIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		return
+	}
+	u, err := h.svc.GetByID(c.Request.Context(), uri.ID)
+	if err != nil {
+		var biz *errcode.BizError
+		if errors.As(err, &biz) {
+			response.FailHTTP(c, http.StatusNotFound, biz.Code, biz.Key, biz.Error())
+			return
+		}
+		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		return
+	}
+	response.OK(c, clientresp.FromUser(u))
+}
+
+// Create 创建用户（后台）。
+// @Summary 创建用户（后台）
+// @Tags admin-user
+// @Accept json
+// @Produce json
+// @Param body body adminreq.UserCreateRequest true "创建参数"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/users [post]
+func (h *UserHandler) Create(c *gin.Context) {
+	var req adminreq.UserCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		return
+	}
+	if err := validator.V().Struct(&req); err != nil {
+		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		return
+	}
+	u, err := h.svc.AdminCreate(c.Request.Context(), req.Username, req.Password, req.Nickname, req.Role)
+	if err != nil {
+		var biz *errcode.BizError
+		if errors.As(err, &biz) {
+			response.FailBiz(c, biz.Code, biz.Key, biz.Error())
+			return
+		}
+		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		return
+	}
+	response.OK(c, clientresp.FromUser(u))
+}
+
+// Update 更新用户（后台）。
+// @Summary 更新用户（后台）
+// @Tags admin-user
+// @Accept json
+// @Produce json
+// @Param id path int true "用户ID"
+// @Param body body adminreq.UserUpdateRequest true "更新参数"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/users/{id} [put]
+func (h *UserHandler) Update(c *gin.Context) {
+	var uri adminreq.UserIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		return
+	}
+	var req adminreq.UserUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		return
+	}
+	if err := validator.V().Struct(&req); err != nil {
+		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		return
+	}
+	u, err := h.svc.AdminUpdate(c.Request.Context(), uri.ID, req.Nickname, req.Password, req.Role)
+	if err != nil {
+		var biz *errcode.BizError
+		if errors.As(err, &biz) {
+			if biz.Code == errcode.UserNotFound {
+				response.FailHTTP(c, http.StatusNotFound, biz.Code, biz.Key, biz.Error())
+				return
+			}
+			response.FailBiz(c, biz.Code, biz.Key, biz.Error())
+			return
+		}
+		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		return
+	}
+	response.OK(c, clientresp.FromUser(u))
+}
+
+// Delete 删除用户（后台，软删除）。
+// @Summary 删除用户（后台）
+// @Tags admin-user
+// @Produce json
+// @Param id path int true "用户ID"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/users/{id} [delete]
+func (h *UserHandler) Delete(c *gin.Context) {
+	var uri adminreq.UserIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		return
+	}
+	err := h.svc.AdminDelete(c.Request.Context(), uri.ID)
+	if err != nil {
+		var biz *errcode.BizError
+		if errors.As(err, &biz) {
+			switch biz.Code {
+			case errcode.UserNotFound:
+				response.FailHTTP(c, http.StatusNotFound, biz.Code, biz.Key, biz.Error())
+			case errcode.Forbidden:
+				response.FailHTTP(c, http.StatusForbidden, biz.Code, errcode.KeySuperAdminProtected, "super admin cannot be deleted")
+			default:
+				response.FailBiz(c, biz.Code, biz.Key, biz.Error())
+			}
+			return
+		}
+		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"deleted": true})
 }
 
 // Export 用户导出（后台）。

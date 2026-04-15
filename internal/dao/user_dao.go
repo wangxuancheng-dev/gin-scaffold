@@ -148,6 +148,41 @@ func (d *UserDAO) Restore(ctx context.Context, id int64, hashedPassword, nicknam
 	return &u, nil
 }
 
+// Update 更新用户资料（支持昵称/密码）。
+func (d *UserDAO) Update(ctx context.Context, id int64, nickname *string, hashedPassword *string) (*model.User, error) {
+	updates := map[string]interface{}{
+		"updated_at": time.Now(),
+	}
+	if nickname != nil {
+		updates["nickname"] = *nickname
+	}
+	if hashedPassword != nil && *hashedPassword != "" {
+		updates["password"] = *hashedPassword
+	}
+	if err := d.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	return d.GetByID(ctx, id)
+}
+
+// SoftDelete 软删除用户。
+func (d *UserDAO) SoftDelete(ctx context.Context, id int64) error {
+	return d.db.WithContext(ctx).Delete(&model.User{}, id).Error
+}
+
+// SetRole 将用户角色切换为给定角色（软删历史角色，保留审计）。
+func (d *UserDAO) SetRole(ctx context.Context, userID int64, role string) error {
+	if err := d.db.WithContext(ctx).Table("user_roles").
+		Where("user_id = ? AND deleted_at IS NULL", userID).
+		Updates(map[string]interface{}{
+			"deleted_at": time.Now(),
+			"updated_at": time.Now(),
+		}).Error; err != nil {
+		return err
+	}
+	return d.BindRole(ctx, userID, role)
+}
+
 // GetPrimaryRole 查询用户主角色（按 user_roles.id 最早一条）。
 func (d *UserDAO) GetPrimaryRole(ctx context.Context, userID int64) (string, error) {
 	var row struct {

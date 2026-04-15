@@ -77,6 +77,22 @@ func (m *mockUserRepo) GetPrimaryRoles(ctx context.Context, userIDs []int64) (ma
 	return rows, args.Error(1)
 }
 
+func (m *mockUserRepo) Update(ctx context.Context, id int64, nickname *string, hashedPassword *string) (*model.User, error) {
+	args := m.Called(ctx, id, nickname, hashedPassword)
+	u, _ := args.Get(0).(*model.User)
+	return u, args.Error(1)
+}
+
+func (m *mockUserRepo) SoftDelete(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *mockUserRepo) SetRole(ctx context.Context, userID int64, role string) error {
+	args := m.Called(ctx, userID, role)
+	return args.Error(0)
+}
+
 func TestUserServiceLogin_Success(t *testing.T) {
 	t.Parallel()
 
@@ -87,7 +103,7 @@ func TestUserServiceLogin_Success(t *testing.T) {
 		RefreshExpireMin: 60,
 		Issuer:           "unit-test",
 	})
-	svc := service.NewUserService(repo, nil, jm)
+	svc := service.NewUserService(repo, nil, jm, 0)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
 	require.NoError(t, err)
@@ -115,7 +131,7 @@ func TestUserServiceLogin_UserNotFound(t *testing.T) {
 		RefreshExpireMin: 60,
 		Issuer:           "unit-test",
 	})
-	svc := service.NewUserService(repo, nil, jm)
+	svc := service.NewUserService(repo, nil, jm, 0)
 
 	repo.On("GetByUsername", mock.Anything, "nobody").Return((*model.User)(nil), gorm.ErrRecordNotFound).Once()
 
@@ -135,7 +151,7 @@ func TestUserServiceRegister_RestoreSoftDeleted(t *testing.T) {
 		RefreshExpireMin: 60,
 		Issuer:           "unit-test",
 	})
-	svc := service.NewUserService(repo, nil, jm)
+	svc := service.NewUserService(repo, nil, jm, 0)
 
 	repo.On("GetByUsername", mock.Anything, "alice").Return((*model.User)(nil), gorm.ErrRecordNotFound).Once()
 	repo.On("GetByUsernameWithDeleted", mock.Anything, "alice").Return(&model.User{

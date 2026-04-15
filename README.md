@@ -276,8 +276,15 @@ go run ./cmd/gen crud --module order --table orders
 - JWT 吊销（黑名单）：`/api/v1/client/auth/logout`
 - 管理端 RBAC：`/api/v1/admin/*` 要求 `role=admin` + `db:ping` 权限
 - RBAC 权限来源：数据库 `roles` / `user_roles` / `role_permissions`（无配置兜底）
+- 超管保护：`rbac.super_admin_user_id`（可由环境变量 `RBAC_SUPER_ADMIN_USER_ID` 覆盖）；该用户默认拥有全部权限且不允许删除
 - 后台菜单可见性：`menus` + `role_menus`
 - RBAC 数据表：`roles`、`user_roles`、`role_permissions`（见 `migrations/mysql/202501011210_create_rbac.up.sql`）
+- 用户管理权限矩阵：
+  - `GET /api/v1/admin/users`、`GET /api/v1/admin/users/{id}`：`user:read`
+  - `POST /api/v1/admin/users`：`user:create`
+  - `PUT /api/v1/admin/users/{id}`：`user:update`
+  - `DELETE /api/v1/admin/users/{id}`：`user:delete`
+  - `GET /api/v1/admin/users/export`：`user:export`
 - 管理员角色初始化：`migrations/mysql/202501011230_seed_admin_role.up.sql`（按用户名 `admin` 绑定）
 - 管理员账号初始化：`migrations/mysql/202501011240_seed_admin_user.up.sql`（默认密码 `Admin@123456`，上线后立刻修改）
 - 环境变量模板：`.env.example`

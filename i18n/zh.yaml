@@ -10,3 +10,5 @@
   translation: "用户不存在"
 - id: user_exists
   translation: "用户已存在"
+- id: super_admin_protected
+  translation: "超管用户不允许删除"

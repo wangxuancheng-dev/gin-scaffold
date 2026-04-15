@@ -18,6 +18,7 @@ const ctxClaims = "jwt_claims"
 var (
 	rbacMu            sync.RWMutex
 	permissionChecker PermissionChecker
+	superAdminUserID  int64
 )
 
 // PermissionChecker 支持将权限判断委托到数据库/权限服务。
@@ -30,6 +31,20 @@ func SetPermissionChecker(checker PermissionChecker) {
 	rbacMu.Lock()
 	defer rbacMu.Unlock()
 	permissionChecker = checker
+}
+
+// SetSuperAdminUserID 设置内置超管用户 ID（0 表示关闭）。
+func SetSuperAdminUserID(id int64) {
+	rbacMu.Lock()
+	defer rbacMu.Unlock()
+	superAdminUserID = id
+}
+
+func isSuperAdminUser(userID int64) bool {
+	rbacMu.RLock()
+	id := superAdminUserID
+	rbacMu.RUnlock()
+	return id > 0 && userID == id
 }
 
 // JWTAuth 校验 Authorization Bearer 访问令牌。
@@ -83,6 +98,10 @@ func RequireRoles(roles ...string) gin.HandlerFunc {
 			return
 		}
 		role := claims.Role
+		if isSuperAdminUser(claims.UserID) {
+			c.Next()
+			return
+		}
 		for _, allowed := range roles {
 			if role == allowed {
 				c.Next()
@@ -106,6 +125,10 @@ func RequirePermission(permission string) gin.HandlerFunc {
 		rbacMu.RLock()
 		checker := permissionChecker
 		rbacMu.RUnlock()
+		if isSuperAdminUser(claims.UserID) {
+			c.Next()
+			return
+		}
 
 		if checker == nil {
 			response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, "permission checker not configured")

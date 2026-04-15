@@ -9,16 +9,20 @@ type RolePermissionRepo interface {
 
 // DBPermissionChecker 基于数据库角色权限表的检查器。
 type DBPermissionChecker struct {
-	repo RolePermissionRepo
+	repo             RolePermissionRepo
+	superAdminUserID int64
 }
 
 // NewDBPermissionChecker 构造数据库权限检查器。
-func NewDBPermissionChecker(repo RolePermissionRepo) *DBPermissionChecker {
-	return &DBPermissionChecker{repo: repo}
+func NewDBPermissionChecker(repo RolePermissionRepo, superAdminUserID int64) *DBPermissionChecker {
+	return &DBPermissionChecker{repo: repo, superAdminUserID: superAdminUserID}
 }
 
 // HasPermission 优先按数据库策略判断权限。
 func (c *DBPermissionChecker) HasPermission(ctx context.Context, userID int64, role, permission string) (bool, error) {
+	if c != nil && c.superAdminUserID > 0 && userID == c.superAdminUserID {
+		return true, nil
+	}
 	if c == nil || c.repo == nil {
 		return false, nil
 	}

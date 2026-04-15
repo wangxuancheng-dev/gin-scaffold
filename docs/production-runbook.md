@@ -107,6 +107,7 @@ sudo systemctl status gin-scaffold
 - `REDIS_ADDR=...`
 - `REDIS_PASSWORD=...`
 - `JWT_SECRET=...`
+- `RBAC_SUPER_ADMIN_USER_ID=...`（超管用户 ID，默认拥有全部权限且不允许删除）
 
 可选：
 

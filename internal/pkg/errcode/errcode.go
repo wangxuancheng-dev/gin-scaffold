@@ -19,12 +19,13 @@ const (
 
 // MessageKey 对应 i18n 翻译 id。
 const (
-	KeySuccess      = "success"
-	KeyInvalidParam = "invalid_param"
-	KeyUnauthorized = "unauthorized"
-	KeyForbidden    = "forbidden"
-	KeyRateLimited  = "rate_limited"
-	KeyInternal     = "internal_error"
-	KeyUserNotFound = "user_not_found"
-	KeyUserExists   = "user_exists"
+	KeySuccess             = "success"
+	KeyInvalidParam        = "invalid_param"
+	KeyUnauthorized        = "unauthorized"
+	KeyForbidden           = "forbidden"
+	KeyRateLimited         = "rate_limited"
+	KeyInternal            = "internal_error"
+	KeyUserNotFound        = "user_not_found"
+	KeyUserExists          = "user_exists"
+	KeySuperAdminProtected = "super_admin_protected"
 )

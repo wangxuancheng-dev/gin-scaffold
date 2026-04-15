@@ -10,3 +10,5 @@
   translation: "user not found"
 - id: user_exists
   translation: "user already exists"
+- id: super_admin_protected
+  translation: "super admin user cannot be deleted"
