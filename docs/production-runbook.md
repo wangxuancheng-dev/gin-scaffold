@@ -76,7 +76,7 @@ sudo systemctl status gin-scaffold
 ./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" up
 ```
 
-说明：未显式传 `--dir` 时，迁移目录会按驱动自动选择（`migrations/mysql` 或 `migrations/postgres`，MySQL 兼容回退 `migrations`）。未传 `--time-zone` 时，优先读环境变量 **`TIME_ZONE`**，否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移 SQL 中 `NOW()` 语义一致。
+说明：未显式传 `--dir` 时，迁移目录会按驱动自动选择（`migrations/mysql` 或 `migrations/postgres`，MySQL 兼容回退 `migrations`），并递归扫描子目录；建议将 seed SQL 放到 `seed/` 子目录集中维护。未传 `--time-zone` 时，优先读环境变量 **`TIME_ZONE`**，否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移 SQL 中 `NOW()` 语义一致。
 
 迁移建议：
 

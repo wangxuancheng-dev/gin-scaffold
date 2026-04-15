@@ -185,28 +185,35 @@ func openDB(driver, dsn, sessionTZ string) (*gorm.DB, error) {
 }
 
 func buildMigrator(db *gorm.DB, dir string) *gormigrate.Gormigrate {
-	entries, err := os.ReadDir(dir)
+	upFiles := make([]string, 0, 16)
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(d.Name(), ".up.sql") {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		upFiles = append(upFiles, rel)
+		return nil
+	})
 	if err != nil {
-		panic(fmt.Errorf("read migration dir: %w", err))
-	}
-	upFiles := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		if strings.HasSuffix(name, ".up.sql") {
-			upFiles = append(upFiles, name)
-		}
+		panic(fmt.Errorf("scan migration dir: %w", err))
 	}
 	sort.Strings(upFiles)
 
 	migrations := make([]*gormigrate.Migration, 0, len(upFiles))
-	for _, upName := range upFiles {
-		base := strings.TrimSuffix(upName, ".up.sql")
-		upPath := filepath.Join(dir, upName)
-		downPath := filepath.Join(dir, base+".down.sql")
-		mID := base
+	for _, upRel := range upFiles {
+		baseRel := strings.TrimSuffix(upRel, ".up.sql")
+		upPath := filepath.Join(dir, upRel)
+		downPath := filepath.Join(dir, baseRel+".down.sql")
+		mID := filepath.Base(baseRel)
 		migrations = append(migrations, &gormigrate.Migration{
 			ID: mID,
 			Migrate: func(tx *gorm.DB) error {

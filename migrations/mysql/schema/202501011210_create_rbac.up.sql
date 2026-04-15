@@ -33,16 +33,3 @@ CREATE TABLE IF NOT EXISTS `role_permissions` (
   UNIQUE KEY `uk_role_permission` (`role`, `permission`),
   KEY `idx_role_permissions_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT IGNORE INTO `roles` (`code`, `name`, `created_at`, `updated_at`) VALUES
-  ('admin', '管理员', NOW(), NOW()),
-  ('user', '普通用户', NOW(), NOW());
-
-INSERT IGNORE INTO `role_permissions` (`role`, `permission`, `created_at`, `updated_at`) VALUES
-  ('admin', 'db:ping', NOW(), NOW()),
-  ('admin', 'user:read', NOW(), NOW()),
-  ('admin', 'user:create', NOW(), NOW()),
-  ('admin', 'user:update', NOW(), NOW()),
-  ('admin', 'user:delete', NOW(), NOW()),
-  ('admin', 'user:export', NOW(), NOW()),
-  ('user', 'user:read', NOW(), NOW());
