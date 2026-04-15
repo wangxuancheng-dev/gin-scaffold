@@ -51,7 +51,7 @@ type LogConfig struct {
 
 // LogChannelConfig 单个日志通道的配置。
 type LogChannelConfig struct {
-	File         string `mapstructure:"file"`          // 目标文件名（相对 log.dir）
+	File         string `mapstructure:"file"`          // 目标文件名（相对 log.dir，可为空；调用 Channel 时动态传入）
 	Level        string `mapstructure:"level"`         // debug|info|warn|error，默认继承 log.level
 	RotationMode string `mapstructure:"rotation_mode"` // size|daily|none，默认继承 log.rotation_mode
 	MaxSizeMB    int    `mapstructure:"max_size_mb"`   // <=0 则继承全局

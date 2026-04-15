@@ -20,6 +20,9 @@ var (
 	accessL     *zap.Logger
 	errL        *zap.Logger
 	channelLogs map[string]*zap.Logger
+	channelCfgs map[string]config.LogChannelConfig
+	baseCfg     *config.LogConfig
+	channelMu   sync.RWMutex
 	once        sync.Once
 )
 
@@ -64,23 +67,37 @@ func Init(cfg *config.LogConfig) error {
 		appL = zap.New(zapcore.NewTee(cores...), zap.AddCaller(), zap.AddCallerSkip(1))
 		accessL = zap.New(accessCore)
 		errL = zap.New(zapcore.NewTee(errCore))
+		cfgCopy := *cfg
+		baseCfg = &cfgCopy
 		channelLogs = make(map[string]*zap.Logger)
+		channelCfgs = make(map[string]config.LogChannelConfig, len(cfg.Channels))
 		for name, chCfg := range cfg.Channels {
+			channelCfgs[name] = chCfg
 			file := strings.TrimSpace(chCfg.File)
 			if file == "" {
 				continue
 			}
-			chLevel := parseLevelOrDefault(chCfg.Level, level)
-			merged := mergeChannelConfig(cfg, chCfg)
-			core := zapcore.NewCore(
-				jsonEnc,
-				writer(filepath.Join(cfg.Dir, file), &merged, resolveRotationMode(merged.RotationMode, "")),
-				chLevel,
-			)
-			channelLogs[name] = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
+			channelLogs[name] = buildChannelLogger(name, file, chCfg)
 		}
 	})
 	return initErr
+}
+
+func buildChannelLogger(name, file string, chCfg config.LogChannelConfig) *zap.Logger {
+	if baseCfg == nil {
+		return appL
+	}
+	encCfg := zap.NewProductionEncoderConfig()
+	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	jsonEnc := zapcore.NewJSONEncoder(encCfg)
+	chLevel := parseLevelOrDefault(chCfg.Level, zapcore.InfoLevel)
+	merged := mergeChannelConfig(baseCfg, chCfg)
+	core := zapcore.NewCore(
+		jsonEnc,
+		writer(filepath.Join(baseCfg.Dir, file), &merged, resolveRotationMode(merged.RotationMode, "")),
+		chLevel,
+	)
+	return zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
 }
 
 func mergeChannelConfig(base *config.LogConfig, ch config.LogChannelConfig) config.LogConfig {
@@ -164,11 +181,13 @@ func Sync() {
 	if errL != nil {
 		_ = errL.Sync()
 	}
+	channelMu.RLock()
 	for _, l := range channelLogs {
 		if l != nil {
 			_ = l.Sync()
 		}
 	}
+	channelMu.RUnlock()
 }
 
 // L 返回应用主日志器。
@@ -187,8 +206,44 @@ func ErrorL() *zap.Logger {
 }
 
 // Channel 返回自定义通道日志器；未配置时回退主日志器。
-func Channel(name string) *zap.Logger {
-	if l, ok := channelLogs[name]; ok && l != nil {
+// 可选传 file 参数覆盖配置中的 file，实现动态文件名：
+// logger.Channel("daily", "del_user.log").Info("...")
+func Channel(name string, file ...string) *zap.Logger {
+	targetFile := ""
+	if len(file) > 0 {
+		targetFile = strings.TrimSpace(file[0])
+	}
+	cacheKey := name
+	if targetFile != "" {
+		cacheKey = name + "|" + targetFile
+	}
+
+	channelMu.RLock()
+	if l, ok := channelLogs[cacheKey]; ok && l != nil {
+		channelMu.RUnlock()
+		return l
+	}
+	chCfg, ok := channelCfgs[name]
+	channelMu.RUnlock()
+	if !ok {
+		return appL
+	}
+	if targetFile == "" {
+		targetFile = strings.TrimSpace(chCfg.File)
+	}
+	if targetFile == "" {
+		return appL
+	}
+
+	l := buildChannelLogger(name, targetFile, chCfg)
+	channelMu.Lock()
+	if existing, ok := channelLogs[cacheKey]; ok && existing != nil {
+		channelMu.Unlock()
+		return existing
+	}
+	channelLogs[cacheKey] = l
+	channelMu.Unlock()
+	if l != nil {
 		return l
 	}
 	return appL

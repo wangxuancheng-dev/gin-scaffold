@@ -52,9 +52,9 @@ go run ./cmd/migrate --env dev up
   - 全局：`log.rotation_mode` / `LOG_ROTATION_MODE`，可选 `size`（默认）`daily` `none`
   - 单文件覆盖：`log.app_rotation_mode`、`log.access_rotation_mode`、`log.error_rotation_mode`（对应环境变量 `LOG_APP_ROTATION_MODE`、`LOG_ACCESS_ROTATION_MODE`、`LOG_ERROR_ROTATION_MODE`）
   - 当单文件模式为空时，回退使用全局模式；`daily` 按当前配置时区 0 点切换，文件名如 `app-2026-04-15.log`
-- 支持自定义日志通道（Laravel 风格）：
-  - 在 `log.channels` 下按名称配置 `file`、`level`、`rotation_mode`（可选覆写 `max_size_mb/max_backups/max_age_days/compress`）
-  - 代码中通过 `logger.Channel("<channel_name>")` 获取并写入（未配置时自动回退主日志器）
+- 支持自定义日志通道：
+  - 在 `log.channels` 下按名称配置 `level`、`rotation_mode`（`file` 可选；可覆写 `max_size_mb/max_backups/max_age_days/compress`）
+  - 代码中可用 `logger.Channel("<channel_name>", "<file_name>")` 动态指定文件名（未配置时自动回退主日志器）
 - 如需临时覆盖可显式传 `--dsn`
 - 数据库**会话时区**：未传 `--time-zone` 时读环境变量 **`TIME_ZONE`**（如 `UTC`、`Asia/Shanghai`、`+08:00`），否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移里 `NOW()` 一致；应用侧见 `configs` 的 **`db.time_zone`**（同样可用 **`TIME_ZONE`** 覆盖）。HTTP/Worker 启动时会把进程 **`time.Local`** 设成与该配置一致，**Gin 里没有单独时区开关**，普通 **`time.Now()`**、日志时间等与 **GORM 自动时间戳** 同一套时区语义
 - 迁移目录默认按驱动自动选择：
