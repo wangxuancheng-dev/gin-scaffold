@@ -31,10 +31,18 @@ type Options struct {
 
 // Build 构建 *gin.Engine。
 func Build(opts Options) *gin.Engine {
-	gin.SetMode(gin.ReleaseMode)
+	if opts.Cfg != nil && opts.Cfg.Debug {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	r := gin.New()
 	r.Use(middleware.RequestID())
-	r.Use(middleware.Recovery())
+	if opts.Cfg != nil && opts.Cfg.Debug {
+		// Debug 模式下额外输出 Gin 风格请求日志，便于本地排障。
+		r.Use(gin.Logger())
+	}
+	r.Use(middleware.Recovery(opts.Cfg != nil && opts.Cfg.Debug))
 	r.Use(middleware.AccessLog())
 	r.Use(middleware.I18n(&opts.Cfg.I18n))
 	r.Use(middleware.CORS(&opts.Cfg.CORS))
@@ -56,6 +64,12 @@ func Build(opts Options) *gin.Engine {
 	r.GET("/livez", opts.Base.Livez)
 	r.GET("/readyz", opts.Base.Readyz)
 	r.GET("/health", opts.Base.Health)
+	if opts.Cfg != nil && opts.Cfg.Debug {
+		// 仅调试环境：用于验证 Recovery 与日志链路。
+		r.GET("/debug/panic", func(c *gin.Context) {
+			panic("debug panic endpoint")
+		})
+	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.AdminMenu, opts.AdminOps, opts.WS, opts.SSE)

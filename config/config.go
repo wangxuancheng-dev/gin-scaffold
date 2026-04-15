@@ -5,6 +5,7 @@ package config
 type App struct {
 	Env       string          `mapstructure:"env"`
 	Name      string          `mapstructure:"name"`
+	Debug     bool            `mapstructure:"debug"`
 	HTTP      HTTPConfig      `mapstructure:"http"`
 	Log       LogConfig       `mapstructure:"log"`
 	DB        DBConfig        `mapstructure:"db"`
@@ -31,16 +32,32 @@ type HTTPConfig struct {
 
 // LogConfig Zap + Lumberjack 日志配置。
 type LogConfig struct {
-	Level      string `mapstructure:"level"`
-	Dir        string `mapstructure:"dir"`
-	AppFile    string `mapstructure:"app_file"`
-	AccessFile string `mapstructure:"access_file"`
-	ErrorFile  string `mapstructure:"error_file"`
-	MaxSizeMB  int    `mapstructure:"max_size_mb"`
-	MaxBackups int    `mapstructure:"max_backups"`
-	MaxAgeDays int    `mapstructure:"max_age_days"`
-	Compress   bool   `mapstructure:"compress"`
-	Console    bool   `mapstructure:"console"`
+	Level              string                      `mapstructure:"level"`
+	Dir                string                      `mapstructure:"dir"`
+	AppFile            string                      `mapstructure:"app_file"`
+	AccessFile         string                      `mapstructure:"access_file"`
+	ErrorFile          string                      `mapstructure:"error_file"`
+	RotationMode       string                      `mapstructure:"rotation_mode"`        // 全局默认: size | daily | none，默认 size
+	AppRotationMode    string                      `mapstructure:"app_rotation_mode"`    // app 日志单独模式，空则用 rotation_mode
+	AccessRotationMode string                      `mapstructure:"access_rotation_mode"` // access 日志单独模式，空则用 rotation_mode
+	ErrorRotationMode  string                      `mapstructure:"error_rotation_mode"`  // error 日志单独模式，空则用 rotation_mode
+	MaxSizeMB          int                         `mapstructure:"max_size_mb"`
+	MaxBackups         int                         `mapstructure:"max_backups"`
+	MaxAgeDays         int                         `mapstructure:"max_age_days"`
+	Compress           bool                        `mapstructure:"compress"`
+	Console            bool                        `mapstructure:"console"`
+	Channels           map[string]LogChannelConfig `mapstructure:"channels"` // 自定义日志通道
+}
+
+// LogChannelConfig 单个日志通道的配置。
+type LogChannelConfig struct {
+	File         string `mapstructure:"file"`          // 目标文件名（相对 log.dir）
+	Level        string `mapstructure:"level"`         // debug|info|warn|error，默认继承 log.level
+	RotationMode string `mapstructure:"rotation_mode"` // size|daily|none，默认继承 log.rotation_mode
+	MaxSizeMB    int    `mapstructure:"max_size_mb"`   // <=0 则继承全局
+	MaxBackups   int    `mapstructure:"max_backups"`   // <0 则继承全局
+	MaxAgeDays   int    `mapstructure:"max_age_days"`  // <=0 则继承全局
+	Compress     *bool  `mapstructure:"compress"`      // nil 则继承全局
 }
 
 // DBConfig 数据库连接、连接池与慢查询配置。

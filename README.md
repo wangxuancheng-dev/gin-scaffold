@@ -29,9 +29,14 @@ TIME_ZONE=UTC
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret
+LOG_ROTATION_MODE=size
+LOG_APP_ROTATION_MODE=
+LOG_ACCESS_ROTATION_MODE=
+LOG_ERROR_ROTATION_MODE=
 ```
 
 > `dev` 环境会自动加载 `.env*` 系列文件，且不会覆盖你已设置的系统环境变量。
+> `debug=true` 时会启用 Gin Debug 模式并输出 Gin 风格请求日志；`prod` 建议保持 `debug=false`。
 
 ### 4) 执行数据库迁移
 
@@ -43,6 +48,13 @@ go run ./cmd/migrate --env dev up
 
 - `cmd/migrate` 在 `--env dev` 下会自动加载 `.env/.env.local`，并读取 `DB_DSN`
 - MySQL 的 `DB_DSN` **不必再写 `loc=`**：`parseTime` 仍建议保留；驱动 **`Loc`** 与 **`TIME_ZONE` / `--time-zone`** 一致，由代码注入（与 HTTP 服务行为相同）
+- 日志轮转支持全局 + 单文件覆盖：
+  - 全局：`log.rotation_mode` / `LOG_ROTATION_MODE`，可选 `size`（默认）`daily` `none`
+  - 单文件覆盖：`log.app_rotation_mode`、`log.access_rotation_mode`、`log.error_rotation_mode`（对应环境变量 `LOG_APP_ROTATION_MODE`、`LOG_ACCESS_ROTATION_MODE`、`LOG_ERROR_ROTATION_MODE`）
+  - 当单文件模式为空时，回退使用全局模式；`daily` 按当前配置时区 0 点切换，文件名如 `app-2026-04-15.log`
+- 支持自定义日志通道（Laravel 风格）：
+  - 在 `log.channels` 下按名称配置 `file`、`level`、`rotation_mode`（可选覆写 `max_size_mb/max_backups/max_age_days/compress`）
+  - 代码中通过 `logger.Channel("<channel_name>")` 获取并写入（未配置时自动回退主日志器）
 - 如需临时覆盖可显式传 `--dsn`
 - 数据库**会话时区**：未传 `--time-zone` 时读环境变量 **`TIME_ZONE`**（如 `UTC`、`Asia/Shanghai`、`+08:00`），否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移里 `NOW()` 一致；应用侧见 `configs` 的 **`db.time_zone`**（同样可用 **`TIME_ZONE`** 覆盖）。HTTP/Worker 启动时会把进程 **`time.Local`** 设成与该配置一致，**Gin 里没有单独时区开关**，普通 **`time.Now()`**、日志时间等与 **GORM 自动时间戳** 同一套时区语义
 - 迁移目录默认按驱动自动选择：
@@ -65,7 +77,7 @@ go run ./cmd/migrate --env dev down
 ### 5) 启动服务
 
 ```bash
-go run ./cmd/server server --env dev
+go run ./cmd/server --env dev
 ```
 
 ### 6) 本地验证
@@ -73,6 +85,7 @@ go run ./cmd/server server --env dev
 - 健康检查：`http://localhost:8080/livez`
 - 就绪检查：`http://localhost:8080/readyz`
 - Swagger：`http://localhost:8080/swagger/index.html`
+- 调试 panic 验证（仅 `debug=true`）：`http://localhost:8080/debug/panic`
 
 ### 7) 常用导出接口示例
 
@@ -107,7 +120,7 @@ JWT_SECRET=replace-with-your-own-secret
 go run ./cmd/migrate --env dev up
 
 # 4) 启动服务
-go run ./cmd/server server --env dev
+go run ./cmd/server --env dev
 ```
 
 启动后访问：
@@ -138,7 +151,7 @@ cp .env.example .env.local
 go run ./cmd/migrate --env dev up
 
 # 4) 启动服务
-go run ./cmd/server server --env dev
+go run ./cmd/server --env dev
 ```
 
 Windows（PowerShell）可用：
@@ -146,7 +159,7 @@ Windows（PowerShell）可用：
 ```powershell
 docker-compose up -d mysql redis
 go run ./cmd/migrate --env dev up
-go run ./cmd/server server --env dev
+go run ./cmd/server --env dev
 ```
 
 ## 核心访问地址

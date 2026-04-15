@@ -1,5 +1,6 @@
 env: dev
 name: gin-scaffold
+debug: true
 
 http:
   host: "0.0.0.0"
@@ -14,11 +15,20 @@ log:
   app_file: app.log
   access_file: access.log
   error_file: error.log
+  rotation_mode: size
+  app_rotation_mode: ""
+  access_rotation_mode: ""
+  error_rotation_mode: ""
   max_size_mb: 100
   max_backups: 10
   max_age_days: 14
   compress: true
   console: true
+  channels:
+    del_user:
+      file: del_user.log
+      level: info
+      rotation_mode: daily
 
 db:
   driver: mysql
@@ -68,8 +78,8 @@ trace:
 i18n:
   default_lang: zh
   bundle_paths:
-    - ./i18n/zh.yaml
-    - ./i18n/en.yaml
+    - ./i18n/zh.json
+    - ./i18n/en.json
 
 limiter:
   ip_rps: 50

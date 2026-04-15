@@ -1,5 +1,6 @@
 env: test
 name: gin-scaffold-test
+debug: true
 
 http:
   host: "127.0.0.1"
@@ -14,6 +15,10 @@ log:
   app_file: app.log
   access_file: access.log
   error_file: error.log
+  rotation_mode: size
+  app_rotation_mode: ""
+  access_rotation_mode: ""
+  error_rotation_mode: ""
   max_size_mb: 50
   max_backups: 5
   max_age_days: 7
@@ -68,8 +73,8 @@ trace:
 i18n:
   default_lang: zh
   bundle_paths:
-    - ./i18n/zh.yaml
-    - ./i18n/en.yaml
+    - ./i18n/zh.json
+    - ./i18n/en.json
 
 limiter:
   ip_rps: 100

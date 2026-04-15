@@ -52,6 +52,7 @@ func Load(env, profile string) (*App, error) {
 	default:
 		base = "app"
 	}
+	v.SetConfigName(base)
 	v.AddConfigPath("./configs")
 	v.AddConfigPath("configs")
 	if err := v.ReadInConfig(); err != nil {
@@ -129,9 +130,11 @@ func loadDotEnv(env, profile string) []string {
 
 func bindEnvKeys(v *viper.Viper) {
 	keys := []string{
-		"env", "name",
+		"env", "name", "debug",
 		"http.host", "http.port", "http.read_timeout_sec", "http.write_timeout_sec", "http.idle_timeout_sec",
-		"log.level", "log.dir", "log.app_file", "log.access_file", "log.error_file", "log.max_size_mb", "log.max_backups", "log.max_age_days", "log.compress", "log.console",
+		"log.level", "log.dir", "log.app_file", "log.access_file", "log.error_file",
+		"log.rotation_mode", "log.app_rotation_mode", "log.access_rotation_mode", "log.error_rotation_mode",
+		"log.max_size_mb", "log.max_backups", "log.max_age_days", "log.compress", "log.console",
 		"db.driver", "db.dsn", "db.max_open_conns", "db.max_idle_conns", "db.conn_max_lifetime_sec", "db.conn_max_idle_time_sec", "db.slow_threshold_ms", "db.log_level",
 		"redis.addr", "redis.password", "redis.db", "redis.pool_size", "redis.min_idle_conns",
 		"asynq.redis_addr", "asynq.redis_password", "asynq.redis_db", "asynq.concurrency", "asynq.strict_priority",

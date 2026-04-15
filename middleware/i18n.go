@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"strings"
 
@@ -8,7 +9,6 @@ import (
 	ginI18n "github.com/gin-contrib/i18n"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/text/language"
-	"gopkg.in/yaml.v3"
 )
 
 // I18n 注册 gin-contrib/i18n，支持通过配置指定默认语言与可用语言包。
@@ -28,9 +28,13 @@ func I18n(cfg *config.I18nConfig) gin.HandlerFunc {
 			for _, p := range cfg.BundlePaths {
 				base := filepath.Base(p)
 				parts := strings.Split(base, ".")
-				// Expected file naming: <name>.<lang>.yaml, e.g. active.zh.yaml.
-				if len(parts) >= 3 {
-					if parsed, err := language.Parse(parts[len(parts)-2]); err == nil {
+				// Expected file naming: <lang>.json or <name>.<lang>.json.
+				if len(parts) >= 2 {
+					langPart := parts[len(parts)-2]
+					if len(parts) == 2 {
+						langPart = parts[0]
+					}
+					if parsed, err := language.Parse(langPart); err == nil {
 						acceptLang = append(acceptLang, parsed)
 					}
 				}
@@ -48,10 +52,10 @@ func I18n(cfg *config.I18nConfig) gin.HandlerFunc {
 	return ginI18n.Localize(
 		ginI18n.WithBundle(&ginI18n.BundleCfg{
 			DefaultLanguage:  defaultLang,
-			FormatBundleFile: "yaml",
+			FormatBundleFile: "json",
 			RootPath:         rootPath,
 			AcceptLanguage:   acceptLang,
-			UnmarshalFunc:    yaml.Unmarshal,
+			UnmarshalFunc:    json.Unmarshal,
 			Loader:           nil,
 		}),
 	)
