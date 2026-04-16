@@ -26,6 +26,11 @@ go mod tidy
 APP_ENV=dev
 DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True
 TIME_ZONE=UTC
+HTTP_READ_TIMEOUT_SEC=30
+HTTP_READ_HEADER_TIMEOUT_SEC=10
+HTTP_WRITE_TIMEOUT_SEC=30
+HTTP_IDLE_TIMEOUT_SEC=120
+HTTP_SHUTDOWN_TIMEOUT_SEC=10
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret
@@ -48,6 +53,7 @@ go run ./cmd/migrate up --env dev
 
 - `cmd/migrate` 在 `--env dev` 下会自动加载 `.env/.env.local`，并读取 `DB_DSN`
 - CLI 统一为 Cobra 子命令风格：`go run ./cmd/<tool> <subcommand> --flags`（例如 `migrate up`、`server server`），不再保留旧的默认动作调用方式
+- HTTP 超时可由环境变量覆盖：`HTTP_READ_TIMEOUT_SEC`、`HTTP_READ_HEADER_TIMEOUT_SEC`、`HTTP_WRITE_TIMEOUT_SEC`、`HTTP_IDLE_TIMEOUT_SEC`、`HTTP_SHUTDOWN_TIMEOUT_SEC`
 - MySQL 的 `DB_DSN` **不必再写 `loc=`**：`parseTime` 仍建议保留；驱动 **`Loc`** 与 **`TIME_ZONE` / `--time-zone`** 一致，由代码注入（与 HTTP 服务行为相同）
 - 日志轮转支持全局 + 单文件覆盖：
   - 全局：`log.rotation_mode` / `LOG_ROTATION_MODE`，可选 `size`（默认）`daily` `none`
@@ -69,6 +75,13 @@ go run ./cmd/migrate up --env dev
   - MySQL: `migrations/mysql`（兼容回退 `migrations`）
   - PostgreSQL: `migrations/postgres`
   - 支持递归扫描子目录；建议按职责分目录：`schema/`（DDL）与 `seed/`（初始化数据）
+
+HTTP 超时建议值（单位秒）：
+
+- 本地开发（默认）：`read=30`，`read_header=10`，`write=30`，`idle=120`，`shutdown=10`
+- 生产 API（经网关/Nginx）：`read=30`，`read_header=5~10`，`write=30~60`，`idle=60~120`，`shutdown=20~30`
+- 慢接口较多（导出/大查询）：可适当调大 `write_timeout_sec`（如 90~120），并确保网关超时大于应用超时
+- 安全建议：`read_header_timeout_sec` 不要为 0，避免慢速请求头占用连接；`shutdown_timeout_sec` 不宜过短，防止发布时中断在途请求
 
 PostgreSQL 示例（显式传参）：
 
@@ -119,6 +132,11 @@ go mod tidy
 APP_ENV=dev
 DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True
 TIME_ZONE=UTC
+HTTP_READ_TIMEOUT_SEC=30
+HTTP_READ_HEADER_TIMEOUT_SEC=10
+HTTP_WRITE_TIMEOUT_SEC=30
+HTTP_IDLE_TIMEOUT_SEC=120
+HTTP_SHUTDOWN_TIMEOUT_SEC=10
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret

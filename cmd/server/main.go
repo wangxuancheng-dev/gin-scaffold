@@ -67,11 +67,12 @@ func runServer(env, profile string) error {
 	printConfigSource("server")
 	addr := fmt.Sprintf("%s:%d", deps.Cfg.HTTP.Host, deps.Cfg.HTTP.Port)
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      deps.Engine,
-		ReadTimeout:  time.Duration(deps.Cfg.HTTP.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(deps.Cfg.HTTP.WriteTimeout) * time.Second,
-		IdleTimeout:  time.Duration(deps.Cfg.HTTP.IdleTimeout) * time.Second,
+		Addr:              addr,
+		Handler:           deps.Engine,
+		ReadTimeout:       time.Duration(deps.Cfg.HTTP.ReadTimeout) * time.Second,
+		ReadHeaderTimeout: time.Duration(deps.Cfg.HTTP.ReadHeaderTimeout) * time.Second,
+		WriteTimeout:      time.Duration(deps.Cfg.HTTP.WriteTimeout) * time.Second,
+		IdleTimeout:       time.Duration(deps.Cfg.HTTP.IdleTimeout) * time.Second,
 	}
 
 	go func() {
@@ -86,7 +87,11 @@ func runServer(env, profile string) error {
 	<-quit
 	logger.InfoX("shutdown signal received")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownTimeout := deps.Cfg.HTTP.ShutdownTimeout
+	if shutdownTimeout <= 0 {
+		shutdownTimeout = 10
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(shutdownTimeout)*time.Second)
 	defer cancel()
 	return srv.Shutdown(ctx)
 }

@@ -24,11 +24,13 @@ type App struct {
 
 // HTTPConfig HTTP 服务监听与超时配置。
 type HTTPConfig struct {
-	Host         string `mapstructure:"host"`
-	Port         int    `mapstructure:"port"`
-	ReadTimeout  int    `mapstructure:"read_timeout_sec"`
-	WriteTimeout int    `mapstructure:"write_timeout_sec"`
-	IdleTimeout  int    `mapstructure:"idle_timeout_sec"`
+	Host              string `mapstructure:"host"`
+	Port              int    `mapstructure:"port"`
+	ReadTimeout       int    `mapstructure:"read_timeout_sec"`
+	ReadHeaderTimeout int    `mapstructure:"read_header_timeout_sec"`
+	WriteTimeout      int    `mapstructure:"write_timeout_sec"`
+	IdleTimeout       int    `mapstructure:"idle_timeout_sec"`
+	ShutdownTimeout   int    `mapstructure:"shutdown_timeout_sec"`
 }
 
 // LogConfig Zap + Lumberjack 日志配置。
