@@ -2,12 +2,13 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/spf13/cobra"
 )
 
 type crudOptions struct {
@@ -17,19 +18,31 @@ type crudOptions struct {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		usage()
-		os.Exit(1)
+	var opt crudOptions
+	rootCmd := &cobra.Command{
+		Use:   "gen",
+		Short: "code generator",
+		Run: func(cmd *cobra.Command, args []string) {
+			usage()
+		},
 	}
-
-	switch os.Args[1] {
-	case "crud":
-		if err := runCRUD(os.Args[2:]); err != nil {
-			fmt.Fprintln(os.Stderr, "crud generator error:", err)
-			os.Exit(1)
-		}
-	default:
-		usage()
+	crudCmd := &cobra.Command{
+		Use:   "crud",
+		Short: "generate CRUD scaffold",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := runCRUD(opt); err != nil {
+				return fmt.Errorf("crud generator error: %w", err)
+			}
+			return nil
+		},
+	}
+	crudCmd.Flags().StringVar(&opt.module, "module", "", "module name, e.g. order")
+	crudCmd.Flags().StringVar(&opt.table, "table", "", "table name, default: <module>s")
+	crudCmd.Flags().BoolVar(&opt.force, "force", false, "overwrite existing files")
+	_ = crudCmd.MarkFlagRequired("module")
+	rootCmd.AddCommand(crudCmd)
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -42,16 +55,7 @@ func usage() {
 	fmt.Println("  go run ./cmd/gen crud --module order --table orders --force")
 }
 
-func runCRUD(args []string) error {
-	fs := flag.NewFlagSet("crud", flag.ContinueOnError)
-	var opt crudOptions
-	fs.StringVar(&opt.module, "module", "", "module name, e.g. order")
-	fs.StringVar(&opt.table, "table", "", "table name, default: <module>s")
-	fs.BoolVar(&opt.force, "force", false, "overwrite existing files")
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
+func runCRUD(opt crudOptions) error {
 	opt.module = strings.TrimSpace(opt.module)
 	if opt.module == "" {
 		return errors.New("module is required")

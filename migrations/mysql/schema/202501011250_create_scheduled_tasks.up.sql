@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS `scheduled_tasks` (
   `name` VARCHAR(128) NOT NULL,
   `spec` VARCHAR(64) NOT NULL,
   `command` VARCHAR(1024) NOT NULL,
-  `timeout_sec` INT NOT NULL DEFAULT 30,
+  `timeout_sec` INT NOT NULL DEFAULT 0,
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
   `last_run_at` DATETIME(3) NULL,
   `last_status` VARCHAR(32) NULL,

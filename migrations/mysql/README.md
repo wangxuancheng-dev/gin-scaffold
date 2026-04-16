@@ -48,5 +48,5 @@
 - 新增默认角色、菜单、账号：放 `seed/`。
 - 不要修改已发布 migration 的历史内容，追加新 migration 修正。
 - 每次提交 migration 后，至少本地验证一次：
-  - `go run ./cmd/migrate --env dev up`
-  - `go run ./cmd/migrate --env dev down`
+  - `go run ./cmd/migrate up --env dev`
+  - `go run ./cmd/migrate down --env dev`

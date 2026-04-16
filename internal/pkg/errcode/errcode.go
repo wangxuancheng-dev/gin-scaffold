@@ -28,4 +28,6 @@ const (
 	KeyUserNotFound        = "user_not_found"
 	KeyUserExists          = "user_exists"
 	KeySuperAdminProtected = "super_admin_protected"
+	KeyTaskAlreadyRunning  = "task_already_running"
+	KeyInvalidCronSpec     = "invalid_cron_spec"
 )

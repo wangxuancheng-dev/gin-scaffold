@@ -106,7 +106,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	middleware.SetSuperAdminUserID(cfg.RBAC.SuperAdminUserID)
 	userSvc := service.NewUserService(userDAO, q, jm, cfg.RBAC.SuperAdminUserID)
 	menuSvc := service.NewMenuService(menuDAO)
-	taskSvc := service.NewScheduledTaskService(taskDAO)
+	taskSvc := service.NewScheduledTaskService(taskDAO, cfg.Scheduler)
 	hub := websocketpkg.NewHub()
 	wsSvc := service.NewWSService(hub)
 	sseSvc := service.NewSSEService()

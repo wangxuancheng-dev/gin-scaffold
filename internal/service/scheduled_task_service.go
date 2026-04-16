@@ -7,12 +7,17 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
 
+	"gin-scaffold/config"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
+	appredis "gin-scaffold/pkg/redis"
 )
 
 type ScheduledTaskRepo interface {
@@ -30,12 +35,34 @@ type ScheduledTaskRepo interface {
 }
 
 type ScheduledTaskService struct {
-	dao       ScheduledTaskRepo
-	onChanged func()
+	dao         ScheduledTaskRepo
+	onChanged   func()
+	lockEnabled bool
+	lockTTL     time.Duration
+	lockPrefix  string
+	withSeconds bool
+	mu          sync.Mutex
+	running     map[int64]struct{}
 }
 
-func NewScheduledTaskService(dao ScheduledTaskRepo) *ScheduledTaskService {
-	return &ScheduledTaskService{dao: dao, onChanged: func() {}}
+func NewScheduledTaskService(dao ScheduledTaskRepo, cfg config.SchedulerConfig) *ScheduledTaskService {
+	lockTTL := time.Duration(cfg.LockTTLSeconds) * time.Second
+	if lockTTL <= 0 {
+		lockTTL = 120 * time.Second
+	}
+	lockPrefix := strings.TrimSpace(cfg.LockPrefix)
+	if lockPrefix == "" {
+		lockPrefix = "scheduler:task:lock:"
+	}
+	return &ScheduledTaskService{
+		dao:         dao,
+		onChanged:   func() {},
+		lockEnabled: cfg.LockEnabled,
+		lockTTL:     lockTTL,
+		lockPrefix:  lockPrefix,
+		withSeconds: cfg.WithSeconds,
+		running:     map[int64]struct{}{},
+	}
 }
 
 func (s *ScheduledTaskService) SetOnChanged(fn func()) {
@@ -57,11 +84,11 @@ func (s *ScheduledTaskService) Create(ctx context.Context, name, spec, command s
 	if name == "" || spec == "" || command == "" {
 		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
 	}
-	if timeoutSec <= 0 {
-		timeoutSec = 30
-	}
-	if timeoutSec > 3600 {
+	if timeoutSec < 0 || timeoutSec > 3600 {
 		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
+	}
+	if !isValidCronSpec(spec, s.withSeconds) {
+		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidCronSpec)
 	}
 	concurrencyPolicy = normalizeConcurrencyPolicy(concurrencyPolicy)
 	task := &model.ScheduledTask{
@@ -108,8 +135,11 @@ func (s *ScheduledTaskService) Update(ctx context.Context, id int64, name, spec,
 	if task.Name == "" || task.Spec == "" || task.Command == "" {
 		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
 	}
-	if task.TimeoutSec <= 0 || task.TimeoutSec > 3600 {
+	if task.TimeoutSec < 0 || task.TimeoutSec > 3600 {
 		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
+	}
+	if !isValidCronSpec(task.Spec, s.withSeconds) {
+		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidCronSpec)
 	}
 	task.ConcurrencyPolicy = normalizeConcurrencyPolicy(task.ConcurrencyPolicy)
 	if err := s.dao.Update(ctx, task); err != nil {
@@ -126,6 +156,21 @@ func normalizeConcurrencyPolicy(v string) string {
 	default:
 		return "forbid"
 	}
+}
+
+func isValidCronSpec(spec string, withSeconds bool) bool {
+	spec = strings.TrimSpace(spec)
+	if spec == "" {
+		return false
+	}
+	var parser cron.Parser
+	if withSeconds {
+		parser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	} else {
+		parser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	}
+	_, err := parser.Parse(spec)
+	return err == nil
 }
 
 func (s *ScheduledTaskService) Delete(ctx context.Context, id int64) error {
@@ -158,6 +203,27 @@ func (s *ScheduledTaskService) RunNow(ctx context.Context, id int64) error {
 		}
 		return err
 	}
+	policy := normalizeConcurrencyPolicy(task.ConcurrencyPolicy)
+	if policy == "allow" {
+		return s.executeTask(ctx, task)
+	}
+	if !s.enterLocal(id) {
+		return errcode.New(errcode.Forbidden, errcode.KeyTaskAlreadyRunning)
+	}
+	defer s.leaveLocal(id)
+
+	unlock := func() {}
+	if s.lockEnabled {
+		u, ok, lockErr := s.acquireDistributedLock(ctx, id)
+		if lockErr != nil {
+			return lockErr
+		}
+		if !ok {
+			return errcode.New(errcode.Forbidden, errcode.KeyTaskAlreadyRunning)
+		}
+		unlock = u
+	}
+	defer unlock()
 	return s.executeTask(ctx, task)
 }
 
@@ -180,10 +246,15 @@ func (s *ScheduledTaskService) ListEnabledTasks(ctx context.Context) ([]model.Sc
 func (s *ScheduledTaskService) executeTask(ctx context.Context, task *model.ScheduledTask) error {
 	start := time.Now()
 	timeout := task.TimeoutSec
-	if timeout <= 0 {
-		timeout = 30
+	var (
+		runCtx context.Context
+		cancel context.CancelFunc
+	)
+	if timeout > 0 {
+		runCtx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	} else {
+		runCtx, cancel = context.WithCancel(ctx)
 	}
-	runCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
 	status := "success"
 	msg := "ok"
@@ -233,4 +304,45 @@ func limitText(s string, n int) string {
 		return s
 	}
 	return s[:n]
+}
+
+func (s *ScheduledTaskService) enterLocal(taskID int64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.running[taskID]; ok {
+		return false
+	}
+	s.running[taskID] = struct{}{}
+	return true
+}
+
+func (s *ScheduledTaskService) leaveLocal(taskID int64) {
+	s.mu.Lock()
+	delete(s.running, taskID)
+	s.mu.Unlock()
+}
+
+func (s *ScheduledTaskService) acquireDistributedLock(ctx context.Context, taskID int64) (func(), bool, error) {
+	rc := appredis.Client()
+	if rc == nil {
+		return nil, false, fmt.Errorf("task lock enabled but redis client is nil")
+	}
+	key := fmt.Sprintf("%s%d", s.lockPrefix, taskID)
+	token := uuid.NewString()
+	ok, err := rc.SetNX(ctx, key, token, s.lockTTL).Result()
+	if err != nil {
+		return nil, false, err
+	}
+	if !ok {
+		return nil, false, nil
+	}
+	unlock := func() {
+		_, _ = rc.Eval(ctx, `
+if redis.call("get", KEYS[1]) == ARGV[1] then
+	return redis.call("del", KEYS[1])
+end
+return 0
+`, []string{key}, token).Result()
+	}
+	return unlock, true, nil
 }

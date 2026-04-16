@@ -1,9 +1,12 @@
 {
   "success": "success",
   "invalid_param": "invalid parameter",
+  "forbidden": "forbidden",
   "unauthorized": "unauthorized",
   "internal_error": "internal error",
   "user_not_found": "user not found",
   "user_exists": "user already exists",
-  "super_admin_protected": "super admin user cannot be deleted"
+  "super_admin_protected": "super admin user cannot be deleted",
+  "task_already_running": "task is already running",
+  "invalid_cron_spec": "invalid cron spec"
 }

@@ -1,9 +1,12 @@
 {
   "success": "成功",
   "invalid_param": "参数错误",
+  "forbidden": "禁止访问",
   "unauthorized": "未授权",
   "internal_error": "服务内部错误",
   "user_not_found": "用户不存在",
   "user_exists": "用户已存在",
-  "super_admin_protected": "超管用户不允许删除"
+  "super_admin_protected": "超管用户不允许删除",
+  "task_already_running": "任务正在执行中",
+  "invalid_cron_spec": "cron 表达式不合法"
 }

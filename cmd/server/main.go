@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	cli "github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
 	"gin-scaffold/config"
@@ -27,34 +27,32 @@ import (
 )
 
 func main() {
-	app := &cli.App{
-		Name:  "gin-scaffold",
-		Usage: "HTTP API 或 Asynq Worker",
-		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "env", Value: "dev", Usage: "配置环境: dev|test|prod"},
-			&cli.StringFlag{Name: "profile", Value: "", Usage: "配置画像: 多实例标识，如 order/crm"},
-		},
-		Commands: []*cli.Command{
-			{
-				Name:  "server",
-				Usage: "启动 HTTP 服务",
-				Action: func(c *cli.Context) error {
-					return runServer(c.String("env"), c.String("profile"))
-				},
-			},
-			{
-				Name:  "worker",
-				Usage: "启动 Asynq 任务消费者",
-				Action: func(c *cli.Context) error {
-					return runWorker(c.String("env"), c.String("profile"))
-				},
-			},
-		},
-		Action: func(c *cli.Context) error {
-			return runServer(c.String("env"), c.String("profile"))
+	var env string
+	var profile string
+	rootCmd := &cobra.Command{
+		Use:   "gin-scaffold",
+		Short: "HTTP API 或 Asynq Worker",
+		Run: func(cmd *cobra.Command, args []string) {
+			_ = cmd.Help()
 		},
 	}
-	if err := app.Run(os.Args); err != nil {
+	rootCmd.PersistentFlags().StringVar(&env, "env", "dev", "配置环境: dev|test|prod")
+	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "配置画像: 多实例标识，如 order/crm")
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "server",
+		Short: "启动 HTTP 服务",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runServer(env, profile)
+		},
+	})
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "worker",
+		Short: "启动 Asynq 任务消费者",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runWorker(env, profile)
+		},
+	})
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

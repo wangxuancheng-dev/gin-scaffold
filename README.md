@@ -41,12 +41,13 @@ LOG_ERROR_ROTATION_MODE=
 ### 4) 执行数据库迁移
 
 ```bash
-go run ./cmd/migrate --env dev up
+go run ./cmd/migrate up --env dev
 ```
 
 说明：
 
 - `cmd/migrate` 在 `--env dev` 下会自动加载 `.env/.env.local`，并读取 `DB_DSN`
+- CLI 统一为 Cobra 子命令风格：`go run ./cmd/<tool> <subcommand> --flags`（例如 `migrate up`、`server server`），不再保留旧的默认动作调用方式
 - MySQL 的 `DB_DSN` **不必再写 `loc=`**：`parseTime` 仍建议保留；驱动 **`Loc`** 与 **`TIME_ZONE` / `--time-zone`** 一致，由代码注入（与 HTTP 服务行为相同）
 - 日志轮转支持全局 + 单文件覆盖：
   - 全局：`log.rotation_mode` / `LOG_ROTATION_MODE`，可选 `size`（默认）`daily` `none`
@@ -58,6 +59,7 @@ go run ./cmd/migrate --env dev up
 - 支持 cron 示例任务（`robfig/cron/v3`）：
   - 配置在 `scheduler`：`enabled`、`with_seconds`、`log_retention_days`、`lock_enabled`、`lock_ttl_seconds`、`lock_prefix`
   - 调度规则来自数据库任务表（每条任务有独立 `spec` 与 `command`）
+  - `timeout_sec` 支持 `0~3600`：`0` 表示不设置超时（适合迁移/备份等长任务），`>0` 表示超时秒数
   - 执行日志写入 `scheduled_task_logs`，可通过后台接口查询；支持按保留天数自动清理
   - 多实例部署时通过 Redis 分布式锁防止同一任务被多台服务器重复执行（并带本机防重入）
   - 任务支持并发策略 `concurrency_policy`：`forbid`（默认，单实例执行）/`allow`（允许并发执行）
@@ -71,19 +73,19 @@ go run ./cmd/migrate --env dev up
 PostgreSQL 示例（显式传参）：
 
 ```bash
-go run ./cmd/migrate --env dev --driver postgres --dsn "<your_pg_dsn>" up
+go run ./cmd/migrate up --env dev --driver postgres --dsn "<your_pg_dsn>"
 ```
 
 回滚上一次 migration（只回滚最后一步）：
 
 ```bash
-go run ./cmd/migrate --env dev down
+go run ./cmd/migrate down --env dev
 ```
 
 ### 5) 启动服务
 
 ```bash
-go run ./cmd/server --env dev
+go run ./cmd/server server --env dev
 ```
 
 ### 6) 本地验证
@@ -123,10 +125,10 @@ JWT_SECRET=replace-with-your-own-secret
 "@ | Set-Content -Path .env.local -Encoding UTF8
 
 # 3) 执行迁移（MySQL 示例）
-go run ./cmd/migrate --env dev up
+go run ./cmd/migrate up --env dev
 
 # 4) 启动服务
-go run ./cmd/server --env dev
+go run ./cmd/server server --env dev
 ```
 
 启动后访问：
@@ -154,18 +156,18 @@ cp .env.example .env.local
 # 按你的 docker-compose 实际端口和账号改 DB_DSN/REDIS_ADDR
 
 # 3) 执行数据库迁移
-go run ./cmd/migrate --env dev up
+go run ./cmd/migrate up --env dev
 
 # 4) 启动服务
-go run ./cmd/server --env dev
+go run ./cmd/server server --env dev
 ```
 
 Windows（PowerShell）可用：
 
 ```powershell
 docker-compose up -d mysql redis
-go run ./cmd/migrate --env dev up
-go run ./cmd/server --env dev
+go run ./cmd/migrate up --env dev
+go run ./cmd/server server --env dev
 ```
 
 ## 核心访问地址

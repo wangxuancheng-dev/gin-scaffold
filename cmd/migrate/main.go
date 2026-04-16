@@ -11,70 +11,77 @@ import (
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"github.com/joho/godotenv"
-	cli "github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
-	app := &cli.App{
-		Name:  "migrate",
-		Usage: "database migration tool",
-		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "env", Value: "dev", Usage: "runtime env, dev will auto load .env files"},
-			&cli.StringFlag{Name: "profile", Usage: "optional profile used by .env.<env>.<profile>"},
-			&cli.StringFlag{Name: "driver", Value: "mysql", Usage: "mysql|postgres"},
-			&cli.StringFlag{Name: "dsn", Usage: "database dsn, fallback to DB_DSN env"},
-			&cli.StringFlag{Name: "time-zone", Usage: "mysql SET time_zone / pg SET TIME ZONE; env TIME_ZONE; default UTC"},
-			&cli.StringFlag{Name: "dir", Usage: "migration directory, default auto: ./migrations/<driver>"},
-		},
-		Commands: []*cli.Command{
-			{
-				Name: "up",
-				Action: func(c *cli.Context) error {
-					loadDotEnv(c.String("env"), c.String("profile"))
-					driver := normalizeDriver(c.String("driver"))
-					db, err := openDB(driver, resolveDSN(c.String("dsn")), resolveTimeZone(c.String("time-zone")))
-					if err != nil {
-						return err
-					}
-					dir, err := resolveMigrationDir(c.String("dir"), driver)
-					if err != nil {
-						return err
-					}
-					m := buildMigrator(db, dir)
-					if err = m.Migrate(); err != nil {
-						return err
-					}
-					fmt.Println("migrate up done")
-					return nil
-				},
-			},
-			{
-				Name: "down",
-				Action: func(c *cli.Context) error {
-					loadDotEnv(c.String("env"), c.String("profile"))
-					driver := normalizeDriver(c.String("driver"))
-					db, err := openDB(driver, resolveDSN(c.String("dsn")), resolveTimeZone(c.String("time-zone")))
-					if err != nil {
-						return err
-					}
-					dir, err := resolveMigrationDir(c.String("dir"), driver)
-					if err != nil {
-						return err
-					}
-					m := buildMigrator(db, dir)
-					if err = m.RollbackLast(); err != nil {
-						return err
-					}
-					fmt.Println("migrate down one step done")
-					return nil
-				},
-			},
-		},
+	var env string
+	var profile string
+	var driver string
+	var dsn string
+	var timeZone string
+	var dir string
+
+	rootCmd := &cobra.Command{
+		Use:   "migrate",
+		Short: "database migration tool",
 	}
-	if err := app.Run(os.Args); err != nil {
+	rootCmd.PersistentFlags().StringVar(&env, "env", "dev", "runtime env, dev will auto load .env files")
+	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "optional profile used by .env.<env>.<profile>")
+	rootCmd.PersistentFlags().StringVar(&driver, "driver", "mysql", "mysql|postgres")
+	rootCmd.PersistentFlags().StringVar(&dsn, "dsn", "", "database dsn, fallback to DB_DSN env")
+	rootCmd.PersistentFlags().StringVar(&timeZone, "time-zone", "", "mysql SET time_zone / pg SET TIME ZONE; env TIME_ZONE; default UTC")
+	rootCmd.PersistentFlags().StringVar(&dir, "dir", "", "migration directory, default auto: ./migrations/<driver>")
+
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "up",
+		Short: "apply all pending migrations",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			loadDotEnv(env, profile)
+			driverName := normalizeDriver(driver)
+			db, err := openDB(driverName, resolveDSN(dsn), resolveTimeZone(timeZone))
+			if err != nil {
+				return err
+			}
+			migrationDir, err := resolveMigrationDir(dir, driverName)
+			if err != nil {
+				return err
+			}
+			m := buildMigrator(db, migrationDir)
+			if err = m.Migrate(); err != nil {
+				return err
+			}
+			fmt.Println("migrate up done")
+			return nil
+		},
+	})
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "down",
+		Short: "rollback one migration step",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			loadDotEnv(env, profile)
+			driverName := normalizeDriver(driver)
+			db, err := openDB(driverName, resolveDSN(dsn), resolveTimeZone(timeZone))
+			if err != nil {
+				return err
+			}
+			migrationDir, err := resolveMigrationDir(dir, driverName)
+			if err != nil {
+				return err
+			}
+			m := buildMigrator(db, migrationDir)
+			if err = m.RollbackLast(); err != nil {
+				return err
+			}
+			fmt.Println("migrate down one step done")
+			return nil
+		},
+	})
+
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

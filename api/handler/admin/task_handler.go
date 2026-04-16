@@ -43,7 +43,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		return
 	}
 	enabled := true
-	timeoutSec := 30
+	timeoutSec := 0
 	concurrencyPolicy := "forbid"
 	if req.Enabled != nil {
 		enabled = *req.Enabled

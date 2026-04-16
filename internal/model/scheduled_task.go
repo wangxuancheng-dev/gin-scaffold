@@ -11,7 +11,7 @@ type ScheduledTask struct {
 	Name              string         `gorm:"size:128;uniqueIndex;not null" json:"name"`
 	Spec              string         `gorm:"size:64;not null" json:"spec"`
 	Command           string         `gorm:"size:1024;not null" json:"command"`
-	TimeoutSec        int            `gorm:"not null;default:30" json:"timeout_sec"`
+	TimeoutSec        int            `gorm:"not null;default:0" json:"timeout_sec"`
 	ConcurrencyPolicy string         `gorm:"size:16;not null;default:forbid" json:"concurrency_policy"`
 	Enabled           bool           `gorm:"not null;default:true" json:"enabled"`
 	LastRunAt         *time.Time     `json:"last_run_at,omitempty"`
