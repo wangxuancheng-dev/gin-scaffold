@@ -93,7 +93,15 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 
 	var q *job.Client
 	if cfg.Asynq.RedisAddr != "" {
-		q = job.NewClient(cfg.Asynq.RedisAddr, cfg.Asynq.RedisPassword, cfg.Asynq.RedisDB)
+		q = job.NewClient(
+			cfg.Asynq.RedisAddr,
+			cfg.Asynq.RedisPassword,
+			cfg.Asynq.RedisDB,
+			cfg.Asynq.Queue,
+			cfg.Asynq.MaxRetry,
+			cfg.Asynq.TimeoutSec,
+			cfg.Asynq.DedupWindowSec,
+		)
 		cleanups = append(cleanups, func(context.Context) { _ = q.Close() })
 	}
 
@@ -176,6 +184,7 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 		asynq.Config{
 			Concurrency:    cfg.Asynq.Concurrency,
 			StrictPriority: cfg.Asynq.StrictPriority,
+			Queues:         resolveAsynqQueues(cfg.Asynq),
 		},
 	)
 	mux := asynq.NewServeMux()
@@ -195,4 +204,15 @@ func runCleanups(ctx context.Context, funcs []func(context.Context)) {
 	for i := len(funcs) - 1; i >= 0; i-- {
 		funcs[i](ctx)
 	}
+}
+
+func resolveAsynqQueues(cfg config.AsynqConfig) map[string]int {
+	if len(cfg.Queues) > 0 {
+		return cfg.Queues
+	}
+	queue := cfg.Queue
+	if queue == "" {
+		queue = "default"
+	}
+	return map[string]int{queue: 1}
 }

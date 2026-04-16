@@ -59,6 +59,14 @@ asynq:
   redis_db: 1
   concurrency: 10
   strict_priority: false
+  queue: "default"
+  queues:
+    critical: 6
+    default: 3
+    low: 1
+  max_retry: 5
+  timeout_sec: 30
+  dedup_window_sec: 30
 
 jwt:
   secret: "change-me-in-prod"

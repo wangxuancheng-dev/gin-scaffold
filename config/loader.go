@@ -143,7 +143,7 @@ func bindEnvKeys(v *viper.Viper) {
 		"log.max_size_mb", "log.max_backups", "log.max_age_days", "log.compress", "log.console",
 		"db.driver", "db.dsn", "db.max_open_conns", "db.max_idle_conns", "db.conn_max_lifetime_sec", "db.conn_max_idle_time_sec", "db.slow_threshold_ms", "db.log_level",
 		"redis.addr", "redis.password", "redis.db", "redis.pool_size", "redis.min_idle_conns",
-		"asynq.redis_addr", "asynq.redis_password", "asynq.redis_db", "asynq.concurrency", "asynq.strict_priority",
+		"asynq.redis_addr", "asynq.redis_password", "asynq.redis_db", "asynq.concurrency", "asynq.strict_priority", "asynq.queue", "asynq.max_retry", "asynq.timeout_sec", "asynq.dedup_window_sec",
 		"jwt.secret", "jwt.access_expire_min", "jwt.refresh_expire_min", "jwt.issuer",
 		"metrics.enabled", "metrics.path",
 		"trace.enabled", "trace.endpoint", "trace.service_name", "trace.insecure",

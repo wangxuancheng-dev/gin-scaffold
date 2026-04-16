@@ -20,6 +20,7 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateHTTP()...)
 	errs = append(errs, a.validateDB()...)
 	errs = append(errs, a.validateRedis()...)
+	errs = append(errs, a.validateAsynq()...)
 	errs = append(errs, a.validateJWT()...)
 	errs = append(errs, a.validateI18n()...)
 	errs = append(errs, a.validateScheduler()...)
@@ -76,6 +77,40 @@ func (a *App) validateJWT() []string {
 	}
 	if a.JWT.AccessExpireMin <= 0 || a.JWT.RefreshExpireMin <= 0 {
 		errs = append(errs, "jwt.access_expire_min and jwt.refresh_expire_min must be > 0")
+	}
+	return errs
+}
+
+func (a *App) validateAsynq() []string {
+	var errs []string
+	if strings.TrimSpace(a.Asynq.RedisAddr) == "" {
+		errs = append(errs, "asynq.redis_addr is required")
+	}
+	if a.Asynq.RedisDB < 0 || a.Asynq.Concurrency < 0 {
+		errs = append(errs, "asynq.redis_db and asynq.concurrency must be >= 0")
+	}
+	if strings.TrimSpace(a.Asynq.Queue) == "" {
+		if len(a.Asynq.Queues) == 0 {
+			errs = append(errs, "asynq.queue is required (or configure asynq.queues)")
+		}
+	}
+	for q, w := range a.Asynq.Queues {
+		if strings.TrimSpace(q) == "" {
+			errs = append(errs, "asynq.queues key must not be empty")
+			continue
+		}
+		if w <= 0 {
+			errs = append(errs, "asynq.queues weight must be > 0")
+		}
+	}
+	if a.Asynq.MaxRetry < 0 {
+		errs = append(errs, "asynq.max_retry must be >= 0")
+	}
+	if a.Asynq.TimeoutSec < 0 {
+		errs = append(errs, "asynq.timeout_sec must be >= 0")
+	}
+	if a.Asynq.DedupWindowSec < 0 {
+		errs = append(errs, "asynq.dedup_window_sec must be >= 0")
 	}
 	return errs
 }

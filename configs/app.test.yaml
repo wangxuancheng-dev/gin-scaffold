@@ -55,6 +55,14 @@ asynq:
   redis_db: 2
   concurrency: 5
   strict_priority: false
+  queue: "default"
+  queues:
+    critical: 5
+    default: 3
+    low: 1
+  max_retry: 5
+  timeout_sec: 30
+  dedup_window_sec: 15
 
 jwt:
   secret: "test-secret"

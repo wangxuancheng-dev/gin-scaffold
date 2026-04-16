@@ -91,11 +91,16 @@ type RedisConfig struct {
 
 // AsynqConfig 异步任务队列配置。
 type AsynqConfig struct {
-	RedisAddr      string `mapstructure:"redis_addr"`
-	RedisPassword  string `mapstructure:"redis_password"`
-	RedisDB        int    `mapstructure:"redis_db"`
-	Concurrency    int    `mapstructure:"concurrency"`
-	StrictPriority bool   `mapstructure:"strict_priority"`
+	RedisAddr      string         `mapstructure:"redis_addr"`
+	RedisPassword  string         `mapstructure:"redis_password"`
+	RedisDB        int            `mapstructure:"redis_db"`
+	Concurrency    int            `mapstructure:"concurrency"`
+	StrictPriority bool           `mapstructure:"strict_priority"`
+	Queue          string         `mapstructure:"queue"`
+	Queues         map[string]int `mapstructure:"queues"`
+	MaxRetry       int            `mapstructure:"max_retry"`
+	TimeoutSec     int            `mapstructure:"timeout_sec"`
+	DedupWindowSec int            `mapstructure:"dedup_window_sec"`
 }
 
 // JWTConfig JWT 签发与校验配置。
