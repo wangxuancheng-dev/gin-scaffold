@@ -25,6 +25,16 @@ func TestValidate_Ok(t *testing.T) {
 		Redis: RedisConfig{
 			Addr: "127.0.0.1:6379",
 		},
+		Asynq: AsynqConfig{
+			RedisAddr:      "127.0.0.1:6379",
+			RedisDB:        1,
+			Concurrency:    10,
+			Queue:          "default",
+			Queues:         map[string]int{"critical": 6, "default": 3, "low": 1},
+			MaxRetry:       5,
+			TimeoutSec:     30,
+			DedupWindowSec: 30,
+		},
 		JWT: JWTConfig{
 			Secret:           "test-secret",
 			AccessExpireMin:  60,
@@ -52,6 +62,11 @@ func TestValidate_FailFast(t *testing.T) {
 		DB:   DBConfig{Driver: "mysql", DSN: "dsn"},
 		Redis: RedisConfig{
 			Addr: "127.0.0.1:6379",
+		},
+		Asynq: AsynqConfig{
+			RedisAddr: "127.0.0.1:6379",
+			Queue:     "default",
+			Queues:    map[string]int{"default": 1},
 		},
 		JWT: JWTConfig{
 			Secret:           "",
@@ -84,6 +99,13 @@ func TestValidate_AggregatesErrors(t *testing.T) {
 			Addr: "",
 			DB:   -1,
 		},
+		Asynq: AsynqConfig{
+			RedisAddr:      "",
+			Queue:          "",
+			Queues:         map[string]int{"": 0},
+			MaxRetry:       -1,
+			DedupWindowSec: -1,
+		},
 		JWT: JWTConfig{
 			Secret:           "",
 			AccessExpireMin:  0,
@@ -106,6 +128,9 @@ func TestValidate_AggregatesErrors(t *testing.T) {
 		"http.host is required",
 		"db.driver must be mysql or postgres",
 		"redis.addr is required",
+		"asynq.redis_addr is required",
+		"asynq.queues key must not be empty",
+		"asynq.dedup_window_sec must be >= 0",
 		"jwt.secret is required",
 		"i18n.default_lang is required",
 		"scheduler.log_retention_days must be >= 0",

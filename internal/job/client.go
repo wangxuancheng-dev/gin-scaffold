@@ -67,8 +67,16 @@ func (c *Client) EnqueueWelcome(ctx context.Context, userID int64, username stri
 
 // EnqueueTask 投递普通任务（不去重）。
 func (c *Client) EnqueueTask(ctx context.Context, taskType string, payload any, uniqueWindowSec int) error {
+	return c.EnqueueTaskInQueue(ctx, c.queue, taskType, payload, uniqueWindowSec)
+}
+
+// EnqueueTaskInQueue 投递普通任务（可指定队列，可选去重窗口）。
+func (c *Client) EnqueueTaskInQueue(ctx context.Context, queueName string, taskType string, payload any, uniqueWindowSec int) error {
 	if c == nil || c.c == nil {
 		return nil
+	}
+	if queueName == "" {
+		queueName = c.queue
 	}
 	b, err := json.Marshal(payload)
 	if err != nil {
@@ -78,10 +86,15 @@ func (c *Client) EnqueueTask(ctx context.Context, taskType string, payload any, 
 	opts := []asynq.Option{
 		asynq.MaxRetry(c.maxRetry),
 		asynq.Timeout(time.Duration(c.timeoutSec) * time.Second),
-		asynq.Queue(c.queue),
+		asynq.Queue(queueName),
 	}
 	if uniqueWindowSec > 0 {
-		opts = append(opts, asynq.Unique(time.Duration(uniqueWindowSec)*time.Second))
+		// asynq.Unique(ttl) 要求 ttl >= 1s，这里做兜底。
+		ttl := uniqueWindowSec
+		if ttl < 1 {
+			ttl = 1
+		}
+		opts = append(opts, asynq.Unique(time.Duration(ttl)*time.Second))
 	}
 	_, err = c.c.EnqueueContext(ctx, task, opts...)
 	return err
@@ -90,5 +103,10 @@ func (c *Client) EnqueueTask(ctx context.Context, taskType string, payload any, 
 // EnqueueUnique 使用配置的去重窗口投递任务。
 // 去重粒度由 taskType + payload 决定，适合“重复点击提交同一业务请求”场景。
 func (c *Client) EnqueueUnique(ctx context.Context, taskType string, payload any) error {
-	return c.EnqueueTask(ctx, taskType, payload, c.dedupWindowSec)
+	return c.EnqueueUniqueInQueue(ctx, c.queue, taskType, payload)
+}
+
+// EnqueueUniqueInQueue 使用配置的去重窗口投递任务（可指定队列）。
+func (c *Client) EnqueueUniqueInQueue(ctx context.Context, queueName string, taskType string, payload any) error {
+	return c.EnqueueTaskInQueue(ctx, queueName, taskType, payload, c.dedupWindowSec)
 }

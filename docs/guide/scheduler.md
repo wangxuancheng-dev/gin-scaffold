@@ -45,6 +45,14 @@ go run ./cmd/artisan queue:failed retry-all 50 --env prod
 - 去重判断基于：`taskType + payload`，因此 payload 里应包含稳定业务键（如 `order_id` 或 `request_id`）
 - 去重窗口由 `asynq.dedup_window_sec` 控制（例如 30 秒）
 
+## 多队列优先级使用方式（critical/default/low）
+
+- 在配置中用 `asynq.queues` 设置权重，例如：`critical:8, default:3, low:1`
+- 业务入队时必须把任务投到对应队列（例如资金类投 `critical`），否则优先级权重无法生效
+- 入队方式：
+  - `EnqueueTaskInQueue(ctx, "critical", taskType, payload, uniqueWindowSec)`
+  - `EnqueueUniqueInQueue(ctx, "critical", taskType, payload)`
+
 ## 配置建议
 
 - `lock_enabled=true`（生产建议开启）

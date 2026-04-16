@@ -79,6 +79,8 @@ func newQueueFailedCommand(env, profile *string) *cobra.Command {
 		Use:   "queue:failed",
 		Short: "inspect and retry failed(asynq archived) tasks",
 	}
+	var queueOverride string
+	root.Flags().StringVarP(&queueOverride, "queue", "q", "", "asynq queue name, default from config")
 	root.AddCommand(&cobra.Command{
 		Use:   "list",
 		Short: "list archived tasks from queue",
@@ -93,12 +95,16 @@ func newQueueFailedCommand(env, profile *string) *cobra.Command {
 				DB:       cfg.Asynq.RedisDB,
 			})
 			defer func() { _ = ins.Close() }()
-			tasks, err := ins.ListArchivedTasks(cfg.Asynq.Queue, asynq.PageSize(20))
+			queueName := cfg.Asynq.Queue
+			if queueOverride != "" {
+				queueName = queueOverride
+			}
+			tasks, err := ins.ListArchivedTasks(queueName, asynq.PageSize(20))
 			if err != nil {
 				return err
 			}
 			if len(tasks) == 0 {
-				fmt.Printf("no archived tasks in queue=%s\n", cfg.Asynq.Queue)
+				fmt.Printf("no archived tasks in queue=%s\n", queueName)
 				return nil
 			}
 			for _, t := range tasks {
@@ -132,10 +138,14 @@ func newQueueFailedCommand(env, profile *string) *cobra.Command {
 				DB:       cfg.Asynq.RedisDB,
 			})
 			defer func() { _ = ins.Close() }()
-			if err := ins.RunTask(cfg.Asynq.Queue, args[0]); err != nil {
+			queueName := cfg.Asynq.Queue
+			if queueOverride != "" {
+				queueName = queueOverride
+			}
+			if err := ins.RunTask(queueName, args[0]); err != nil {
 				return err
 			}
-			fmt.Printf("retry task ok: queue=%s id=%s\n", cfg.Asynq.Queue, args[0])
+			fmt.Printf("retry task ok: queue=%s id=%s\n", queueName, args[0])
 			return nil
 		},
 	})
@@ -156,23 +166,27 @@ func newQueueFailedCommand(env, profile *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			queueName := cfg.Asynq.Queue
+			if queueOverride != "" {
+				queueName = queueOverride
+			}
 			ins := asynq.NewInspector(asynq.RedisClientOpt{
 				Addr:     cfg.Asynq.RedisAddr,
 				Password: cfg.Asynq.RedisPassword,
 				DB:       cfg.Asynq.RedisDB,
 			})
 			defer func() { _ = ins.Close() }()
-			tasks, err := ins.ListArchivedTasks(cfg.Asynq.Queue, asynq.PageSize(limit))
+			tasks, err := ins.ListArchivedTasks(queueName, asynq.PageSize(limit))
 			if err != nil {
 				return err
 			}
 			okCount := 0
 			for _, t := range tasks {
-				if err := ins.RunTask(cfg.Asynq.Queue, t.ID); err == nil {
+				if err := ins.RunTask(queueName, t.ID); err == nil {
 					okCount++
 				}
 			}
-			fmt.Printf("retry-all done: queue=%s success=%d total=%d\n", cfg.Asynq.Queue, okCount, len(tasks))
+			fmt.Printf("retry-all done: queue=%s success=%d total=%d\n", queueName, okCount, len(tasks))
 			return nil
 		},
 	})

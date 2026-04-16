@@ -35,8 +35,12 @@ go run ./cmd/artisan run ping
 go run ./cmd/artisan make:command report:daily
 # 查看死信（归档）任务
 go run ./cmd/artisan queue:failed list --env dev
+# 指定某个队列查看
+go run ./cmd/artisan queue:failed list --env dev --queue critical
 # 重试一条死信任务
 go run ./cmd/artisan queue:failed retry <task_id> --env dev
+# 指定队列重试
+go run ./cmd/artisan queue:failed retry <task_id> --env dev --queue critical
 ```
 
 ### 自定义命令与计划任务联动
