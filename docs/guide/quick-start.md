@@ -1,0 +1,49 @@
+# 快速开始
+
+## 1) 环境准备
+
+- Go `1.22+`
+- MySQL 或 PostgreSQL
+- Redis
+
+## 2) 拉取代码与依赖
+
+```bash
+git clone <your_repo_url>
+cd gin-scaffold
+go mod tidy
+```
+
+## 3) 准备 `.env.local`
+
+```env
+APP_ENV=dev
+DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True
+TIME_ZONE=UTC
+HTTP_READ_TIMEOUT_SEC=30
+HTTP_READ_HEADER_TIMEOUT_SEC=10
+HTTP_WRITE_TIMEOUT_SEC=30
+HTTP_IDLE_TIMEOUT_SEC=120
+HTTP_SHUTDOWN_TIMEOUT_SEC=10
+REDIS_ADDR=127.0.0.1:6379
+REDIS_PASSWORD=
+JWT_SECRET=replace-with-your-own-secret
+```
+
+## 4) 执行迁移
+
+```bash
+go run ./cmd/migrate up --env dev
+```
+
+## 5) 启动服务
+
+```bash
+go run ./cmd/server server --env dev
+```
+
+## 6) 验证接口
+
+- `http://localhost:8080/livez`
+- `http://localhost:8080/readyz`
+- `http://localhost:8080/swagger/index.html`

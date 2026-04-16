@@ -1,0 +1,37 @@
+# 项目简介
+
+`gin-scaffold` 是一套面向业务落地的 Go 服务端脚手架，核心目标是：
+
+- 快速启动：开箱即用的 API、迁移、任务、日志、鉴权能力
+- 生产可用：基础可观测、超时、限流、恢复、检查点齐全
+- 结构清晰：分层明确，易于团队协作和后续扩展
+
+## 技术栈
+
+- Web：Gin
+- ORM：GORM
+- DB：MySQL / PostgreSQL
+- Cache：Redis
+- Queue：Asynq
+- Docs：Swagger + VitePress
+- Logging：Zap + 按需轮转
+- Trace/Metrics：OpenTelemetry + Prometheus
+
+## 目录概览
+
+```text
+cmd/                # 启动命令（server/migrate/gen/artisan）
+config/             # 配置加载与校验
+configs/            # 各环境配置模板
+internal/           # 核心业务（dao/service/job/console 等）
+api/                # handler/request/response
+routes/             # 路由注册
+migrations/         # DB 迁移（schema/seed）
+docs/               # 文档中心（VitePress）
+```
+
+## 设计原则
+
+- 默认可运行，关键能力可配置
+- 配置错误快速失败（fail fast）
+- 功能优先服务中小团队生产场景，避免过度平台化
