@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +16,8 @@ import (
 	"gorm.io/gorm"
 
 	"gin-scaffold/config"
+	"gin-scaffold/internal/console"
+	_ "gin-scaffold/internal/console/commands"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
 	appredis "gin-scaffold/pkg/redis"
@@ -289,6 +292,9 @@ func (s *ScheduledTaskService) PurgeLogs(ctx context.Context, retentionDays int)
 }
 
 func runCommand(ctx context.Context, command string) (string, error) {
+	if out, ok, err := runArtisanCommand(ctx, command); ok {
+		return out, err
+	}
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
 		cmd = exec.CommandContext(ctx, "cmd", "/C", command)
@@ -297,6 +303,23 @@ func runCommand(ctx context.Context, command string) (string, error) {
 	}
 	out, err := cmd.CombinedOutput()
 	return string(out), err
+}
+
+func runArtisanCommand(ctx context.Context, command string) (string, bool, error) {
+	line := strings.TrimSpace(command)
+	if line == "" {
+		return "", false, nil
+	}
+	parts := strings.Fields(line)
+	if len(parts) == 0 || parts[0] != "artisan" {
+		return "", false, nil
+	}
+	if len(parts) < 2 {
+		return "", true, fmt.Errorf("artisan command is required")
+	}
+	var buf bytes.Buffer
+	err := console.Execute(ctx, parts[1], parts[2:], &buf)
+	return buf.String(), true, err
 }
 
 func limitText(s string, n int) string {

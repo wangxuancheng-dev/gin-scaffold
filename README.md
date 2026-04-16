@@ -69,6 +69,7 @@ go run ./cmd/migrate up --env dev
   - 执行日志写入 `scheduled_task_logs`，可通过后台接口查询；支持按保留天数自动清理
   - 多实例部署时通过 Redis 分布式锁防止同一任务被多台服务器重复执行（并带本机防重入）
   - 任务支持并发策略 `concurrency_policy`：`forbid`（默认，单实例执行）/`allow`（允许并发执行）
+  - 任务 `command` 支持 artisan 前缀：如 `artisan ping`、`artisan report:daily --date=2026-04-16`（与 `cmd/artisan run` 使用同一命令注册体系）
 - 如需临时覆盖可显式传 `--dsn`
 - 数据库**会话时区**：未传 `--time-zone` 时读环境变量 **`TIME_ZONE`**（如 `UTC`、`Asia/Shanghai`、`+08:00`），否则默认 **`UTC`**（MySQL：`SET time_zone`；PostgreSQL：`SET TIME ZONE`），与迁移里 `NOW()` 一致；应用侧见 `configs` 的 **`db.time_zone`**（同样可用 **`TIME_ZONE`** 覆盖）。HTTP/Worker 启动时会把进程 **`time.Local`** 设成与该配置一致，**Gin 里没有单独时区开关**，普通 **`time.Now()`**、日志时间等与 **GORM 自动时间戳** 同一套时区语义
 - 迁移目录默认按驱动自动选择：
@@ -100,6 +101,21 @@ go run ./cmd/migrate down --env dev
 ```bash
 go run ./cmd/server server --env dev
 ```
+
+### 5.1) Artisan 控制台命令
+
+```bash
+# 查看已注册命令
+go run ./cmd/artisan list
+
+# 执行命令
+go run ./cmd/artisan run ping
+
+# 生成自定义命令模板
+go run ./cmd/artisan make:command report:daily
+```
+
+> 新生成命令位于 `internal/console/commands/*.go`，实现后重新编译即可使用。
 
 ### 6) 本地验证
 

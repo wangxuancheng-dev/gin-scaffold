@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -66,6 +67,7 @@ func runServer(env, profile string) error {
 	defer deps.Cleanup(context.Background())
 	printConfigSource("server")
 	addr := fmt.Sprintf("%s:%d", deps.Cfg.HTTP.Host, deps.Cfg.HTTP.Port)
+	printServerStartupSummary(deps.Cfg, addr, len(deps.Engine.Routes()))
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           deps.Engine,
@@ -130,4 +132,31 @@ func printConfigSource(component string) {
 		zap.Strings("dotenv_files", src.DotEnvFiles),
 		zap.String("env_strategy", "runtime env vars have highest priority"),
 	)
+}
+
+func printServerStartupSummary(cfg *config.App, addr string, routeCount int) {
+	if cfg == nil {
+		return
+	}
+	mode := "release"
+	if cfg.Debug {
+		mode = "debug"
+	}
+	line := strings.Repeat("=", 72)
+	fmt.Printf("\x1b[35m%s\x1b[0m\n", line)
+	fmt.Printf("\x1b[35m%-72s\x1b[0m\n", " Gin Scaffold Startup ")
+	fmt.Printf("\x1b[35m%s\x1b[0m\n", line)
+	fmt.Printf("  \x1b[36mMode\x1b[0m       : %s\n", mode)
+	fmt.Printf("  \x1b[36mEnv\x1b[0m        : %s\n", cfg.Env)
+	fmt.Printf("  \x1b[36mApp\x1b[0m        : %s\n", cfg.Name)
+	fmt.Printf("  \x1b[36mAddress\x1b[0m    : %s\n", addr)
+	fmt.Printf("  \x1b[36mRoutes\x1b[0m     : %d\n", routeCount)
+	fmt.Printf("  \x1b[36mHTTP Timeout\x1b[0m: read=%ds, header=%ds, write=%ds, idle=%ds, shutdown=%ds\n",
+		cfg.HTTP.ReadTimeout,
+		cfg.HTTP.ReadHeaderTimeout,
+		cfg.HTTP.WriteTimeout,
+		cfg.HTTP.IdleTimeout,
+		cfg.HTTP.ShutdownTimeout,
+	)
+	fmt.Printf("\x1b[35m%s\x1b[0m\n", line)
 }

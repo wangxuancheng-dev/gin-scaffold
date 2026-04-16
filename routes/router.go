@@ -2,7 +2,10 @@
 package routes
 
 import (
+	"fmt"
 	"net"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -36,6 +39,15 @@ type Options struct {
 func Build(opts Options) *gin.Engine {
 	if opts.Cfg != nil && opts.Cfg.Debug {
 		gin.SetMode(gin.DebugMode)
+		gin.ForceConsoleColor()
+		gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {
+			fmt.Fprintf(os.Stdout, "\x1b[36m[ROUTE]\x1b[0m %-6s %-40s \x1b[90mhandlers=%-2d\x1b[0m %s\n",
+				httpMethod,
+				truncatePath(absolutePath, 40),
+				nuHandlers,
+				handlerName,
+			)
+		}
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -82,6 +94,16 @@ func Build(opts Options) *gin.Engine {
 	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.AdminUser, opts.AdminMenu, opts.AdminOps, opts.AdminTask, opts.WS, opts.SSE)
 
 	return r
+}
+
+func truncatePath(p string, max int) string {
+	if len(p) <= max {
+		return p + strings.Repeat(" ", max-len(p))
+	}
+	if max <= 3 {
+		return p[:max]
+	}
+	return p[:max-3] + "..."
 }
 
 func isLoopbackClient(ip string) bool {
