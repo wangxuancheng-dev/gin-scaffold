@@ -82,6 +82,9 @@ func Load(env, profile string) (*App, error) {
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("validate config: %w", err)
+	}
 	global.Store(&cfg)
 	meta.Store(SourceMeta{
 		Env:         env,
@@ -93,6 +96,9 @@ func Load(env, profile string) (*App, error) {
 	v.OnConfigChange(func(e fsnotify.Event) {
 		var next App
 		if err := v.Unmarshal(&next); err != nil {
+			return
+		}
+		if err := next.Validate(); err != nil {
 			return
 		}
 		mu.Lock()
