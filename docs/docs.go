@@ -90,15 +90,15 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/admin/audit-logs/export": {
-            "get": {
+        "/api/v1/admin/audit-logs/export/tasks": {
+            "post": {
                 "produces": [
-                    "text/csv"
+                    "application/json"
                 ],
                 "tags": [
                     "admin-ops"
                 ],
-                "summary": "审计日志导出（后台）",
+                "summary": "创建审计日志异步导出任务（后台）",
                 "parameters": [
                     {
                         "type": "integer",
@@ -132,7 +132,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "开始时间（RFC3339）；为空时默认 now-7d",
+                        "description": "开始时间（RFC3339）；为空时默认 now-export_default_days",
                         "name": "from",
                         "in": "query"
                     },
@@ -141,19 +141,69 @@ const docTemplate = `{
                         "description": "结束时间（RFC3339）；为空时默认 now",
                         "name": "to",
                         "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "最大导出条数（默认 5000，最大 10000）",
-                        "name": "limit",
-                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "csv content",
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/audit-logs/export/tasks/{task_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-ops"
+                ],
+                "summary": "查询审计日志异步导出任务状态（后台）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/audit-logs/export/tasks/{task_id}/download": {
+            "get": {
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "admin-ops"
+                ],
+                "summary": "下载审计日志异步导出结果（后台）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     }
                 }
@@ -261,51 +311,26 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/admin/users/export": {
-            "get": {
+        "/api/v1/admin/users/export/tasks": {
+            "post": {
                 "produces": [
-                    "text/csv",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    "application/json"
                 ],
                 "tags": [
                     "admin-user"
                 ],
-                "summary": "用户导出（后台）",
+                "summary": "用户异步导出任务创建（后台）",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "用户名（模糊）",
+                        "description": "用户名模糊查询",
                         "name": "username",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "昵称（模糊）",
+                        "description": "昵称模糊查询",
                         "name": "nickname",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "导出范围: all/page, 默认 all",
-                        "name": "export_scope",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "导出格式: csv/xlsx, 默认 csv",
-                        "name": "export_format",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "全量导出上限，默认 5000",
-                        "name": "export_limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "流式导出批大小，默认 1000，最大 5000",
-                        "name": "export_batch_size",
                         "in": "query"
                     },
                     {
@@ -317,7 +342,63 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "csv/xlsx file",
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/export/tasks/{task_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-user"
+                ],
+                "summary": "用户异步导出任务状态（后台）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/export/tasks/{task_id}/download": {
+            "get": {
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "admin-user"
+                ],
+                "summary": "下载用户异步导出结果（后台）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "file"
                         }

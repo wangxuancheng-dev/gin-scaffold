@@ -1,36 +1,43 @@
 package adminhandler
 
 import (
-	"encoding/csv"
 	"fmt"
+	"io"
 	"net/http"
+	"path"
 	"slices"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/xuri/excelize/v2"
 
 	"gin-scaffold/api/handler"
 	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/response"
 	clientresp "gin-scaffold/api/response/client"
+	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/internal/pkg/validator"
 	"gin-scaffold/internal/service/port"
+	"gin-scaffold/middleware"
+	"gin-scaffold/pkg/storage"
 )
 
 // UserHandler 后台用户接口。
 type UserHandler struct {
 	svc port.UserService
+	q   *job.Client
 }
 
 // NewUserHandler 构造后台用户 handler。
-func NewUserHandler(s port.UserService) *UserHandler {
-	return &UserHandler{svc: s}
+func NewUserHandler(s port.UserService, q ...*job.Client) *UserHandler {
+	var queue *job.Client
+	if len(q) > 0 {
+		queue = q[0]
+	}
+	return &UserHandler{svc: s, q: queue}
 }
 
 // List 用户分页（后台）。
@@ -168,230 +175,139 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	response.OK(c, gin.H{"deleted": true})
 }
 
-// Export 用户导出（后台）。
-// @Summary 用户导出（后台）
+
+// ExportTaskCreate 创建用户异步导出任务（low 队列，CSV 全量）。
+// @Summary 用户异步导出任务创建（后台）
 // @Tags admin-user
-// @Produce text/csv
-// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-// @Param username query string false "用户名（模糊）"
-// @Param nickname query string false "昵称（模糊）"
-// @Param export_scope query string false "导出范围: all/page, 默认 all"
-// @Param export_format query string false "导出格式: csv/xlsx, 默认 csv"
-// @Param export_limit query int false "全量导出上限，默认 5000"
-// @Param export_batch_size query int false "流式导出批大小，默认 1000，最大 5000"
+// @Produce json
+// @Param username query string false "用户名模糊查询"
+// @Param nickname query string false "昵称模糊查询"
 // @Param fields query string false "导出列，逗号分隔: id,username,nickname,created_at,role"
-// @Success 200 {file} file "csv/xlsx file"
-// @Router /api/v1/admin/users/export [get]
-func (h *UserHandler) Export(c *gin.Context) {
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/users/export/tasks [post]
+func (h *UserHandler) ExportTaskCreate(c *gin.Context) {
+	if h == nil || h.q == nil {
+		handler.FailServiceUnavailable(c, fmt.Errorf("export queue unavailable"), "export queue unavailable")
+		return
+	}
 	var q adminreq.UserListQuery
 	_ = c.ShouldBindQuery(&q)
-
 	fields := parseExportFields(q.Fields)
-	pageOnly := strings.EqualFold(q.ExportScope, "page")
-	withRole := slices.Contains(fields, "role")
-	format := strings.ToLower(strings.TrimSpace(q.ExportFormat))
-	batchSize := normalizeBatchSize(q.ExportBatchSize)
-	if format == "" {
-		format = "csv"
+	taskID := uuid.NewString()
+	operator := int64(0)
+	if cl, ok := middleware.Claims(c); ok && cl != nil {
+		operator = cl.UserID
 	}
-
-	switch format {
-	case "xlsx":
-		if err := h.exportXLSX(c, q, fields, batchSize, pageOnly, withRole); err != nil {
-			handler.FailInternal(c, err)
-		}
-	default:
-		if err := h.exportCSV(c, q, fields, batchSize, pageOnly, withRole); err != nil {
-			// Streaming started; cannot safely return JSON envelope now.
-			c.Error(err)
-		}
+	payload := job.UserExportPayload{
+		TaskID:   taskID,
+		Operator: operator,
+		Username: strings.TrimSpace(q.Username),
+		Nickname: strings.TrimSpace(q.Nickname),
+		Fields:   fields,
+		WithRole: slices.Contains(fields, "role"),
+		FileType: "csv",
 	}
+	filter := buildUserExportFilterSummary(payload)
+	if err := job.SetUserExportStatus(c.Request.Context(), &job.UserExportStatus{
+		TaskID: taskID,
+		State:  "queued",
+		Filter: filter,
+	}); err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	if err := h.q.EnqueueTaskInQueue(c.Request.Context(), "low", job.TypeUserExport, payload, 0); err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	response.OK(c, gin.H{"task_id": taskID, "state": "queued", "filter": filter})
 }
 
-func (h *UserHandler) exportCSV(
-	c *gin.Context,
-	q adminreq.UserListQuery,
-	fields []string,
-	batchSize int,
-	pageOnly, withRole bool,
-) error {
-	filename := "users_" + time.Now().Format("20060102_150405") + ".csv"
+// ExportTaskStatus 查询用户异步导出任务状态。
+// @Summary 用户异步导出任务状态（后台）
+// @Tags admin-user
+// @Produce json
+// @Param task_id path string true "任务ID"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/users/export/tasks/{task_id} [get]
+func (h *UserHandler) ExportTaskStatus(c *gin.Context) {
+	taskID := strings.TrimSpace(c.Param("task_id"))
+	if taskID == "" {
+		handler.FailInvalidParam(c, fmt.Errorf("task_id is required"))
+		return
+	}
+	st, err := job.GetUserExportStatus(c.Request.Context(), taskID)
+	if err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	if st == nil {
+		handler.FailInvalidParam(c, fmt.Errorf("task not found"))
+		return
+	}
+	out := gin.H{
+		"task_id":       st.TaskID,
+		"state":         st.State,
+		"is_ready":      st.State == "success" && strings.TrimSpace(st.FileKey) != "",
+		"progress_rows": st.ProgressRows,
+		"file_key":      st.FileKey,
+		"error":         st.Error,
+		"filter":        st.Filter,
+		"created_at":    st.CreatedAt,
+		"updated_at":    st.UpdatedAt,
+	}
+	if st.State == "success" && strings.TrimSpace(st.FileKey) != "" {
+		dp := "/api/v1/admin/users/export/tasks/" + taskID + "/download"
+		out["download_path"] = dp
+		out["download_url"] = buildAbsoluteURL(c, dp)
+	}
+	response.OK(c, out)
+}
+
+// ExportTaskDownload 下载用户异步导出结果。
+// @Summary 下载用户异步导出结果（后台）
+// @Tags admin-user
+// @Produce text/csv
+// @Param task_id path string true "任务ID"
+// @Success 200 {file} file
+// @Router /api/v1/admin/users/export/tasks/{task_id}/download [get]
+func (h *UserHandler) ExportTaskDownload(c *gin.Context) {
+	taskID := strings.TrimSpace(c.Param("task_id"))
+	if taskID == "" {
+		handler.FailInvalidParam(c, fmt.Errorf("task_id is required"))
+		return
+	}
+	st, err := job.GetUserExportStatus(c.Request.Context(), taskID)
+	if err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	if st == nil || st.State != "success" || strings.TrimSpace(st.FileKey) == "" {
+		handler.FailInvalidParam(c, fmt.Errorf("export file is not ready"))
+		return
+	}
+	sp, err := storage.Require()
+	if err != nil {
+		handler.FailServiceUnavailable(c, err, "storage not configured")
+		return
+	}
+	rc, err := sp.Open(c.Request.Context(), st.FileKey)
+	if err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	defer rc.Close()
 	c.Header("Content-Type", "text/csv; charset=utf-8")
-	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	c.Header("Content-Disposition", "attachment; filename=\""+path.Base(st.FileKey)+"\"")
 	c.Status(http.StatusOK)
-
-	w := csv.NewWriter(c.Writer)
-	if err := w.Write(fields); err != nil {
-		return err
-	}
-	w.Flush()
-	if err := w.Error(); err != nil {
-		return err
-	}
-	if flusher, ok := c.Writer.(http.Flusher); ok {
-		flusher.Flush()
-	}
-
-	return h.svc.StreamExport(
-		c.Request.Context(),
-		h.buildQuery(q),
-		q.Page,
-		q.PageSize,
-		q.ExportLimit,
-		batchSize,
-		pageOnly,
-		withRole,
-		func(r model.UserExportRow) error {
-			record := make([]string, 0, len(fields))
-			for _, f := range fields {
-				switch f {
-				case "id":
-					record = append(record, strconv.FormatInt(r.ID, 10))
-				case "username":
-					record = append(record, r.Username)
-				case "nickname":
-					record = append(record, r.Nickname)
-				case "created_at":
-					record = append(record, r.CreatedAt.Format(time.RFC3339))
-				case "role":
-					record = append(record, r.Role)
-				}
-			}
-			if err := w.Write(record); err != nil {
-				return err
-			}
-			w.Flush()
-			if err := w.Error(); err != nil {
-				return err
-			}
-			if flusher, ok := c.Writer.(http.Flusher); ok {
-				flusher.Flush()
-			}
-			return nil
-		},
-	)
+	_, _ = io.Copy(c.Writer, rc)
 }
 
-func (h *UserHandler) exportXLSX(
-	c *gin.Context,
-	q adminreq.UserListQuery,
-	fields []string,
-	batchSize int,
-	pageOnly, withRole bool,
-) error {
-	const maxSheetRows = 1_048_576
-	file := excelize.NewFile()
-	defer func() { _ = file.Close() }()
-
-	sheetIndex := 1
-	sheetName := "Sheet1"
-	rowIndex := 1
-	stream, err := file.NewStreamWriter(sheetName)
-	if err != nil {
-		return err
-	}
-
-	writeHeader := func() error {
-		head := make([]interface{}, 0, len(fields))
-		for _, f := range fields {
-			head = append(head, f)
-		}
-		cell, err := excelize.CoordinatesToCellName(1, rowIndex)
-		if err != nil {
-			return err
-		}
-		if err := stream.SetRow(cell, head); err != nil {
-			return err
-		}
-		rowIndex++
-		return nil
-	}
-	if err := writeHeader(); err != nil {
-		return err
-	}
-
-	rotateSheet := func() error {
-		if err := stream.Flush(); err != nil {
-			return err
-		}
-		sheetIndex++
-		sheetName = fmt.Sprintf("Sheet%d", sheetIndex)
-		file.NewSheet(sheetName)
-		s, err := file.NewStreamWriter(sheetName)
-		if err != nil {
-			return err
-		}
-		stream = s
-		rowIndex = 1
-		return writeHeader()
-	}
-
-	err = h.svc.StreamExport(
-		c.Request.Context(),
-		h.buildQuery(q),
-		q.Page,
-		q.PageSize,
-		q.ExportLimit,
-		batchSize,
-		pageOnly,
-		withRole,
-		func(r model.UserExportRow) error {
-			if rowIndex > maxSheetRows {
-				if err := rotateSheet(); err != nil {
-					return err
-				}
-			}
-			record := make([]interface{}, 0, len(fields))
-			for _, f := range fields {
-				record = append(record, exportValue(r, f))
-			}
-			cell, err := excelize.CoordinatesToCellName(1, rowIndex)
-			if err != nil {
-				return err
-			}
-			if err := stream.SetRow(cell, record); err != nil {
-				return err
-			}
-			rowIndex++
-			return nil
-		},
-	)
-	if err != nil {
-		return err
-	}
-	if err := stream.Flush(); err != nil {
-		return err
-	}
-
-	filename := "users_" + time.Now().Format("20060102_150405") + ".xlsx"
-	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
-	c.Status(http.StatusOK)
-	_, err = file.WriteTo(c.Writer)
-	return err
-}
 
 func (h *UserHandler) buildQuery(q adminreq.UserListQuery) model.UserQuery {
 	return model.UserQuery{
 		Username: q.Username,
 		Nickname: q.Nickname,
-	}
-}
-
-func exportValue(r model.UserExportRow, field string) string {
-	switch field {
-	case "id":
-		return strconv.FormatInt(r.ID, 10)
-	case "username":
-		return r.Username
-	case "nickname":
-		return r.Nickname
-	case "created_at":
-		return r.CreatedAt.Format(time.RFC3339)
-	case "role":
-		return r.Role
-	default:
-		return ""
 	}
 }
 
@@ -422,12 +338,23 @@ func parseExportFields(s string) []string {
 	return out
 }
 
-func normalizeBatchSize(n int) int {
-	if n <= 0 {
-		return 1000
+func buildUserExportFilterSummary(p job.UserExportPayload) string {
+	parts := []string{"file_type=csv"}
+	if s := strings.TrimSpace(p.Username); s != "" {
+		parts = append(parts, "username~="+s)
 	}
-	if n > 5000 {
-		return 5000
+	if s := strings.TrimSpace(p.Nickname); s != "" {
+		parts = append(parts, "nickname~="+s)
 	}
-	return n
+	if len(p.Fields) > 0 {
+		parts = append(parts, "fields="+strings.Join(p.Fields, ","))
+	}
+	if p.WithRole {
+		parts = append(parts, "with_role=true")
+	}
+	out := strings.Join(parts, "&")
+	if len(out) > 1024 {
+		return out[:1024]
+	}
+	return out
 }

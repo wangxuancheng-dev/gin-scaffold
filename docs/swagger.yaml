@@ -171,8 +171,8 @@ paths:
       summary: 审计日志查询（后台）
       tags:
       - admin-ops
-  /api/v1/admin/audit-logs/export:
-    get:
+  /api/v1/admin/audit-logs/export/tasks:
+    post:
       parameters:
       - description: 用户 ID
         in: query
@@ -194,7 +194,7 @@ paths:
         in: query
         name: request_id
         type: string
-      - description: 开始时间（RFC3339）；为空时默认 now-7d
+      - description: 开始时间（RFC3339）；为空时默认 now-export_default_days
         in: query
         name: from
         type: string
@@ -202,18 +202,50 @@ paths:
         in: query
         name: to
         type: string
-      - description: 最大导出条数（默认 5000，最大 10000）
-        in: query
-        name: limit
-        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 创建审计日志异步导出任务（后台）
+      tags:
+      - admin-ops
+  /api/v1/admin/audit-logs/export/tasks/{task_id}:
+    get:
+      parameters:
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 查询审计日志异步导出任务状态（后台）
+      tags:
+      - admin-ops
+  /api/v1/admin/audit-logs/export/tasks/{task_id}/download:
+    get:
+      parameters:
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
       produces:
       - text/csv
       responses:
         "200":
-          description: csv content
+          description: OK
           schema:
-            type: string
-      summary: 审计日志导出（后台）
+            type: file
+      summary: 下载审计日志异步导出结果（后台）
       tags:
       - admin-ops
   /api/v1/admin/dbping:
@@ -341,46 +373,65 @@ paths:
       summary: 更新用户（后台）
       tags:
       - admin-user
-  /api/v1/admin/users/export:
-    get:
+  /api/v1/admin/users/export/tasks:
+    post:
       parameters:
-      - description: 用户名（模糊）
+      - description: 用户名模糊查询
         in: query
         name: username
         type: string
-      - description: 昵称（模糊）
+      - description: 昵称模糊查询
         in: query
         name: nickname
         type: string
-      - description: '导出范围: all/page, 默认 all'
-        in: query
-        name: export_scope
-        type: string
-      - description: '导出格式: csv/xlsx, 默认 csv'
-        in: query
-        name: export_format
-        type: string
-      - description: 全量导出上限，默认 5000
-        in: query
-        name: export_limit
-        type: integer
-      - description: 流式导出批大小，默认 1000，最大 5000
-        in: query
-        name: export_batch_size
-        type: integer
       - description: '导出列，逗号分隔: id,username,nickname,created_at,role'
         in: query
         name: fields
         type: string
       produces:
-      - text/csv
-      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      - application/json
       responses:
         "200":
-          description: csv/xlsx file
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 用户异步导出任务创建（后台）
+      tags:
+      - admin-user
+  /api/v1/admin/users/export/tasks/{task_id}:
+    get:
+      parameters:
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 用户异步导出任务状态（后台）
+      tags:
+      - admin-user
+  /api/v1/admin/users/export/tasks/{task_id}/download:
+    get:
+      parameters:
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
           schema:
             type: file
-      summary: 用户导出（后台）
+      summary: 下载用户异步导出结果（后台）
       tags:
       - admin-user
   /api/v1/client/auth/login:

@@ -210,42 +210,6 @@ func TestUserHandler_Get_Success(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestUserHandler_Export_Success(t *testing.T) {
-	t.Parallel()
-	gin.SetMode(gin.TestMode)
-
-	svc := new(mockUserService)
-	h := adminhandler.NewUserHandler(svc)
-
-	r := gin.New()
-	r.GET("/users/export", h.Export)
-
-	svc.On(
-		"StreamExport",
-		mock.Anything,
-		model.UserQuery{Username: "ali", Nickname: ""},
-		1,
-		20,
-		200,
-		1000,
-		true,
-		true,
-		mock.Anything,
-	).Run(func(args mock.Arguments) {
-		cb, _ := args.Get(8).(func(model.UserExportRow) error)
-		_ = cb(model.UserExportRow{ID: 1, Username: "alice", Nickname: "Alice", Role: "admin"})
-	}).Return(nil).Once()
-
-	req := httptest.NewRequest(http.MethodGet, "/users/export?username=ali&export_scope=page&page=1&page_size=20&export_limit=200&fields=id,username,role", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code)
-	require.Contains(t, w.Body.String(), "id,username,role")
-	require.Contains(t, w.Body.String(), "1,alice,admin")
-	svc.AssertExpectations(t)
-}
-
 func TestUserHandler_Delete_SuperAdminProtected(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)

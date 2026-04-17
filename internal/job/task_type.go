@@ -4,4 +4,6 @@ package job
 // 任务类型常量。
 const (
 	TypeWelcomeEmail = "user:welcome"
+	TypeAuditExport  = "audit:export"
+	TypeUserExport   = "user:export"
 )

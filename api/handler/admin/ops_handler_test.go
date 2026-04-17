@@ -4,13 +4,14 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"gin-scaffold/internal/dao"
+	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/model"
 )
 
@@ -85,56 +86,70 @@ func (f *fakeAuditStore) ListForExport(context.Context, dao.AuditLogListQuery, i
 	return f.rows, nil
 }
 
-func TestAuditLogsExport_Headers(t *testing.T) {
+func TestBuildExportFilterSummary(t *testing.T) {
 	t.Parallel()
-	gin.SetMode(gin.TestMode)
-	h := NewOpsHandler(&fakeAuditStore{
-		rows: []model.AuditLog{
-			{ID: 1, Action: "POST", Path: "/api/v1/admin/users", Status: 200, CreatedAt: time.Now()},
-		},
+	from := time.Now().UTC().Add(-24 * time.Hour)
+	to := time.Now().UTC()
+	s := buildExportFilterSummary(dao.AuditLogListQuery{
+		UserID:    12,
+		Action:    "post",
+		Status:    200,
+		PathLike:  "/api/v1/admin",
+		RequestID: "rid-1",
+		From:      &from,
+		To:        &to,
 	})
-	r := gin.New()
-	r.GET("/api/v1/admin/audit-logs/export", h.AuditLogsExport)
-	from := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
-	to := time.Now().UTC().Format(time.RFC3339)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/audit-logs/export?from="+url.QueryEscape(from)+"&to="+url.QueryEscape(to)+"&limit=10", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d, body=%s", w.Code, w.Body.String())
+	wantContains := []string{
+		"user_id=12", "action=POST", "status=200", "path~=/api/v1/admin", "request_id=rid-1", "from=", "to=",
 	}
-	if w.Header().Get("X-Export-Count") != "1" {
-		t.Fatalf("expected X-Export-Count=1, got %q", w.Header().Get("X-Export-Count"))
-	}
-	window := w.Header().Get("X-Export-Window")
-	if window == "" || len(window) < 10 {
-		t.Fatalf("expected non-empty X-Export-Window, got %q", window)
+	for _, w := range wantContains {
+		if !strings.Contains(s, w) {
+			t.Fatalf("filter summary should contain %q, got %q", w, s)
+		}
 	}
 }
 
-func TestAuditLogsExport_LimitInvalid(t *testing.T) {
+func TestBuildAbsoluteURL(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
-	h := NewOpsHandler(&fakeAuditStore{
-		rows: []model.AuditLog{
-			{ID: 1, Action: "POST", Path: "/api/v1/admin/users", Status: 200, CreatedAt: time.Now()},
-		},
-	})
-	r := gin.New()
-	r.GET("/api/v1/admin/audit-logs/export", h.AuditLogsExport)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/audit-logs/export?limit=10001", nil)
 	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d, body=%s", w.Code, w.Body.String())
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/x", nil)
+	c.Request.Host = "api.example.com"
+	got := buildAbsoluteURL(c, "/api/v1/admin/audit-logs/export/tasks/t1/download")
+	if got != "http://api.example.com/api/v1/admin/audit-logs/export/tasks/t1/download" {
+		t.Fatalf("unexpected absolute url: %s", got)
 	}
-	if w.Header().Get("X-Export-Count") != "" {
-		t.Fatalf("expected no X-Export-Count, got %q", w.Header().Get("X-Export-Count"))
+	c.Request.Header.Set("X-Forwarded-Proto", "https")
+	got = buildAbsoluteURL(c, "/p")
+	if got != "https://api.example.com/p" {
+		t.Fatalf("unexpected forwarded proto url: %s", got)
 	}
-	if w.Header().Get("X-Export-Window") != "" {
-		t.Fatalf("expected no X-Export-Window, got %q", w.Header().Get("X-Export-Window"))
+}
+
+func TestBuildAuditExportStatusResponse_IsReady(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/x", nil)
+	c.Request.Host = "example.com"
+	notReady := buildAuditExportStatusResponse(c, &job.AuditExportStatus{
+		TaskID: "t1",
+		State:  "running",
+	}, "t1")
+	if notReady["is_ready"] != false {
+		t.Fatalf("expected is_ready=false, got %v", notReady["is_ready"])
 	}
-	if len(w.Body.String()) == 0 || w.Body.String()[0] != '{' {
-		t.Fatalf("expected JSON error body, got: %q", w.Body.String())
+	ready := buildAuditExportStatusResponse(c, &job.AuditExportStatus{
+		TaskID:  "t2",
+		State:   "success",
+		FileKey: "exports/audit/a.csv",
+	}, "t2")
+	if ready["is_ready"] != true {
+		t.Fatalf("expected is_ready=true, got %v", ready["is_ready"])
+	}
+	if !strings.Contains(ready["download_url"].(string), "/api/v1/admin/audit-logs/export/tasks/t2/download") {
+		t.Fatalf("unexpected download_url: %v", ready["download_url"])
 	}
 }

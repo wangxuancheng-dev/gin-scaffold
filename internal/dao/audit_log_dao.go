@@ -23,6 +23,22 @@ type AuditLogListQuery struct {
 	To        *time.Time
 }
 
+// AuditLogExportRow 导出行（字段与 CSV 一致）。
+type AuditLogExportRow struct {
+	ID        int64
+	RequestID string
+	UserID    int64
+	Role      string
+	ActorType string
+	Action    string
+	Path      string
+	Query     string
+	Status    int
+	LatencyMS int
+	ClientIP  string
+	CreatedAt time.Time
+}
+
 // AuditLogDAO 审计日志写入。
 type AuditLogDAO struct {
 	db *gorm.DB
@@ -118,6 +134,44 @@ func (d *AuditLogDAO) ListForExport(ctx context.Context, q AuditLogListQuery, ma
 	}
 	var rows []model.AuditLog
 	if err := query.Order("id desc").Limit(maxRows).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// ListExportChunk 以 ID 游标分批拉取导出数据（按 id asc）。
+func (d *AuditLogDAO) ListExportChunk(ctx context.Context, q AuditLogListQuery, lastID int64, size int) ([]AuditLogExportRow, error) {
+	if d == nil || d.db == nil {
+		return []AuditLogExportRow{}, nil
+	}
+	if size <= 0 || size > 2000 {
+		size = 1000
+	}
+	query := d.db.WithContext(ctx).Model(&model.AuditLog{}).Where("id > ?", lastID)
+	if q.UserID > 0 {
+		query = query.Where("user_id = ?", q.UserID)
+	}
+	if s := strings.TrimSpace(q.Action); s != "" {
+		query = query.Where("action = ?", strings.ToUpper(s))
+	}
+	if q.Status > 0 {
+		query = query.Where("status = ?", q.Status)
+	}
+	if s := strings.TrimSpace(q.PathLike); s != "" {
+		query = query.Where("path LIKE ?", "%"+s+"%")
+	}
+	if s := strings.TrimSpace(q.RequestID); s != "" {
+		query = query.Where("request_id = ?", s)
+	}
+	if q.From != nil {
+		query = query.Where("created_at >= ?", *q.From)
+	}
+	if q.To != nil {
+		query = query.Where("created_at <= ?", *q.To)
+	}
+	var rows []AuditLogExportRow
+	if err := query.Select("id,request_id,user_id,role,actor_type,action,path,`query`,status,latency_ms,client_ip,created_at").
+		Order("id asc").Limit(size).Scan(&rows).Error; err != nil {
 		return nil, err
 	}
 	return rows, nil

@@ -136,9 +136,9 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	baseH := &handler.BaseHandler{DB: gdb, Storage: &cfg.Storage}
 	clientUserH := clienthandler.NewUserHandler(userSvc)
 	clientFileH := clienthandler.NewFileHandler(&cfg.Storage)
-	adminUserH := adminhandler.NewUserHandler(userSvc)
+	adminUserH := adminhandler.NewUserHandler(userSvc, q)
 	adminMenuH := adminhandler.NewMenuHandler(menuSvc)
-	adminOpsH := adminhandler.NewOpsHandler(auditDAO)
+	adminOpsH := adminhandler.NewOpsHandler(auditDAO, q)
 	adminTaskH := adminhandler.NewTaskHandler(taskSvc)
 	wsH := handler.NewWSHandler(wsSvc)
 	sseH := handler.NewSSEHandler(sseSvc)
@@ -195,6 +195,12 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 		return nil, err
 	}
 	platform.Init(cfg)
+	if _, err := db.Init(&cfg.DB); err != nil {
+		return nil, fmt.Errorf("database: %w", err)
+	}
+	if err := redis.Init(&cfg.Redis); err != nil {
+		return nil, fmt.Errorf("redis: %w", err)
+	}
 
 	cleanups := []func(context.Context){
 		func(context.Context) { logger.Sync() },
@@ -214,6 +220,8 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 	)
 	mux := asynq.NewServeMux()
 	mux.Handle(job.TypeWelcomeEmail, jobhandler.WelcomeHandler{})
+	mux.Handle(job.TypeAuditExport, jobhandler.AuditExportHandler{})
+	mux.Handle(job.TypeUserExport, jobhandler.UserExportHandler{})
 
 	return &WorkerDeps{
 		Cfg:    cfg,

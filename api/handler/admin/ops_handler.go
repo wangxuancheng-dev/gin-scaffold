@@ -2,12 +2,14 @@ package adminhandler
 
 import (
 	"context"
-	"encoding/csv"
 	"fmt"
+	"io"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gin-gonic/gin"
 
 	"gin-scaffold/api/handler"
@@ -15,9 +17,11 @@ import (
 	"gin-scaffold/api/response"
 	"gin-scaffold/config"
 	"gin-scaffold/internal/dao"
+	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/middleware"
 	"gin-scaffold/pkg/db"
+	"gin-scaffold/pkg/storage"
 )
 
 const (
@@ -28,11 +32,12 @@ const (
 // OpsHandler 后台运维类接口。
 type OpsHandler struct {
 	auditDAO auditLogStore
+	queue    *job.Client
 }
 
 // NewOpsHandler 构造后台运维 handler。
-func NewOpsHandler(auditDAO auditLogStore) *OpsHandler {
-	return &OpsHandler{auditDAO: auditDAO}
+func NewOpsHandler(auditDAO auditLogStore, queue *job.Client) *OpsHandler {
+	return &OpsHandler{auditDAO: auditDAO, queue: queue}
 }
 
 type auditLogStore interface {
@@ -96,101 +101,132 @@ func (h *OpsHandler) AuditLogs(c *gin.Context) {
 	response.OK(c, gin.H{"list": list, "total": total})
 }
 
-// AuditLogsExport 导出审计日志 CSV。
-// @Summary 审计日志导出（后台）
+
+// AuditLogsExportTaskCreate 创建异步导出任务（低优先级队列）。
+// @Summary 创建审计日志异步导出任务（后台）
 // @Tags admin-ops
-// @Produce text/csv
+// @Produce json
 // @Param user_id query int false "用户 ID"
 // @Param action query string false "动作：POST|PUT|PATCH|DELETE"
 // @Param status query int false "HTTP 状态码"
 // @Param path query string false "按路径模糊匹配"
 // @Param request_id query string false "按请求 ID 精确匹配"
-// @Param from query string false "开始时间（RFC3339）；为空时默认 now-7d"
+// @Param from query string false "开始时间（RFC3339）；为空时默认 now-export_default_days"
 // @Param to query string false "结束时间（RFC3339）；为空时默认 now"
-// @Param limit query int false "最大导出条数（默认 5000，最大 10000）"
-// @Success 200 {string} string "csv content"
-// @Router /api/v1/admin/audit-logs/export [get]
-func (h *OpsHandler) AuditLogsExport(c *gin.Context) {
-	if h == nil || h.auditDAO == nil {
-		handler.FailServiceUnavailable(c, fmt.Errorf("audit dao not configured"), "audit service unavailable")
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/audit-logs/export/tasks [post]
+func (h *OpsHandler) AuditLogsExportTaskCreate(c *gin.Context) {
+	if h == nil || h.auditDAO == nil || h.queue == nil {
+		handler.FailServiceUnavailable(c, fmt.Errorf("export queue unavailable"), "export queue unavailable")
 		return
 	}
-	daoQuery, ok := parseAuditQuery(c, true)
+	q, ok := parseAuditQuery(c, true)
 	if !ok {
 		return
 	}
-	limit := 5000
-	if s := c.Query("limit"); s != "" {
-		n, err := strconv.Atoi(s)
-		if err != nil || n <= 0 || n > 10000 {
-			handler.FailInvalidParam(c, fmt.Errorf("limit must be between 1 and 10000"))
-			return
-		}
-		limit = n
+	taskID := uuid.NewString()
+	operator := int64(0)
+	if cl, ok := middleware.Claims(c); ok && cl != nil {
+		operator = cl.UserID
 	}
-	rows, err := h.auditDAO.ListForExport(c.Request.Context(), daoQuery, limit)
+	payload := job.AuditExportPayload{
+		TaskID:    taskID,
+		Operator:  operator,
+		UserID:    q.UserID,
+		Action:    q.Action,
+		Status:    q.Status,
+		PathLike:  q.PathLike,
+		RequestID: q.RequestID,
+	}
+	if q.From != nil {
+		payload.From = q.From.Format(time.RFC3339)
+	}
+	if q.To != nil {
+		payload.To = q.To.Format(time.RFC3339)
+	}
+	filterSummary := buildExportFilterSummary(q)
+	if err := job.SetAuditExportStatus(c.Request.Context(), &job.AuditExportStatus{
+		TaskID: taskID,
+		State:  "queued",
+		Filter: filterSummary,
+	}); err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	if err := h.queue.EnqueueTaskInQueue(c.Request.Context(), "low", job.TypeAuditExport, payload, 0); err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	response.OK(c, gin.H{"task_id": taskID, "state": "queued", "filter": filterSummary})
+}
+
+// AuditLogsExportTaskStatus 查询异步导出任务状态。
+// @Summary 查询审计日志异步导出任务状态（后台）
+// @Tags admin-ops
+// @Produce json
+// @Param task_id path string true "任务ID"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/audit-logs/export/tasks/{task_id} [get]
+func (h *OpsHandler) AuditLogsExportTaskStatus(c *gin.Context) {
+	taskID := strings.TrimSpace(c.Param("task_id"))
+	if taskID == "" {
+		handler.FailInvalidParam(c, fmt.Errorf("task_id is required"))
+		return
+	}
+	st, err := job.GetAuditExportStatus(c.Request.Context(), taskID)
 	if err != nil {
 		handler.FailInternal(c, err)
 		return
 	}
-	h.writeExportAudit(c, daoQuery, limit, len(rows))
-	filename := "audit_logs_" + time.Now().Format("20060102_150405") + ".csv"
-	c.Header("Content-Type", "text/csv; charset=utf-8")
-	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
-	c.Header("X-Export-Count", strconv.Itoa(len(rows)))
-	if daoQuery.From != nil && daoQuery.To != nil {
-		c.Header("X-Export-Window", daoQuery.From.Format(time.RFC3339)+"/"+daoQuery.To.Format(time.RFC3339))
-	}
-	w := csv.NewWriter(c.Writer)
-	_ = w.Write([]string{"id", "request_id", "user_id", "role", "actor_type", "action", "path", "query", "status", "latency_ms", "client_ip", "created_at"})
-	for _, r := range rows {
-		_ = w.Write([]string{
-			strconv.FormatInt(r.ID, 10),
-			r.RequestID,
-			strconv.FormatInt(r.UserID, 10),
-			r.Role,
-			r.ActorType,
-			r.Action,
-			r.Path,
-			r.Query,
-			strconv.Itoa(r.Status),
-			strconv.Itoa(r.LatencyMS),
-			r.ClientIP,
-			r.CreatedAt.Format(time.RFC3339),
-		})
-	}
-	w.Flush()
-}
-
-func (h *OpsHandler) writeExportAudit(c *gin.Context, q dao.AuditLogListQuery, limit int, exported int) {
-	if h == nil || h.auditDAO == nil || c == nil {
+	if st == nil {
+		handler.FailInvalidParam(c, fmt.Errorf("task not found"))
 		return
 	}
-	row := &model.AuditLog{
-		RequestID: middleware.GetRequestID(c),
-		Action:    "EXPORT",
-		Path:      c.Request.URL.Path,
-		Status:    200,
-		LatencyMS: 0,
-		ClientIP:  c.ClientIP(),
-		CreatedAt: time.Now(),
-	}
-	if cl, ok := middleware.Claims(c); ok && cl != nil {
-		row.UserID = cl.UserID
-		row.Role = cl.Role
-		row.ActorType = "jwt"
-	} else {
-		row.ActorType = "anonymous"
-	}
-	row.Query = buildExportAuditQuery(q, limit, exported)
-	_ = h.auditDAO.Create(c.Request.Context(), row)
+	out := buildAuditExportStatusResponse(c, st, taskID)
+	response.OK(c, out)
 }
 
-func buildExportAuditQuery(q dao.AuditLogListQuery, limit int, exported int) string {
-	parts := []string{
-		"exported=" + strconv.Itoa(exported),
-		"limit=" + strconv.Itoa(limit),
+// AuditLogsExportTaskDownload 下载异步导出的结果文件。
+// @Summary 下载审计日志异步导出结果（后台）
+// @Tags admin-ops
+// @Produce text/csv
+// @Param task_id path string true "任务ID"
+// @Success 200 {file} file
+// @Router /api/v1/admin/audit-logs/export/tasks/{task_id}/download [get]
+func (h *OpsHandler) AuditLogsExportTaskDownload(c *gin.Context) {
+	taskID := strings.TrimSpace(c.Param("task_id"))
+	if taskID == "" {
+		handler.FailInvalidParam(c, fmt.Errorf("task_id is required"))
+		return
 	}
+	st, err := job.GetAuditExportStatus(c.Request.Context(), taskID)
+	if err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	if st == nil || st.State != "success" || strings.TrimSpace(st.FileKey) == "" {
+		handler.FailInvalidParam(c, fmt.Errorf("export file is not ready"))
+		return
+	}
+	sp, err := storage.Require()
+	if err != nil {
+		handler.FailServiceUnavailable(c, err, "storage not configured")
+		return
+	}
+	rc, err := sp.Open(c.Request.Context(), st.FileKey)
+	if err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	defer rc.Close()
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", "attachment; filename=\""+path.Base(st.FileKey)+"\"")
+	c.Status(200)
+	_, _ = io.Copy(c.Writer, rc)
+}
+
+func buildExportFilterSummary(q dao.AuditLogListQuery) string {
+	parts := make([]string, 0, 8)
 	if q.UserID > 0 {
 		parts = append(parts, "user_id="+strconv.FormatInt(q.UserID, 10))
 	}
@@ -285,4 +321,43 @@ func auditExportWindows() (defaultRange time.Duration, maxRange time.Duration) {
 		}
 	}
 	return time.Duration(defaultDays) * 24 * time.Hour, time.Duration(maxDays) * 24 * time.Hour
+}
+
+func buildAuditExportStatusResponse(c *gin.Context, st *job.AuditExportStatus, taskID string) gin.H {
+	out := gin.H{
+		"task_id":       st.TaskID,
+		"state":         st.State,
+		"is_ready":      st.State == "success" && strings.TrimSpace(st.FileKey) != "",
+		"progress_rows": st.ProgressRows,
+		"file_key":      st.FileKey,
+		"error":         st.Error,
+		"filter":        st.Filter,
+		"created_at":    st.CreatedAt,
+		"updated_at":    st.UpdatedAt,
+	}
+	if st.State == "success" && strings.TrimSpace(st.FileKey) != "" {
+		downloadPath := "/api/v1/admin/audit-logs/export/tasks/" + taskID + "/download"
+		out["download_path"] = downloadPath
+		out["download_url"] = buildAbsoluteURL(c, downloadPath)
+	}
+	return out
+}
+
+func buildAbsoluteURL(c *gin.Context, p string) string {
+	if c == nil || c.Request == nil {
+		return p
+	}
+	proto := strings.TrimSpace(c.GetHeader("X-Forwarded-Proto"))
+	if proto == "" {
+		if c.Request.TLS != nil {
+			proto = "https"
+		} else {
+			proto = "http"
+		}
+	}
+	host := strings.TrimSpace(c.Request.Host)
+	if host == "" {
+		return p
+	}
+	return proto + "://" + host + p
 }

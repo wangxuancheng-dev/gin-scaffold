@@ -14,6 +14,12 @@
 - 导出接口（`/api/v1/admin/audit-logs/export`）默认导出最近 `export_default_days` 天，且时间窗不得超过 `export_max_days` 天。
 - 查询/导出权限：`audit:read`、`audit:export`（升级项目时执行 seed：`202504171420_seed_audit_permission`、`202504171430_seed_audit_export_permission`）。
 - 导出响应头：`X-Export-Count`（本次导出行数）、`X-Export-Window`（实际导出时间窗，RFC3339/RFC3339）。
+- 大数据量建议使用异步导出任务：
+  - 创建：`POST /api/v1/admin/audit-logs/export/tasks`
+  - 查询状态：`GET /api/v1/admin/audit-logs/export/tasks/{task_id}`
+  - 下载结果：`GET /api/v1/admin/audit-logs/export/tasks/{task_id}/download`
+  - 状态为 `success` 时，状态接口会返回 `download_url`（可直接下载）与 `filter`（任务筛选摘要）。
+  - 任务固定投递到 Asynq `low` 队列，避免影响在线请求。
 
 ## 幂等（`platform.idempotency`）
 
@@ -41,3 +47,67 @@
 ## 策略辅助（`pkg/policy`）
 
 - `policy.SameUser(actorID, ownerID)`：判断资源是否属于当前用户，可与 RBAC 组合使用。
+
+## 用户异步导出（仅任务模式）
+
+用户导出已统一为异步任务接口，不再提供同步 `GET /api/v1/admin/users/export`。
+
+### 1) 创建任务
+
+- 接口：`POST /api/v1/admin/users/export/tasks`
+- 权限：`user:export`
+- 可选筛选：`username`、`nickname`、`fields`（如 `id,username,nickname,created_at,role`）
+
+```bash
+curl -X POST "http://127.0.0.1:8080/api/v1/admin/users/export/tasks?username=ali&fields=id,username,role" \
+  -H "Authorization: Bearer <admin-jwt>"
+```
+
+返回示例（节选）：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "task_id": "e7d6e1e5-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "state": "queued",
+    "filter": "file_type=csv&username~=ali&fields=id,username,role&with_role=true"
+  }
+}
+```
+
+### 2) 轮询任务状态
+
+- 接口：`GET /api/v1/admin/users/export/tasks/{task_id}`
+- 当 `state=success` 且 `is_ready=true` 时，响应会返回 `download_url`
+
+```bash
+curl "http://127.0.0.1:8080/api/v1/admin/users/export/tasks/e7d6e1e5-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+  -H "Authorization: Bearer <admin-jwt>"
+```
+
+返回示例（节选）：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "task_id": "e7d6e1e5-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "state": "success",
+    "is_ready": true,
+    "progress_rows": 12345,
+    "download_url": "http://127.0.0.1:8080/api/v1/admin/users/export/tasks/e7d6e1e5-xxxx-xxxx-xxxx-xxxxxxxxxxxx/download"
+  }
+}
+```
+
+### 3) 下载结果文件
+
+- 接口：`GET /api/v1/admin/users/export/tasks/{task_id}/download`
+- 当前导出文件类型固定为 CSV（后台 low 队列异步生成）
+
+```bash
+curl -L "http://127.0.0.1:8080/api/v1/admin/users/export/tasks/e7d6e1e5-xxxx-xxxx-xxxx-xxxxxxxxxxxx/download" \
+  -H "Authorization: Bearer <admin-jwt>" \
+  -o users_export.csv
+```
