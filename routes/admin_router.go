@@ -24,6 +24,8 @@ func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandl
 	admin.GET("/users/export", middleware.RequirePermission("user:export"), user.Export)
 	admin.GET("/menus", middleware.RequirePermission("menu:read"), menu.ListMine)
 	admin.GET("/dbping", middleware.RequirePermission("db:ping"), ops.DBPing)
+	admin.GET("/audit-logs", middleware.RequirePermission("audit:read"), ops.AuditLogs)
+	admin.GET("/audit-logs/export", middleware.RequirePermission("audit:export"), ops.AuditLogsExport)
 	admin.GET("/tasks", middleware.RequirePermission("task:read"), task.List)
 	admin.POST("/tasks", middleware.RequirePermission("task:create"), task.Create)
 	admin.PUT("/tasks/:id", middleware.RequirePermission("task:update"), task.Update)

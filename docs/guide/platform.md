@@ -11,6 +11,9 @@
 - `enabled: true` 时，对 `POST`/`PUT`/`PATCH`/`DELETE` 异步写入表 `audit_logs`（需执行迁移 `202504171400_create_audit_logs`）。
 - 记录：`request_id`、用户（JWT 或 anonymous）、路径、查询串、状态码、耗时、客户端 IP；**不落库请求体**。
 - `/livez`、`/readyz`、`/health`、`/swagger`、`/metrics`、`/debug` 等路径自动跳过。
+- 导出接口（`/api/v1/admin/audit-logs/export`）默认导出最近 `export_default_days` 天，且时间窗不得超过 `export_max_days` 天。
+- 查询/导出权限：`audit:read`、`audit:export`（升级项目时执行 seed：`202504171420_seed_audit_permission`、`202504171430_seed_audit_export_permission`）。
+- 导出响应头：`X-Export-Count`（本次导出行数）、`X-Export-Window`（实际导出时间窗，RFC3339/RFC3339）。
 
 ## 幂等（`platform.idempotency`）
 

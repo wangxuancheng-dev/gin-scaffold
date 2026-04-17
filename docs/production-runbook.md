@@ -113,6 +113,18 @@ sudo systemctl status gin-scaffold
 
 - `OTEL_EXPORTER_OTLP_ENDPOINT=...`
 - `TIME_ZONE`（如 `UTC`；供 `cmd/migrate` 与 Viper 覆盖 `db.time_zone`）
+- `PLATFORM_AUDIT_ENABLED=true|false`
+- `PLATFORM_AUDIT_EXPORT_DEFAULT_DAYS=7`
+- `PLATFORM_AUDIT_EXPORT_MAX_DAYS=31`
+
+RBAC/菜单补充（审计功能）：
+
+- 若你从旧版本升级，需要执行 seed 迁移以补齐权限与菜单：
+  - `202504171420_seed_audit_permission`（`audit:read` + 审计菜单）
+  - `202504171430_seed_audit_export_permission`（`audit:export`）
+- 后台接口权限对应：
+  - `/api/v1/admin/audit-logs` -> `audit:read`
+  - `/api/v1/admin/audit-logs/export` -> `audit:export`
 
 时区建议：
 

@@ -145,6 +145,8 @@ storage:
 platform:
   audit:
     enabled: false
+    export_default_days: 7
+    export_max_days: 31
   idempotency:
     enabled: false
     ttl_seconds: 86400

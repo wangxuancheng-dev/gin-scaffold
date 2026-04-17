@@ -22,6 +22,7 @@
 
 - [ ] 数据库可连接且账号权限正确
 - [ ] 线上 migration 已执行并记录版本：`./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" up`
+- [ ] 审计权限 seed 已执行（旧版本升级时）：`202504171420_seed_audit_permission`、`202504171430_seed_audit_export_permission`
 - [ ] Redis 可连接且密码正确
 - [ ] `systemd` 服务文件已更新：`/etc/systemd/system/gin-scaffold.service`
 - [ ] 执行 `sudo systemctl daemon-reload`
@@ -40,6 +41,7 @@
 
 - [ ] `GET /livez` 与 `GET /readyz` 返回成功
 - [ ] 核心业务接口 smoke 测试通过
+- [ ] 审计查询与导出权限验证通过：`audit:read` / `audit:export`
 - [ ] `GET /metrics` 可按预期访问（白名单内可访问）
 - [ ] 观察 10~15 分钟日志，无明显 5xx/panic/连接错误
 - [ ] 关键失败接口返回结构符合统一规范（`code/msg/request_id/trace_id`）

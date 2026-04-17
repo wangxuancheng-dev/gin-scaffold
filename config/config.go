@@ -35,7 +35,9 @@ type PlatformConfig struct {
 
 // AuditConfig 写操作 HTTP 审计落库（异步插入，失败仅打日志）。
 type AuditConfig struct {
-	Enabled bool `mapstructure:"enabled"`
+	Enabled           bool `mapstructure:"enabled"`
+	ExportDefaultDays int  `mapstructure:"export_default_days"` // 导出默认时间窗（天），默认 7
+	ExportMaxDays     int  `mapstructure:"export_max_days"`     // 导出最大允许时间窗（天），默认 31
 }
 
 // IdempotencyConfig POST 幂等（Redis，需 X-Idempotency-Key）。

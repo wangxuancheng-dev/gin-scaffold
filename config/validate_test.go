@@ -57,6 +57,12 @@ func TestValidate_Ok(t *testing.T) {
 			AllowedMIME:  "text/plain",
 			URLExpireSec: 60,
 		},
+		Platform: PlatformConfig{
+			Audit: AuditConfig{
+				ExportDefaultDays: 7,
+				ExportMaxDays:     31,
+			},
+		},
 	}
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("validate should pass, got: %v", err)
@@ -93,6 +99,7 @@ func TestValidate_PlatformNotifyDriverInvalid(t *testing.T) {
 		Scheduler: SchedulerConfig{LogRetentionDays: 30, LockTTLSeconds: 120},
 		Storage: StorageConfig{Enabled: false},
 		Platform: PlatformConfig{
+			Audit:  AuditConfig{ExportDefaultDays: 7, ExportMaxDays: 31},
 			Notify: NotifyConfig{Driver: "smtp"},
 		},
 	}
@@ -142,6 +149,12 @@ func TestValidate_StorageReadyzCheckRequiresEnabled(t *testing.T) {
 			MaxUploadMB:  5,
 			AllowedMIME:  "text/plain",
 			URLExpireSec: 60,
+		},
+		Platform: PlatformConfig{
+			Audit: AuditConfig{
+				ExportDefaultDays: 7,
+				ExportMaxDays:     31,
+			},
 		},
 	}
 	err := cfg.Validate()
@@ -247,6 +260,8 @@ func TestValidate_AggregatesErrors(t *testing.T) {
 		"storage.max_upload_mb must be > 0 when storage.enabled=true",
 		"storage.url_expire_sec must be > 0 when storage.enabled=true",
 		"storage.allowed_mime must not contain empty entries",
+		"platform.audit.export_default_days must be > 0",
+		"platform.audit.export_max_days must be > 0",
 	}
 	for _, part := range wantParts {
 		if !strings.Contains(msg, part) {

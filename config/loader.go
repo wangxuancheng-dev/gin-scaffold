@@ -169,7 +169,7 @@ func bindEnvKeys(v *viper.Viper) {
 		"storage.enabled", "storage.driver", "storage.local_dir", "storage.sign_secret", "storage.max_upload_mb", "storage.allowed_ext", "storage.allowed_mime", "storage.url_expire_sec",
 		"storage.s3_endpoint", "storage.s3_region", "storage.s3_bucket", "storage.s3_access_key", "storage.s3_secret_key", "storage.s3_path_style", "storage.s3_insecure",
 		"storage.readyz_check",
-		"platform.audit.enabled",
+		"platform.audit.enabled", "platform.audit.export_default_days", "platform.audit.export_max_days",
 		"platform.idempotency.enabled", "platform.idempotency.ttl_seconds", "platform.idempotency.lock_seconds",
 		"platform.idempotency.max_body_bytes", "platform.idempotency.max_cached_response_bytes",
 		"platform.cache.key_prefix",

@@ -122,6 +122,100 @@ info:
   title: Gin Scaffold API
   version: "1.0"
 paths:
+  /api/v1/admin/audit-logs:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 分页大小（<=200）
+        in: query
+        name: page_size
+        type: integer
+      - description: 用户 ID
+        in: query
+        name: user_id
+        type: integer
+      - description: 动作：POST|PUT|PATCH|DELETE
+        in: query
+        name: action
+        type: string
+      - description: HTTP 状态码
+        in: query
+        name: status
+        type: integer
+      - description: 按路径模糊匹配
+        in: query
+        name: path
+        type: string
+      - description: 按请求 ID 精确匹配
+        in: query
+        name: request_id
+        type: string
+      - description: 开始时间（RFC3339）
+        in: query
+        name: from
+        type: string
+      - description: 结束时间（RFC3339）
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 审计日志查询（后台）
+      tags:
+      - admin-ops
+  /api/v1/admin/audit-logs/export:
+    get:
+      parameters:
+      - description: 用户 ID
+        in: query
+        name: user_id
+        type: integer
+      - description: 动作：POST|PUT|PATCH|DELETE
+        in: query
+        name: action
+        type: string
+      - description: HTTP 状态码
+        in: query
+        name: status
+        type: integer
+      - description: 按路径模糊匹配
+        in: query
+        name: path
+        type: string
+      - description: 按请求 ID 精确匹配
+        in: query
+        name: request_id
+        type: string
+      - description: 开始时间（RFC3339）；为空时默认 now-7d
+        in: query
+        name: from
+        type: string
+      - description: 结束时间（RFC3339）；为空时默认 now
+        in: query
+        name: to
+        type: string
+      - description: 最大导出条数（默认 5000，最大 10000）
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: csv content
+          schema:
+            type: string
+      summary: 审计日志导出（后台）
+      tags:
+      - admin-ops
   /api/v1/admin/dbping:
     get:
       produces:

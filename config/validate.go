@@ -223,6 +223,15 @@ func (a *App) validateStorage() []string {
 func (a *App) validatePlatform() []string {
 	var errs []string
 	p := a.Platform
+	if p.Audit.ExportDefaultDays <= 0 {
+		errs = append(errs, "platform.audit.export_default_days must be > 0")
+	}
+	if p.Audit.ExportMaxDays <= 0 {
+		errs = append(errs, "platform.audit.export_max_days must be > 0")
+	}
+	if p.Audit.ExportDefaultDays > 0 && p.Audit.ExportMaxDays > 0 && p.Audit.ExportDefaultDays > p.Audit.ExportMaxDays {
+		errs = append(errs, "platform.audit.export_default_days must be <= platform.audit.export_max_days")
+	}
 	if p.Idempotency.Enabled {
 		if p.Idempotency.TTLSeconds < 60 {
 			errs = append(errs, "platform.idempotency.ttl_seconds must be >= 60 when idempotency is enabled")

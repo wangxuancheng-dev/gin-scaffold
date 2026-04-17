@@ -75,6 +75,8 @@
 审计、幂等、缓存键前缀、通知驱动等；详见 [平台横切能力](/guide/platform)。
 
 - `audit.enabled`：是否将写类 HTTP 请求异步写入 `audit_logs`（需迁移）
+- `audit.export_default_days`：审计导出默认时间窗（天）
+- `audit.export_max_days`：审计导出最大允许时间窗（天）
 - `idempotency.*`：基于 Redis 的 POST 幂等（`X-Idempotency-Key`），见专页说明
 - `cache.key_prefix`：`pkg/cache` 使用的 Redis 键前缀
 - `notify.driver`：`log`（写应用日志）或 `noop`
