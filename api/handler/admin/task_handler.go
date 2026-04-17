@@ -1,14 +1,13 @@
 package adminhandler
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"gin-scaffold/api/handler"
 	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/response"
-	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/internal/pkg/validator"
 	"gin-scaffold/internal/service/port"
 )
@@ -26,7 +25,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 	_ = c.ShouldBindQuery(&q)
 	rows, total, err := h.svc.List(c.Request.Context(), q.Page, q.PageSize)
 	if err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, gin.H{"total": total, "list": rows})
@@ -35,11 +34,11 @@ func (h *TaskHandler) List(c *gin.Context) {
 func (h *TaskHandler) Create(c *gin.Context) {
 	var req adminreq.TaskCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := validator.V().Struct(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	enabled := true
@@ -65,16 +64,16 @@ func (h *TaskHandler) Create(c *gin.Context) {
 func (h *TaskHandler) Update(c *gin.Context) {
 	var uri adminreq.TaskIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	var req adminreq.TaskUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := validator.V().Struct(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	row, err := h.svc.Update(c.Request.Context(), uri.ID, req.Name, req.Spec, req.Command, req.TimeoutSec, req.ConcurrencyPolicy, req.Enabled)
@@ -88,7 +87,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 func (h *TaskHandler) Delete(c *gin.Context) {
 	var uri adminreq.TaskIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := h.svc.Delete(c.Request.Context(), uri.ID); err != nil {
@@ -101,12 +100,12 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 func (h *TaskHandler) Toggle(c *gin.Context) {
 	var uri adminreq.TaskIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	var req adminreq.TaskToggleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := h.svc.SetEnabled(c.Request.Context(), uri.ID, req.Enabled); err != nil {
@@ -119,7 +118,7 @@ func (h *TaskHandler) Toggle(c *gin.Context) {
 func (h *TaskHandler) RunNow(c *gin.Context) {
 	var uri adminreq.TaskIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := h.svc.RunNow(c.Request.Context(), uri.ID); err != nil {
@@ -132,7 +131,7 @@ func (h *TaskHandler) RunNow(c *gin.Context) {
 func (h *TaskHandler) Logs(c *gin.Context) {
 	var uri adminreq.TaskIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	var q adminreq.TaskListQuery
@@ -146,10 +145,5 @@ func (h *TaskHandler) Logs(c *gin.Context) {
 }
 
 func (h *TaskHandler) failWithErr(c *gin.Context, err error) {
-	var biz *errcode.BizError
-	if errors.As(err, &biz) {
-		response.FailBiz(c, biz.Code, biz.Key, biz.Error())
-		return
-	}
-	response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+	handler.FailByError(c, err, http.StatusBadRequest, nil)
 }

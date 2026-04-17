@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
 
+	"gin-scaffold/api/handler"
 	"gin-scaffold/api/response"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
@@ -36,7 +37,7 @@ func (h *MenuHandler) ListMine(c *gin.Context) {
 	}
 	menus, err := h.svc.ListByRole(c.Request.Context(), claims.Role)
 	if err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	data := lo.Map(menus, func(m model.Menu, _ int) gin.H {

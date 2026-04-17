@@ -3,13 +3,14 @@ package errcode
 
 // 标准与公共错误码（与 HTTP 状态可对应）。
 const (
-	OK            = 200
-	BadRequest    = 400
-	Unauthorized  = 401
-	Forbidden     = 403
-	NotFound      = 404
-	TooManyReq    = 429
-	InternalError = 500
+	OK              = 200
+	BadRequest      = 400
+	Unauthorized    = 401
+	Forbidden       = 403
+	NotFound        = 404
+	TooManyReq      = 429
+	PayloadTooLarge = 413
+	InternalError   = 500
 
 	// 业务用户模块 1xxxx
 	UserNotFound   = 10001
@@ -24,6 +25,7 @@ const (
 	KeyUnauthorized        = "unauthorized"
 	KeyForbidden           = "forbidden"
 	KeyRateLimited         = "rate_limited"
+	KeyPayloadTooLarge     = "payload_too_large"
 	KeyInternal            = "internal_error"
 	KeyUserNotFound        = "user_not_found"
 	KeyUserExists          = "user_exists"

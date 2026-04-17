@@ -53,6 +53,9 @@ func Build(opts Options) *gin.Engine {
 	}
 	r := gin.New()
 	r.Use(middleware.RequestID())
+	if opts.Cfg != nil {
+		r.Use(middleware.BodyLimit(opts.Cfg.HTTP.MaxBodyBytes))
+	}
 	if opts.Cfg != nil && opts.Cfg.Debug {
 		// Debug 模式下额外输出 Gin 风格请求日志，便于本地排障。
 		r.Use(gin.Logger())

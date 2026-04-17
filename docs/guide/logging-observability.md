@@ -21,9 +21,12 @@
 - 健康检查：`/livez`、`/readyz`、`/health`
 - 指标：`/metrics`
 - 链路追踪：OpenTelemetry（可开关）
+- 告警规则模板：`deploy/observability/prometheus-rules.example.yml`
+- 看板模板：`deploy/observability/grafana-dashboard-ops.example.json`
 
 ## 建议实践
 
 - 生产关闭 `debug`
 - 为关键业务操作使用独立 channel（如审计日志）
 - 把告警基于 `error` 日志和任务失败日志建立起来
+- 在监控中至少覆盖：`5xx 比例`、`P95 延迟`、`队列积压`、`DB 连接池利用率`

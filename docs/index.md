@@ -16,6 +16,7 @@
 - [项目简介](/guide/introduction)
 - [快速开始](/guide/quick-start)
 - [配置说明](/guide/configuration)
+- [错误码与错误响应规范](/guide/error-handling)
 - [命令系统](/guide/commands)
 - [定时任务中心](/guide/scheduler)
 - [日志与可观测](/guide/logging-observability)

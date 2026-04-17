@@ -2,7 +2,6 @@ package adminhandler
 
 import (
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -14,6 +13,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/xuri/excelize/v2"
 
+	"gin-scaffold/api/handler"
 	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/response"
 	clientresp "gin-scaffold/api/response/client"
@@ -46,7 +46,7 @@ func (h *UserHandler) List(c *gin.Context) {
 	_ = c.ShouldBindQuery(&q)
 	rows, total, err := h.svc.List(c.Request.Context(), h.buildQuery(q), q.Page, q.PageSize)
 	if err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	list := lo.Map(rows, func(u model.User, _ int) clientresp.UserVO {
@@ -65,17 +65,14 @@ func (h *UserHandler) List(c *gin.Context) {
 func (h *UserHandler) Get(c *gin.Context) {
 	var uri adminreq.UserIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	u, err := h.svc.GetByID(c.Request.Context(), uri.ID)
 	if err != nil {
-		var biz *errcode.BizError
-		if errors.As(err, &biz) {
-			response.FailHTTP(c, http.StatusNotFound, biz.Code, biz.Key, biz.Error())
-			return
-		}
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailByError(c, err, http.StatusNotFound, map[int]handler.BizMapping{
+			errcode.UserNotFound: {Status: http.StatusNotFound},
+		})
 		return
 	}
 	response.OK(c, clientresp.FromUser(u))
@@ -92,21 +89,16 @@ func (h *UserHandler) Get(c *gin.Context) {
 func (h *UserHandler) Create(c *gin.Context) {
 	var req adminreq.UserCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := validator.V().Struct(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	u, err := h.svc.AdminCreate(c.Request.Context(), req.Username, req.Password, req.Nickname, req.Role)
 	if err != nil {
-		var biz *errcode.BizError
-		if errors.As(err, &biz) {
-			response.FailBiz(c, biz.Code, biz.Key, biz.Error())
-			return
-		}
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailByError(c, err, http.StatusBadRequest, nil)
 		return
 	}
 	response.OK(c, clientresp.FromUser(u))
@@ -124,30 +116,23 @@ func (h *UserHandler) Create(c *gin.Context) {
 func (h *UserHandler) Update(c *gin.Context) {
 	var uri adminreq.UserIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	var req adminreq.UserUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := validator.V().Struct(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	u, err := h.svc.AdminUpdate(c.Request.Context(), uri.ID, req.Nickname, req.Password, req.Role)
 	if err != nil {
-		var biz *errcode.BizError
-		if errors.As(err, &biz) {
-			if biz.Code == errcode.UserNotFound {
-				response.FailHTTP(c, http.StatusNotFound, biz.Code, biz.Key, biz.Error())
-				return
-			}
-			response.FailBiz(c, biz.Code, biz.Key, biz.Error())
-			return
-		}
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+			errcode.UserNotFound: {Status: http.StatusNotFound},
+		})
 		return
 	}
 	response.OK(c, clientresp.FromUser(u))
@@ -163,24 +148,21 @@ func (h *UserHandler) Update(c *gin.Context) {
 func (h *UserHandler) Delete(c *gin.Context) {
 	var uri adminreq.UserIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	err := h.svc.AdminDelete(c.Request.Context(), uri.ID)
 	if err != nil {
-		var biz *errcode.BizError
-		if errors.As(err, &biz) {
-			switch biz.Code {
-			case errcode.UserNotFound:
-				response.FailHTTP(c, http.StatusNotFound, biz.Code, biz.Key, biz.Error())
-			case errcode.Forbidden:
-				response.FailHTTP(c, http.StatusForbidden, biz.Code, errcode.KeySuperAdminProtected, "super admin cannot be deleted")
-			default:
-				response.FailBiz(c, biz.Code, biz.Key, biz.Error())
-			}
-			return
-		}
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+			errcode.UserNotFound: {
+				Status: http.StatusNotFound,
+			},
+			errcode.Forbidden: {
+				Status:     http.StatusForbidden,
+				MsgKey:     errcode.KeySuperAdminProtected,
+				DefaultMsg: "super admin cannot be deleted",
+			},
+		})
 		return
 	}
 	response.OK(c, gin.H{"deleted": true})
@@ -216,7 +198,7 @@ func (h *UserHandler) Export(c *gin.Context) {
 	switch format {
 	case "xlsx":
 		if err := h.exportXLSX(c, q, fields, batchSize, pageOnly, withRole); err != nil {
-			response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+			handler.FailInternal(c, err)
 		}
 	default:
 		if err := h.exportCSV(c, q, fields, batchSize, pageOnly, withRole); err != nil {

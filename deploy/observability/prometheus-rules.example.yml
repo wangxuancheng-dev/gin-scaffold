@@ -1,0 +1,48 @@
+groups:
+  - name: gin-scaffold-api
+    rules:
+      - alert: GinScaffoldHigh5xxRate
+        expr: |
+          (
+            sum(rate(gin_requests_total{status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(gin_requests_total[5m])), 1)
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 5xx ratio is higher than 5%"
+          description: "Please inspect logs and traces for recent error spikes."
+
+      - alert: GinScaffoldP95LatencyHigh
+        expr: |
+          histogram_quantile(0.95, sum(rate(gin_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 latency is above 1s"
+          description: "Investigate slow downstream dependencies and DB queries."
+
+  - name: gin-scaffold-runtime
+    rules:
+      - alert: GinScaffoldDBPoolExhausted
+        expr: |
+          go_sql_db_stats_in_use_connections / clamp_min(go_sql_db_stats_max_open_connections, 1) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DB pool utilization above 90%"
+          description: "Increase DB pool capacity or investigate slow SQL."
+
+      - alert: GinScaffoldAsynqQueueBacklog
+        expr: |
+          asynq_queue_size > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Asynq queue backlog is too high"
+          description: "Scale workers or inspect blocked task handlers."

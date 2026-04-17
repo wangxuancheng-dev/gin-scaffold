@@ -10,6 +10,7 @@ http:
   write_timeout_sec: 15
   idle_timeout_sec: 60
   shutdown_timeout_sec: 10
+  max_body_bytes: 1048576
 
 log:
   level: info
@@ -122,3 +123,10 @@ scheduler:
   lock_enabled: true
   lock_ttl_seconds: 60
   lock_prefix: "scheduler:task:lock:"
+
+outbound:
+  timeout_ms: 1500
+  retry_max: 1
+  retry_backoff_ms: 100
+  circuit_threshold: 5
+  circuit_open_sec: 10

@@ -1,0 +1,48 @@
+{
+  "title": "gin-scaffold ops overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "title": "HTTP RPS",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(gin_requests_total[1m]))",
+          "legendFormat": "rps"
+        }
+      ]
+    },
+    {
+      "title": "HTTP 5xx Ratio",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(gin_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(gin_requests_total[5m])), 1)",
+          "legendFormat": "5xx_ratio"
+        }
+      ]
+    },
+    {
+      "title": "Queue Backlog",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "asynq_queue_size",
+          "legendFormat": "{{queue}}"
+        }
+      ]
+    },
+    {
+      "title": "DB Pool Utilization",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "go_sql_db_stats_in_use_connections / clamp_min(go_sql_db_stats_max_open_connections, 1)",
+          "legendFormat": "{{db}}"
+        }
+      ]
+    }
+  ]
+}

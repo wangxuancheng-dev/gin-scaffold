@@ -22,6 +22,7 @@ import (
 	"gin-scaffold/internal/service/authz"
 	"gin-scaffold/middleware"
 	"gin-scaffold/pkg/db"
+	"gin-scaffold/pkg/httpclient"
 	"gin-scaffold/pkg/logger"
 	"gin-scaffold/pkg/redis"
 	"gin-scaffold/pkg/tracer"
@@ -63,6 +64,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	if err := db.SyncProcessLocalToTimeZone(cfg.DB.TimeZone); err != nil {
 		return nil, fmt.Errorf("time.Local (align with db.time_zone / TIME_ZONE): %w", err)
 	}
+	httpclient.InitDefault(cfg.Outbound)
 	if err := logger.Init(&cfg.Log); err != nil {
 		return nil, err
 	}
@@ -167,6 +169,7 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 	if err := db.SyncProcessLocalToTimeZone(cfg.DB.TimeZone); err != nil {
 		return nil, fmt.Errorf("time.Local (align with db.time_zone / TIME_ZONE): %w", err)
 	}
+	httpclient.InitDefault(cfg.Outbound)
 	if err := logger.Init(&cfg.Log); err != nil {
 		return nil, err
 	}

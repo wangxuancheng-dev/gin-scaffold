@@ -18,6 +18,7 @@
 - `write_timeout_sec`
 - `idle_timeout_sec`
 - `shutdown_timeout_sec`
+- `max_body_bytes`: 请求体大小上限（字节），默认建议 `1048576`（1MB）
 
 ## `db`
 
@@ -39,6 +40,14 @@
 - `lock_enabled`
 - `lock_ttl_seconds`
 - `lock_prefix`
+
+## `outbound`
+
+- `timeout_ms`: 下游 HTTP 请求超时
+- `retry_max`: 最大重试次数（不含首发）
+- `retry_backoff_ms`: 重试退避间隔
+- `circuit_threshold`: 连续失败达到阈值后熔断
+- `circuit_open_sec`: 熔断打开持续秒数
 
 ## 启动校验（Fail Fast）
 

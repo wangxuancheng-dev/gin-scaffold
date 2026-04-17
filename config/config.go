@@ -20,6 +20,7 @@ type App struct {
 	CORS      CORSConfig      `mapstructure:"cors"`
 	RBAC      RBACConfig      `mapstructure:"rbac"`
 	Scheduler SchedulerConfig `mapstructure:"scheduler"`
+	Outbound  OutboundConfig  `mapstructure:"outbound"`
 }
 
 // HTTPConfig HTTP 服务监听与超时配置。
@@ -31,6 +32,7 @@ type HTTPConfig struct {
 	WriteTimeout      int    `mapstructure:"write_timeout_sec"`
 	IdleTimeout       int    `mapstructure:"idle_timeout_sec"`
 	ShutdownTimeout   int    `mapstructure:"shutdown_timeout_sec"`
+	MaxBodyBytes      int64  `mapstructure:"max_body_bytes"`
 }
 
 // LogConfig Zap + Lumberjack 日志配置。
@@ -166,4 +168,13 @@ type SchedulerConfig struct {
 	LockEnabled      bool   `mapstructure:"lock_enabled"`       // 多实例防重：是否启用 Redis 分布式锁
 	LockTTLSeconds   int    `mapstructure:"lock_ttl_seconds"`   // 分布式锁 TTL（秒）
 	LockPrefix       string `mapstructure:"lock_prefix"`        // 分布式锁 key 前缀
+}
+
+// OutboundConfig 下游 HTTP 客户端治理参数。
+type OutboundConfig struct {
+	TimeoutMS        int `mapstructure:"timeout_ms"`
+	RetryMax         int `mapstructure:"retry_max"`
+	RetryBackoffMS   int `mapstructure:"retry_backoff_ms"`
+	CircuitThreshold int `mapstructure:"circuit_threshold"`
+	CircuitOpenSec   int `mapstructure:"circuit_open_sec"`
 }

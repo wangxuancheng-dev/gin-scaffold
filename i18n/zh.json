@@ -3,6 +3,8 @@
   "invalid_param": "参数错误",
   "forbidden": "禁止访问",
   "unauthorized": "未授权",
+  "rate_limited": "请求过于频繁",
+  "payload_too_large": "请求体过大",
   "internal_error": "服务内部错误",
   "user_not_found": "用户不存在",
   "user_exists": "用户已存在",

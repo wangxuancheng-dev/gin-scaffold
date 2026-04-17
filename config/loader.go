@@ -138,6 +138,7 @@ func bindEnvKeys(v *viper.Viper) {
 	keys := []string{
 		"env", "name", "debug",
 		"http.host", "http.port", "http.read_timeout_sec", "http.read_header_timeout_sec", "http.write_timeout_sec", "http.idle_timeout_sec", "http.shutdown_timeout_sec",
+		"http.max_body_bytes",
 		"log.level", "log.dir", "log.app_file", "log.access_file", "log.error_file",
 		"log.rotation_mode", "log.app_rotation_mode", "log.access_rotation_mode", "log.error_rotation_mode",
 		"log.max_size_mb", "log.max_backups", "log.max_age_days", "log.compress", "log.console",
@@ -153,6 +154,7 @@ func bindEnvKeys(v *viper.Viper) {
 		"rbac.super_admin_user_id",
 		"scheduler.enabled", "scheduler.with_seconds", "scheduler.log_retention_days",
 		"scheduler.lock_enabled", "scheduler.lock_ttl_seconds", "scheduler.lock_prefix",
+		"outbound.timeout_ms", "outbound.retry_max", "outbound.retry_backoff_ms", "outbound.circuit_threshold", "outbound.circuit_open_sec",
 	}
 	for _, k := range keys {
 		_ = v.BindEnv(k)

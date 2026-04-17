@@ -1,19 +1,19 @@
 package clienthandler
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"gin-scaffold/api/handler"
 	clientreq "gin-scaffold/api/request/client"
 	"gin-scaffold/api/response"
 	clientresp "gin-scaffold/api/response/client"
 	"gin-scaffold/internal/pkg/errcode"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
-	"gin-scaffold/internal/service/port"
 	"gin-scaffold/internal/pkg/validator"
+	"gin-scaffold/internal/service/port"
 	"gin-scaffold/middleware"
 )
 
@@ -38,21 +38,16 @@ func NewUserHandler(s port.UserService) *UserHandler {
 func (h *UserHandler) Register(c *gin.Context) {
 	var req clientreq.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := validator.V().Struct(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	u, err := h.svc.Register(c.Request.Context(), req.Username, req.Password, req.Nickname)
 	if err != nil {
-		var biz *errcode.BizError
-		if errors.As(err, &biz) {
-			response.FailBiz(c, biz.Code, biz.Key, biz.Error())
-			return
-		}
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailByError(c, err, http.StatusBadRequest, nil)
 		return
 	}
 	response.OK(c, clientresp.FromUser(u))
@@ -68,17 +63,14 @@ func (h *UserHandler) Register(c *gin.Context) {
 func (h *UserHandler) Get(c *gin.Context) {
 	var uri clientreq.UserIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	u, err := h.svc.GetByID(c.Request.Context(), uri.ID)
 	if err != nil {
-		var biz *errcode.BizError
-		if errors.As(err, &biz) {
-			response.FailHTTP(c, http.StatusNotFound, biz.Code, biz.Key, biz.Error())
-			return
-		}
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailByError(c, err, http.StatusNotFound, map[int]handler.BizMapping{
+			errcode.UserNotFound: {Status: http.StatusNotFound},
+		})
 		return
 	}
 	response.OK(c, clientresp.FromUser(u))
@@ -95,21 +87,16 @@ func (h *UserHandler) Get(c *gin.Context) {
 func (h *UserHandler) Login(c *gin.Context) {
 	var req clientreq.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := validator.V().Struct(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	access, refresh, err := h.svc.LoginWithRefresh(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		var biz *errcode.BizError
-		if errors.As(err, &biz) {
-			response.FailHTTP(c, http.StatusUnauthorized, biz.Code, biz.Key, biz.Error())
-			return
-		}
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailByError(c, err, http.StatusUnauthorized, nil)
 		return
 	}
 	response.OK(c, gin.H{"access_token": access, "refresh_token": refresh})
@@ -126,17 +113,12 @@ func (h *UserHandler) Login(c *gin.Context) {
 func (h *UserHandler) Refresh(c *gin.Context) {
 	var req clientreq.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	access, refresh, err := h.svc.RefreshAccess(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		var biz *errcode.BizError
-		if errors.As(err, &biz) {
-			response.FailHTTP(c, http.StatusUnauthorized, biz.Code, biz.Key, biz.Error())
-			return
-		}
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailByError(c, err, http.StatusUnauthorized, nil)
 		return
 	}
 	response.OK(c, gin.H{"access_token": access, "refresh_token": refresh})
@@ -160,7 +142,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		return
 	}
 	if err := jwtpkg.RevokeAccessToken(c.Request.Context(), raw, claims.ExpiresAt.Time); err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, gin.H{"revoked_until": claims.ExpiresAt.Time.Format(time.RFC3339)})

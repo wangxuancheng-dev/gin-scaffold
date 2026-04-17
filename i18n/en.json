@@ -3,6 +3,8 @@
   "invalid_param": "invalid parameter",
   "forbidden": "forbidden",
   "unauthorized": "unauthorized",
+  "rate_limited": "rate limited",
+  "payload_too_large": "payload too large",
   "internal_error": "internal error",
   "user_not_found": "user not found",
   "user_exists": "user already exists",

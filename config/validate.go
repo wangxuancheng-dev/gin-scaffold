@@ -24,6 +24,8 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateJWT()...)
 	errs = append(errs, a.validateI18n()...)
 	errs = append(errs, a.validateScheduler()...)
+	errs = append(errs, a.validateCORS()...)
+	errs = append(errs, a.validateOutbound()...)
 	if len(errs) > 0 {
 		return fmt.Errorf("invalid config: %s", strings.Join(errs, "; "))
 	}
@@ -40,6 +42,9 @@ func (a *App) validateHTTP() []string {
 	}
 	if a.HTTP.ReadTimeout < 0 || a.HTTP.ReadHeaderTimeout < 0 || a.HTTP.WriteTimeout < 0 || a.HTTP.IdleTimeout < 0 || a.HTTP.ShutdownTimeout < 0 {
 		errs = append(errs, "http timeout values must be >= 0")
+	}
+	if a.HTTP.MaxBodyBytes < 0 {
+		errs = append(errs, "http.max_body_bytes must be >= 0")
 	}
 	return errs
 }
@@ -133,6 +138,27 @@ func (a *App) validateScheduler() []string {
 	}
 	if a.Scheduler.LockTTLSeconds < 0 {
 		errs = append(errs, "scheduler.lock_ttl_seconds must be >= 0")
+	}
+	return errs
+}
+
+func (a *App) validateCORS() []string {
+	var errs []string
+	if a.CORS.AllowCredentials {
+		for _, origin := range a.CORS.AllowOrigins {
+			if strings.TrimSpace(origin) == "*" {
+				errs = append(errs, "cors.allow_credentials cannot be true when allow_origins contains *")
+				break
+			}
+		}
+	}
+	return errs
+}
+
+func (a *App) validateOutbound() []string {
+	var errs []string
+	if a.Outbound.TimeoutMS < 0 || a.Outbound.RetryMax < 0 || a.Outbound.RetryBackoffMS < 0 || a.Outbound.CircuitThreshold < 0 || a.Outbound.CircuitOpenSec < 0 {
+		errs = append(errs, "outbound values must be >= 0")
 	}
 	return errs
 }
