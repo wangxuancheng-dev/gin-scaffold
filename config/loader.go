@@ -175,6 +175,7 @@ func bindEnvKeys(v *viper.Viper) {
 		"platform.cache.key_prefix",
 		"platform.notify.driver",
 		"tenant.enabled", "tenant.header", "tenant.default_id",
+		"outbox.enabled", "outbox.poll_interval_sec", "outbox.batch_size", "outbox.max_attempts", "outbox.retry_backoff_sec",
 	}
 	for _, k := range keys {
 		_ = v.BindEnv(k)

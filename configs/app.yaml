@@ -166,3 +166,10 @@ tenant:
   enabled: false
   header: "X-Tenant-ID"
   default_id: "default"
+
+outbox:
+  enabled: true
+  poll_interval_sec: 2
+  batch_size: 100
+  max_attempts: 10
+  retry_backoff_sec: 5

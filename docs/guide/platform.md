@@ -38,6 +38,21 @@
 - 在 `internal/app/platform.Init` 中重置默认总线；业务可 `eventbus.Default().On("name", handler)` 订阅。
 - 示例：`user.registered` 在用户注册成功后由 handler 发出。
 
+## 事务 Outbox（`outbox`）
+
+- 目标：保证“数据库写入成功后，事件最终一定可分发”，避免直接异步调用导致的丢消息。
+- 表：`outbox_events`（迁移：`202604172130_create_outbox_events`）。
+- 运行机制：
+  - 业务在事务内写入 outbox 记录（`status=pending`）。
+  - 后台分发器按 `poll_interval_sec` 扫描待处理记录，发布到 `eventbus`。
+  - 成功后标记 `published`；失败按 `retry_backoff_sec` 退避重试，超过 `max_attempts` 标记 `dead`。
+- 配置项（`outbox`）：
+  - `enabled`
+  - `poll_interval_sec`
+  - `batch_size`
+  - `max_attempts`
+  - `retry_backoff_sec`
+
 ## 通知（`platform.notify` + `pkg/notify`）
 
 - `driver: log`：写入应用日志（默认）。

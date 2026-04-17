@@ -124,6 +124,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	menuDAO := dao.NewMenuDAO(gdb)
 	taskDAO := dao.NewScheduledTaskDAO(gdb)
 	auditDAO := dao.NewAuditLogDAO(gdb)
+	outboxDAO := dao.NewOutboxDAO(gdb)
 	sysSettingDAO := dao.NewSystemSettingDAO(gdb)
 	announcementDAO := dao.NewAnnouncementDAO(gdb)
 	authzDAO := dao.NewAuthzDAO(gdb)
@@ -158,6 +159,9 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	}
 	taskSvc.SetOnChanged(notifyTaskScheduler)
 	cleanups = append(cleanups, func(context.Context) { stopTaskScheduler() })
+
+	stopOutboxDispatcher := service.NewOutboxDispatcher(outboxDAO, cfg.Outbox).Start()
+	cleanups = append(cleanups, func(context.Context) { stopOutboxDispatcher() })
 
 	engine := routes.Build(routes.Options{
 		Cfg:        cfg,

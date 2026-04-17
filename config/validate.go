@@ -28,6 +28,7 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateOutbound()...)
 	errs = append(errs, a.validateStorage()...)
 	errs = append(errs, a.validatePlatform()...)
+	errs = append(errs, a.validateOutbox()...)
 	if len(errs) > 0 {
 		return fmt.Errorf("invalid config: %s", strings.Join(errs, "; "))
 	}
@@ -252,6 +253,26 @@ func (a *App) validatePlatform() []string {
 	}
 	if d != "log" && d != "noop" {
 		errs = append(errs, "platform.notify.driver must be log or noop")
+	}
+	return errs
+}
+
+func (a *App) validateOutbox() []string {
+	var errs []string
+	if !a.Outbox.Enabled {
+		return errs
+	}
+	if a.Outbox.PollIntervalSec <= 0 {
+		errs = append(errs, "outbox.poll_interval_sec must be > 0 when outbox is enabled")
+	}
+	if a.Outbox.BatchSize <= 0 {
+		errs = append(errs, "outbox.batch_size must be > 0 when outbox is enabled")
+	}
+	if a.Outbox.MaxAttempts <= 0 {
+		errs = append(errs, "outbox.max_attempts must be > 0 when outbox is enabled")
+	}
+	if a.Outbox.RetryBackoffSec <= 0 {
+		errs = append(errs, "outbox.retry_backoff_sec must be > 0 when outbox is enabled")
 	}
 	return errs
 }

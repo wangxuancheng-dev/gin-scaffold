@@ -24,12 +24,21 @@ type App struct {
 	Storage   StorageConfig   `mapstructure:"storage"`
 	Platform  PlatformConfig  `mapstructure:"platform"`
 	Tenant    TenantConfig    `mapstructure:"tenant"`
+	Outbox    OutboxConfig    `mapstructure:"outbox"`
 }
 
 type TenantConfig struct {
 	Enabled   bool   `mapstructure:"enabled"`
 	Header    string `mapstructure:"header"`
 	DefaultID string `mapstructure:"default_id"`
+}
+
+type OutboxConfig struct {
+	Enabled         bool `mapstructure:"enabled"`
+	PollIntervalSec int  `mapstructure:"poll_interval_sec"`
+	BatchSize       int  `mapstructure:"batch_size"`
+	MaxAttempts     int  `mapstructure:"max_attempts"`
+	RetryBackoffSec int  `mapstructure:"retry_backoff_sec"`
 }
 
 // PlatformConfig 横切能力：审计、幂等、缓存前缀、通知驱动等。
