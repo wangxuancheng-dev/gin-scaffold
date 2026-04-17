@@ -140,3 +140,4 @@ storage:
   allowed_ext: ".jpg,.png,.txt"
   allowed_mime: "image/jpeg,image/png,text/plain"
   url_expire_sec: 120
+  readyz_check: false

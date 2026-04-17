@@ -63,6 +63,54 @@ func TestValidate_Ok(t *testing.T) {
 	}
 }
 
+func TestValidate_StorageReadyzCheckRequiresEnabled(t *testing.T) {
+	cfg := &App{
+		Env:  "dev",
+		Name: "gin-scaffold",
+		HTTP: HTTPConfig{
+			Host:              "0.0.0.0",
+			Port:              8080,
+			ReadTimeout:       30,
+			ReadHeaderTimeout: 10,
+			WriteTimeout:      30,
+			IdleTimeout:       120,
+			ShutdownTimeout:   10,
+		},
+		DB: DBConfig{
+			Driver: "mysql",
+			DSN:    "root:root@tcp(127.0.0.1:3306)/scaffold?charset=utf8mb4&parseTime=True",
+		},
+		Redis: RedisConfig{Addr: "127.0.0.1:6379"},
+		Asynq: AsynqConfig{
+			RedisAddr: "127.0.0.1:6379", RedisDB: 1, Concurrency: 10, Queue: "default",
+			Queues: map[string]int{"default": 1}, MaxRetry: 5, TimeoutSec: 30, DedupWindowSec: 30,
+		},
+		JWT: JWTConfig{Secret: "test-secret", AccessExpireMin: 60, RefreshExpireMin: 1440},
+		I18n: I18nConfig{
+			DefaultLang: "zh",
+			BundlePaths: []string{"./i18n/zh.json"},
+		},
+		Scheduler: SchedulerConfig{LogRetentionDays: 30, LockTTLSeconds: 120},
+		Storage: StorageConfig{
+			Enabled:      false,
+			ReadyzCheck:  true,
+			Driver:       "local",
+			LocalDir:     "./storage-test",
+			SignSecret:   "unit-test-secret",
+			MaxUploadMB:  5,
+			AllowedMIME:  "text/plain",
+			URLExpireSec: 60,
+		},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected validate error when readyz_check without storage.enabled")
+	}
+	if !strings.Contains(err.Error(), "storage.readyz_check requires storage.enabled=true") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestValidate_FailFast(t *testing.T) {
 	cfg := &App{
 		Env:  "dev",

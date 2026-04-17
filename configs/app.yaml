@@ -144,3 +144,4 @@ storage:
   allowed_ext: ".jpg,.jpeg,.png,.pdf,.txt"
   allowed_mime: "image/jpeg,image/png,application/pdf,text/plain"
   url_expire_sec: 300
+  readyz_check: false

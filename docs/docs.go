@@ -84,6 +84,193 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-user"
+                ],
+                "summary": "创建用户（后台）",
+                "parameters": [
+                    {
+                        "description": "创建参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/adminreq.UserCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/export": {
+            "get": {
+                "produces": [
+                    "text/csv",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "admin-user"
+                ],
+                "summary": "用户导出（后台）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户名（模糊）",
+                        "name": "username",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "昵称（模糊）",
+                        "name": "nickname",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "导出范围: all/page, 默认 all",
+                        "name": "export_scope",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "导出格式: csv/xlsx, 默认 csv",
+                        "name": "export_format",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "全量导出上限，默认 5000",
+                        "name": "export_limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "流式导出批大小，默认 1000，最大 5000",
+                        "name": "export_batch_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "导出列，逗号分隔: id,username,nickname,created_at,role",
+                        "name": "fields",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "csv/xlsx file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-user"
+                ],
+                "summary": "用户详情（后台）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-user"
+                ],
+                "summary": "更新用户（后台）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/adminreq.UserUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-user"
+                ],
+                "summary": "删除用户（后台）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/client/auth/login": {
@@ -159,6 +346,185 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/clientreq.RefreshTokenRequest"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/client/files/complete": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client-file"
+                ],
+                "summary": "确认上传完成",
+                "parameters": [
+                    {
+                        "description": "完成确认参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/clientreq.FileCompleteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/client/files/download": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "client-file"
+                ],
+                "summary": "下载文件（签名）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文件 key",
+                        "name": "key",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "过期时间（Unix 秒）",
+                        "name": "e",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "签名",
+                        "name": "sig",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/client/files/presign": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client-file"
+                ],
+                "summary": "预签名直传 PUT",
+                "parameters": [
+                    {
+                        "description": "预签名参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/clientreq.FilePresignPutRequest"
+                        }
+                    },
+                    {
+                        "type": "integer",
+                        "description": "预签名有效期（秒），默认使用 storage.url_expire_sec",
+                        "name": "expire_sec",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/client/files/upload": {
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client-file"
+                ],
+                "summary": "上传文件",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "上传文件",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/client/files/url": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client-file"
+                ],
+                "summary": "生成签名下载地址",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文件 key",
+                        "name": "key",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "过期秒数，默认使用 storage.url_expire_sec",
+                        "name": "expire_sec",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -339,6 +705,99 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "adminreq.UserCreateRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "nickname": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 6
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "user"
+                    ]
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 3
+                }
+            }
+        },
+        "adminreq.UserUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "nickname": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 6
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "user"
+                    ]
+                }
+            }
+        },
+        "clientreq.FileCompleteRequest": {
+            "type": "object",
+            "required": [
+                "key"
+            ],
+            "properties": {
+                "expected_sha256": {
+                    "description": "可选：64 位十六进制；S3 优先比对元数据，否则在大小上限内流式计算",
+                    "type": "string"
+                },
+                "expected_size": {
+                    "description": "可选：与对象 Content-Length 一致",
+                    "type": "integer"
+                },
+                "key": {
+                    "type": "string"
+                }
+            }
+        },
+        "clientreq.FilePresignPutRequest": {
+            "type": "object",
+            "required": [
+                "content_type",
+                "filename"
+            ],
+            "properties": {
+                "content_length": {
+                    "description": "可选：与 PUT 的 Content-Length 一致（需 \u003c= max_upload_mb）",
+                    "type": "integer"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "sha256": {
+                    "description": "可选：64 位十六进制，写入 x-amz-meta-sha256 便于 /files/complete 校验",
+                    "type": "string"
+                }
+            }
+        },
         "clientreq.LoginRequest": {
             "type": "object",
             "required": [
@@ -400,6 +859,12 @@ const docTemplate = `{
                 },
                 "data": {},
                 "msg": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "trace_id": {
                     "type": "string"
                 }
             }

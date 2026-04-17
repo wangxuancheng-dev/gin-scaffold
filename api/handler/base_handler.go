@@ -9,12 +9,15 @@ import (
 	"gorm.io/gorm"
 
 	"gin-scaffold/api/response"
+	"gin-scaffold/config"
 	appredis "gin-scaffold/pkg/redis"
+	"gin-scaffold/pkg/storage"
 )
 
 // BaseHandler 健康检查等基础接口。
 type BaseHandler struct {
-	DB *gorm.DB
+	DB      *gorm.DB
+	Storage *config.StorageConfig
 }
 
 // Health 兼容入口，等价于 Readyz（依赖就绪检查）。
@@ -39,7 +42,7 @@ func (h *BaseHandler) Livez(c *gin.Context) {
 	response.OK(c, gin.H{"app": "ok"})
 }
 
-// Readyz 依赖就绪检查：数据库、Redis。
+// Readyz 依赖就绪检查：数据库、Redis；若配置 storage.readyz_check=true 则额外检查存储连通性。
 // @Summary 就绪检查
 // @Description 返回依赖组件就绪状态
 // @Tags base
@@ -76,6 +79,24 @@ func (h *BaseHandler) readiness(c *gin.Context) (gin.H, bool) {
 	out["redis"] = "ok"
 	if out["db"] != "ok" && out["db"] != "skip" {
 		return out, false
+	}
+	out["storage"] = "skip"
+	if h.Storage != nil && h.Storage.ReadyzCheck {
+		p, err := storage.Require()
+		if err != nil {
+			out["storage"] = err.Error()
+			return out, false
+		}
+		rc, ok := p.(storage.ReadinessChecker)
+		if !ok {
+			out["storage"] = "readiness unsupported for storage driver"
+			return out, false
+		}
+		if err := rc.Ready(ctx); err != nil {
+			out["storage"] = err.Error()
+			return out, false
+		}
+		out["storage"] = "ok"
 	}
 	return out, true
 }

@@ -130,7 +130,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	wsSvc := service.NewWSService(hub)
 	sseSvc := service.NewSSEService()
 
-	baseH := &handler.BaseHandler{DB: gdb}
+	baseH := &handler.BaseHandler{DB: gdb, Storage: &cfg.Storage}
 	clientUserH := clienthandler.NewUserHandler(userSvc)
 	clientFileH := clienthandler.NewFileHandler(&cfg.Storage)
 	adminUserH := adminhandler.NewUserHandler(userSvc)

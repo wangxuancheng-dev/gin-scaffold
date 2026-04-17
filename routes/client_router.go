@@ -32,5 +32,6 @@ func registerClientRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, base *handler.B
 	clientAuth.POST("/auth/logout", user.Logout)
 	clientAuth.POST("/files/upload", file.Upload)
 	clientAuth.POST("/files/presign", file.PresignPut)
+	clientAuth.POST("/files/complete", file.Complete)
 	clientAuth.GET("/files/url", file.SignURL)
 }

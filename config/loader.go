@@ -157,6 +157,7 @@ func bindEnvKeys(v *viper.Viper) {
 		"outbound.timeout_ms", "outbound.retry_max", "outbound.retry_backoff_ms", "outbound.circuit_threshold", "outbound.circuit_open_sec",
 		"storage.enabled", "storage.driver", "storage.local_dir", "storage.sign_secret", "storage.max_upload_mb", "storage.allowed_ext", "storage.allowed_mime", "storage.url_expire_sec",
 		"storage.s3_endpoint", "storage.s3_region", "storage.s3_bucket", "storage.s3_access_key", "storage.s3_secret_key", "storage.s3_path_style", "storage.s3_insecure",
+		"storage.readyz_check",
 	}
 	for _, k := range keys {
 		_ = v.BindEnv(k)

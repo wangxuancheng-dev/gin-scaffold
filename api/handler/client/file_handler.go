@@ -2,6 +2,9 @@ package clienthandler
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -135,12 +138,39 @@ func (h *FileHandler) PresignPut(c *gin.Context) {
 		handler.FailInternal(c, err)
 		return
 	}
-	method, url, headers, err := pp.PresignPutURL(c.Request.Context(), key, req.ContentType, time.Duration(expireSec)*time.Second)
+	var presignOpts *storage.PresignPutOptions
+	if req.ContentLength != nil {
+		if *req.ContentLength <= 0 {
+			handler.FailInvalidParam(c, fmt.Errorf("content_length must be > 0 when set"))
+			return
+		}
+		if *req.ContentLength > h.maxUploadBytes() {
+			handler.FailInvalidParam(c, fmt.Errorf("content_length exceeds upload limit"))
+			return
+		}
+		presignOpts = &storage.PresignPutOptions{ContentLength: *req.ContentLength}
+	}
+	if raw := strings.TrimSpace(req.Sha256); raw != "" {
+		sum, decErr := hex.DecodeString(raw)
+		if decErr != nil || len(sum) != 32 {
+			handler.FailInvalidParam(c, fmt.Errorf("sha256 must be 64 hex characters"))
+			return
+		}
+		sha := hex.EncodeToString(sum)
+		if presignOpts == nil {
+			presignOpts = &storage.PresignPutOptions{}
+		}
+		if presignOpts.Metadata == nil {
+			presignOpts.Metadata = map[string]string{}
+		}
+		presignOpts.Metadata["sha256"] = sha
+	}
+	method, url, headers, err := pp.PresignPutURL(c.Request.Context(), key, req.ContentType, time.Duration(expireSec)*time.Second, presignOpts)
 	if err != nil {
 		handler.FailInternal(c, err)
 		return
 	}
-	response.OK(c, gin.H{
+	out := gin.H{
 		"key":          key,
 		"method":       method,
 		"url":          url,
@@ -148,7 +178,97 @@ func (h *FileHandler) PresignPut(c *gin.Context) {
 		"expire_sec":   expireSec,
 		"filename":     req.Filename,
 		"content_type": strings.TrimSpace(strings.Split(req.ContentType, ";")[0]),
-	})
+	}
+	if req.ContentLength != nil {
+		out["content_length"] = *req.ContentLength
+	}
+	if presignOpts != nil && presignOpts.Metadata != nil {
+		if v := presignOpts.Metadata["sha256"]; v != "" {
+			out["sha256"] = v
+		}
+	}
+	response.OK(c, out)
+}
+
+// Complete 确认对象已写入（Head/Stat），可选校验大小与 SHA256。
+// @Summary 确认上传完成
+// @Tags client-file
+// @Accept json
+// @Produce json
+// @Param body body clientreq.FileCompleteRequest true "完成确认参数"
+// @Success 200 {object} response.Body
+// @Router /api/v1/client/files/complete [post]
+func (h *FileHandler) Complete(c *gin.Context) {
+	provider, err := storage.Require()
+	if err != nil {
+		handler.FailServiceUnavailable(c, err, "storage not configured")
+		return
+	}
+	st, ok := provider.(storage.ObjectStatProvider)
+	if !ok {
+		handler.FailServiceUnavailable(c, fmt.Errorf("stat unsupported"), "storage driver does not support object stat")
+		return
+	}
+	var req clientreq.FileCompleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	key := strings.TrimSpace(req.Key)
+	stat, err := st.StatObject(c.Request.Context(), key)
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			handler.FailInvalidParam(c, fmt.Errorf("object not found"))
+			return
+		}
+		handler.FailInternal(c, err)
+		return
+	}
+	if req.ExpectedSize != nil && *req.ExpectedSize != stat.Size {
+		handler.FailInvalidParam(c, fmt.Errorf("size mismatch"))
+		return
+	}
+	if exp := strings.TrimSpace(req.ExpectedSHA256); exp != "" {
+		sum, decErr := hex.DecodeString(exp)
+		if decErr != nil || len(sum) != 32 {
+			handler.FailInvalidParam(c, fmt.Errorf("expected_sha256 must be 64 hex characters"))
+			return
+		}
+		want := hex.EncodeToString(sum)
+		got := strings.TrimSpace(stat.Metadata["sha256"])
+		if got != "" {
+			if got != want {
+				handler.FailInvalidParam(c, fmt.Errorf("sha256 mismatch"))
+				return
+			}
+		} else {
+			if stat.Size > h.maxUploadBytes() {
+				handler.FailInvalidParam(c, fmt.Errorf("object too large to verify sha256 without sha256 metadata; presign with sha256 in request body"))
+				return
+			}
+			rc, openErr := provider.Open(c.Request.Context(), key)
+			if openErr != nil {
+				handler.FailInternal(c, openErr)
+				return
+			}
+			defer rc.Close()
+			hash := sha256.New()
+			lr := &io.LimitedReader{R: rc, N: h.maxUploadBytes() + 1}
+			if _, copyErr := io.Copy(hash, lr); copyErr != nil {
+				handler.FailInternal(c, copyErr)
+				return
+			}
+			if lr.N <= 0 {
+				handler.FailInvalidParam(c, fmt.Errorf("object too large to verify"))
+				return
+			}
+			if hex.EncodeToString(hash.Sum(nil)) != want {
+				handler.FailInvalidParam(c, fmt.Errorf("sha256 mismatch"))
+				return
+			}
+		}
+	}
+	response.OK(c, gin.H{"key": key, "size": stat.Size})
 }
 
 // SignURL 生成签名下载地址。

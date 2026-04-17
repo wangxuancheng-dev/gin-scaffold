@@ -69,6 +69,39 @@ func (p *LocalProvider) Verify(key string, expires int64, sig string) bool {
 	return verifyDownload(p.secret, key, expires, sig)
 }
 
+func (p *LocalProvider) StatObject(_ context.Context, key string) (*ObjectStat, error) {
+	if p == nil {
+		return nil, fmt.Errorf("storage local: nil provider")
+	}
+	path, err := p.absPath(key)
+	if err != nil {
+		return nil, err
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrObjectNotExist
+		}
+		return nil, err
+	}
+	if fi.IsDir() {
+		return nil, fmt.Errorf("storage local: key is a directory")
+	}
+	return &ObjectStat{Size: fi.Size(), Metadata: map[string]string{}}, nil
+}
+
+func (p *LocalProvider) Ready(ctx context.Context) error {
+	if p == nil {
+		return fmt.Errorf("storage local: nil provider")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	root := filepath.Clean(p.baseDir)
+	_, err := os.Stat(root)
+	return err
+}
+
 func (p *LocalProvider) absPath(key string) (string, error) {
 	normalized := normalizeKey(key)
 	if normalized == "" {

@@ -197,4 +197,5 @@ type StorageConfig struct {
 	S3SecretKey  string `mapstructure:"s3_secret_key"`
 	S3PathStyle  bool   `mapstructure:"s3_path_style"` // MinIO 通常 true
 	S3Insecure   bool   `mapstructure:"s3_insecure"`   // 跳过 TLS 校验（仅内网/开发）
+	ReadyzCheck  bool   `mapstructure:"readyz_check"`  // /readyz 是否检查存储连通性（HeadBucket 或本地目录）
 }

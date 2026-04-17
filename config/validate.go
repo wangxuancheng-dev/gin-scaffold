@@ -165,10 +165,13 @@ func (a *App) validateOutbound() []string {
 }
 
 func (a *App) validateStorage() []string {
-	if !a.Storage.Enabled {
-		return nil
-	}
 	var errs []string
+	if a.Storage.ReadyzCheck && !a.Storage.Enabled {
+		errs = append(errs, "storage.readyz_check requires storage.enabled=true")
+	}
+	if !a.Storage.Enabled {
+		return errs
+	}
 	driver := strings.ToLower(strings.TrimSpace(a.Storage.Driver))
 	if driver == "" {
 		driver = "local"

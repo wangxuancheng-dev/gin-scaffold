@@ -3,19 +3,35 @@ package storage
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"gin-scaffold/config"
 )
+
+var s3MetaKeyRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
+
+func isS3NotFound(err error) bool {
+	var re *awshttp.ResponseError
+	if !errors.As(err, &re) {
+		return false
+	}
+	if re.Response == nil {
+		return false
+	}
+	return re.Response.StatusCode == http.StatusNotFound
+}
 
 // S3Provider S3 兼容对象存储（含 MinIO）。
 type S3Provider struct {
@@ -77,7 +93,7 @@ func NewS3Provider(cfg *config.StorageConfig) (*S3Provider, error) {
 	}, nil
 }
 
-func (p *S3Provider) PresignPutURL(ctx context.Context, key string, contentType string, expire time.Duration) (string, string, map[string]string, error) {
+func (p *S3Provider) PresignPutURL(ctx context.Context, key string, contentType string, expire time.Duration, opts *PresignPutOptions) (string, string, map[string]string, error) {
 	if p == nil || p.presignClient == nil {
 		return "", "", nil, fmt.Errorf("storage s3: presign client not initialized")
 	}
@@ -92,22 +108,82 @@ func (p *S3Provider) PresignPutURL(ctx context.Context, key string, contentType 
 	if ct == "" {
 		return "", "", nil, fmt.Errorf("storage s3: content type is empty")
 	}
-	out, err := p.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
+	in := &s3.PutObjectInput{
 		Bucket:      aws.String(p.bucket),
 		Key:         aws.String(k),
 		ContentType: aws.String(ct),
-	}, s3.WithPresignExpires(expire))
+	}
+	if opts != nil {
+		if opts.ContentLength > 0 {
+			in.ContentLength = aws.Int64(opts.ContentLength)
+		}
+		if len(opts.Metadata) > 0 {
+			meta := make(map[string]string, len(opts.Metadata))
+			for mk, mv := range opts.Metadata {
+				mk = strings.ToLower(strings.TrimSpace(mk))
+				if mk == "" || !s3MetaKeyRe.MatchString(mk) {
+					return "", "", nil, fmt.Errorf("storage s3: invalid metadata key %q", mk)
+				}
+				mv = strings.TrimSpace(mv)
+				if len(mv) > 2048 {
+					return "", "", nil, fmt.Errorf("storage s3: metadata value too long for key %q", mk)
+				}
+				meta[mk] = mv
+			}
+			in.Metadata = meta
+		}
+	}
+	out, err := p.presignClient.PresignPutObject(ctx, in, s3.WithPresignExpires(expire))
 	if err != nil {
 		return "", "", nil, err
 	}
 	headers := make(map[string]string, len(out.SignedHeader))
-	for k, vv := range out.SignedHeader {
+	for hk, vv := range out.SignedHeader {
 		if len(vv) == 0 {
 			continue
 		}
-		headers[k] = vv[0]
+		headers[hk] = vv[0]
 	}
 	return out.Method, out.URL, headers, nil
+}
+
+func (p *S3Provider) StatObject(ctx context.Context, key string) (*ObjectStat, error) {
+	if p == nil || p.client == nil {
+		return nil, fmt.Errorf("storage s3: client not initialized")
+	}
+	k := normalizeKey(key)
+	if k == "" {
+		return nil, fmt.Errorf("storage s3: empty key")
+	}
+	out, err := p.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(p.bucket),
+		Key:    aws.String(k),
+	})
+	if err != nil {
+		if isS3NotFound(err) {
+			return nil, ErrObjectNotExist
+		}
+		return nil, err
+	}
+	meta := make(map[string]string, len(out.Metadata))
+	for mk, mv := range out.Metadata {
+		meta[strings.ToLower(strings.TrimSpace(mk))] = strings.TrimSpace(mv)
+	}
+	return &ObjectStat{
+		Size:         aws.ToInt64(out.ContentLength),
+		ContentType:  aws.ToString(out.ContentType),
+		Metadata:     meta,
+		ETag:         strings.Trim(aws.ToString(out.ETag), `"`),
+		DeleteMarker: aws.ToBool(out.DeleteMarker),
+	}, nil
+}
+
+func (p *S3Provider) Ready(ctx context.Context) error {
+	if p == nil || p.client == nil {
+		return fmt.Errorf("storage s3: client not initialized")
+	}
+	_, err := p.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(p.bucket)})
+	return err
 }
 
 func (p *S3Provider) Put(ctx context.Context, key string, reader io.Reader) error {
