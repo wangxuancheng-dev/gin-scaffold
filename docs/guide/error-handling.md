@@ -38,3 +38,31 @@
 - 下层抛出 `errcode.BizError`，在 handler 层映射 HTTP 状态与业务码。
 - 对外 `msg` 应可读且稳定，敏感堆栈仅写日志，不直接返回给调用方。
 - 关键失败日志必须带 `request_id` 与 `trace_id`，便于定位。
+
+## Handler 错误映射约定
+
+统一使用 `api/handler/error_helper.go` 提供的 helper，避免每个 handler 重复编写 `errors.As` 分支：
+
+- 参数绑定/校验失败：`handler.FailInvalidParam(c, err)`
+- 非业务错误（兜底）：`handler.FailInternal(c, err)`
+- 业务错误映射：`handler.FailByError(c, err, <defaultStatus>, <mapping>)`
+
+示例（`UserNotFound -> 404`，其余业务错误按默认 `400`）：
+
+```go
+handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+    errcode.UserNotFound: {Status: http.StatusNotFound},
+})
+```
+
+需要覆盖消息文案时，可在 `BizMapping` 中设置：
+
+- `MsgKey`：覆盖 i18n key
+- `DefaultMsg`：覆盖默认文案
+
+## CI 自动检查
+
+仓库包含脚本 `scripts/check-handler-error-helper.sh`，会在 CI 中扫描 `api/handler`：
+
+- 禁止新增直接 `response.FailHTTP(...)` / `response.FailBiz(...)`（`error_helper.go` 除外）
+- 检测到后直接失败，提示改用 `error_helper` 统一 helper

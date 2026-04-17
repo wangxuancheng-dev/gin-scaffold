@@ -49,6 +49,20 @@
 - `circuit_threshold`: 连续失败达到阈值后熔断
 - `circuit_open_sec`: 熔断打开持续秒数
 
+## `storage`
+
+- `enabled`: 是否启用文件存储
+- `driver`: 存储驱动（`local` | `s3` | `minio`，`minio` 与 `s3` 等价）
+- `local_dir`: 本地存储根目录
+- `sign_secret`: 下载签名密钥（生产必须独立强密钥）
+- `max_upload_mb`: 上传大小上限（MB）
+- `allowed_ext`: 允许上传扩展名（逗号分隔）
+- `allowed_mime`: 允许内容类型（逗号分隔，与 `http.DetectContentType` 嗅探结果比对）
+- `url_expire_sec`: 签名下载地址默认过期时间（秒）
+- `s3_endpoint` / `s3_region` / `s3_bucket` / `s3_access_key` / `s3_secret_key`：`s3`/`minio` 驱动必填
+- `s3_path_style`：是否路径风格访问（MinIO 通常为 `true`）
+- `s3_insecure`：是否跳过 TLS 证书校验（仅内网/开发）
+
 ## 启动校验（Fail Fast）
 
 服务启动时会进行关键配置校验，校验失败直接退出，并聚合输出全部错误项，避免带病运行。

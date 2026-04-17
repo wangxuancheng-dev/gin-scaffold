@@ -1,15 +1,12 @@
 package adminhandler
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
 
 	"gin-scaffold/api/handler"
 	"gin-scaffold/api/response"
 	"gin-scaffold/internal/model"
-	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/internal/service/port"
 	"gin-scaffold/middleware"
 )
@@ -32,7 +29,7 @@ func NewMenuHandler(s port.MenuService) *MenuHandler {
 func (h *MenuHandler) ListMine(c *gin.Context) {
 	claims, ok := middleware.Claims(c)
 	if !ok || claims == nil {
-		response.FailHTTP(c, http.StatusUnauthorized, errcode.Unauthorized, errcode.KeyUnauthorized, "missing claims")
+		handler.FailUnauthorized(c, "missing claims")
 		return
 	}
 	menus, err := h.svc.ListByRole(c.Request.Context(), claims.Role)

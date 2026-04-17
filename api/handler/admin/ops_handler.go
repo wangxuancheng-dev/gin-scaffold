@@ -1,12 +1,10 @@
 package adminhandler
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 
+	"gin-scaffold/api/handler"
 	"gin-scaffold/api/response"
-	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/pkg/db"
 )
 
@@ -26,16 +24,16 @@ func NewOpsHandler() *OpsHandler {
 // @Router /api/v1/admin/dbping [get]
 func (h *OpsHandler) DBPing(c *gin.Context) {
 	if db.DB() == nil {
-		response.FailHTTP(c, http.StatusServiceUnavailable, errcode.InternalError, errcode.KeyInternal, "db not configured")
+		handler.FailServiceUnavailable(c, nil, "db not configured")
 		return
 	}
 	sqlDB, err := db.DB().DB()
 	if err != nil {
-		response.FailHTTP(c, http.StatusServiceUnavailable, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailServiceUnavailable(c, err, "")
 		return
 	}
 	if err := sqlDB.PingContext(c.Request.Context()); err != nil {
-		response.FailHTTP(c, http.StatusServiceUnavailable, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailServiceUnavailable(c, err, "")
 		return
 	}
 	response.OK(c, gin.H{"db": "ok"})

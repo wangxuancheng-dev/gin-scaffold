@@ -48,6 +48,15 @@ func TestValidate_Ok(t *testing.T) {
 			LogRetentionDays: 30,
 			LockTTLSeconds:   120,
 		},
+		Storage: StorageConfig{
+			Enabled:      true,
+			Driver:       "local",
+			LocalDir:     "./storage-test",
+			SignSecret:   "unit-test-secret",
+			MaxUploadMB:  5,
+			AllowedMIME:  "text/plain",
+			URLExpireSec: 60,
+		},
 	}
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("validate should pass, got: %v", err)
@@ -116,6 +125,15 @@ func TestValidate_AggregatesErrors(t *testing.T) {
 			LogRetentionDays: -1,
 			LockTTLSeconds:   -1,
 		},
+		Storage: StorageConfig{
+			Enabled:      true,
+			Driver:       "ftp",
+			LocalDir:     "",
+			SignSecret:   "",
+			MaxUploadMB:  0,
+			AllowedMIME:  ",",
+			URLExpireSec: 0,
+		},
 	}
 	err := cfg.Validate()
 	if err == nil {
@@ -134,6 +152,11 @@ func TestValidate_AggregatesErrors(t *testing.T) {
 		"jwt.secret is required",
 		"i18n.default_lang is required",
 		"scheduler.log_retention_days must be >= 0",
+		"storage.driver must be local, s3, or minio",
+		"storage.sign_secret is required when storage.enabled=true",
+		"storage.max_upload_mb must be > 0 when storage.enabled=true",
+		"storage.url_expire_sec must be > 0 when storage.enabled=true",
+		"storage.allowed_mime must not contain empty entries",
 	}
 	for _, part := range wantParts {
 		if !strings.Contains(msg, part) {

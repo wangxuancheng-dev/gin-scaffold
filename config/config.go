@@ -21,6 +21,7 @@ type App struct {
 	RBAC      RBACConfig      `mapstructure:"rbac"`
 	Scheduler SchedulerConfig `mapstructure:"scheduler"`
 	Outbound  OutboundConfig  `mapstructure:"outbound"`
+	Storage   StorageConfig   `mapstructure:"storage"`
 }
 
 // HTTPConfig HTTP 服务监听与超时配置。
@@ -177,4 +178,23 @@ type OutboundConfig struct {
 	RetryBackoffMS   int `mapstructure:"retry_backoff_ms"`
 	CircuitThreshold int `mapstructure:"circuit_threshold"`
 	CircuitOpenSec   int `mapstructure:"circuit_open_sec"`
+}
+
+// StorageConfig 文件存储配置（V1: local）。
+type StorageConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`
+	Driver       string `mapstructure:"driver"` // local | s3 | minio（minio 与 s3 等价）
+	LocalDir     string `mapstructure:"local_dir"`
+	SignSecret   string `mapstructure:"sign_secret"`
+	MaxUploadMB  int64  `mapstructure:"max_upload_mb"`
+	AllowedExt   string `mapstructure:"allowed_ext"`  // 逗号分隔，如 .jpg,.png,.pdf
+	AllowedMIME  string `mapstructure:"allowed_mime"` // 逗号分隔，如 image/jpeg,application/pdf
+	URLExpireSec int    `mapstructure:"url_expire_sec"`
+	S3Endpoint   string `mapstructure:"s3_endpoint"`   // 如 https://minio.example.com
+	S3Region     string `mapstructure:"s3_region"`   // 可为空，MinIO 常用 us-east-1
+	S3Bucket     string `mapstructure:"s3_bucket"`
+	S3AccessKey  string `mapstructure:"s3_access_key"`
+	S3SecretKey  string `mapstructure:"s3_secret_key"`
+	S3PathStyle  bool   `mapstructure:"s3_path_style"` // MinIO 通常 true
+	S3Insecure   bool   `mapstructure:"s3_insecure"`   // 跳过 TLS 校验（仅内网/开发）
 }

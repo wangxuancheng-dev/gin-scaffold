@@ -134,3 +134,13 @@ outbound:
   retry_backoff_ms: 200
   circuit_threshold: 10
   circuit_open_sec: 30
+
+storage:
+  enabled: true
+  driver: local
+  local_dir: ./storage
+  sign_secret: "dev-storage-sign-secret"
+  max_upload_mb: 10
+  allowed_ext: ".jpg,.jpeg,.png,.pdf,.txt"
+  allowed_mime: "image/jpeg,image/png,application/pdf,text/plain"
+  url_expire_sec: 300

@@ -133,12 +133,12 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 func (h *UserHandler) Logout(c *gin.Context) {
 	claims, ok := middleware.Claims(c)
 	if !ok || claims == nil || claims.ExpiresAt == nil {
-		response.FailHTTP(c, http.StatusUnauthorized, errcode.Unauthorized, errcode.KeyUnauthorized, "missing claims")
+		handler.FailUnauthorized(c, "missing claims")
 		return
 	}
 	raw, ok := middleware.RawToken(c)
 	if !ok || raw == "" {
-		response.FailHTTP(c, http.StatusUnauthorized, errcode.Unauthorized, errcode.KeyUnauthorized, "missing token")
+		handler.FailUnauthorized(c, "missing token")
 		return
 	}
 	if err := jwtpkg.RevokeAccessToken(c.Request.Context(), raw, claims.ExpiresAt.Time); err != nil {

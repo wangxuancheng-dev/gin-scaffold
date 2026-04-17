@@ -25,6 +25,7 @@ import (
 	"gin-scaffold/pkg/httpclient"
 	"gin-scaffold/pkg/logger"
 	"gin-scaffold/pkg/redis"
+	"gin-scaffold/pkg/storage"
 	"gin-scaffold/pkg/tracer"
 	"gin-scaffold/routes"
 )
@@ -92,6 +93,14 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		runCleanups(context.Background(), cleanups)
 		return nil, fmt.Errorf("snowflake: %w", err)
 	}
+	if cfg.Storage.Enabled {
+		sp, storageErr := storage.NewFromConfig(&cfg.Storage)
+		if storageErr != nil {
+			runCleanups(context.Background(), cleanups)
+			return nil, fmt.Errorf("storage: %w", storageErr)
+		}
+		storage.InitDefault(sp)
+	}
 
 	var q *job.Client
 	if cfg.Asynq.RedisAddr != "" {
@@ -123,6 +132,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 
 	baseH := &handler.BaseHandler{DB: gdb}
 	clientUserH := clienthandler.NewUserHandler(userSvc)
+	clientFileH := clienthandler.NewFileHandler(&cfg.Storage)
 	adminUserH := adminhandler.NewUserHandler(userSvc)
 	adminMenuH := adminhandler.NewMenuHandler(menuSvc)
 	adminOpsH := adminhandler.NewOpsHandler()
@@ -143,6 +153,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		JWT:        jm,
 		Base:       baseH,
 		ClientUser: clientUserH,
+		ClientFile: clientFileH,
 		AdminUser:  adminUserH,
 		AdminMenu:  adminMenuH,
 		AdminOps:   adminOpsH,
@@ -170,6 +181,13 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 		return nil, fmt.Errorf("time.Local (align with db.time_zone / TIME_ZONE): %w", err)
 	}
 	httpclient.InitDefault(cfg.Outbound)
+	if cfg.Storage.Enabled {
+		sp, storageErr := storage.NewFromConfig(&cfg.Storage)
+		if storageErr != nil {
+			return nil, fmt.Errorf("storage: %w", storageErr)
+		}
+		storage.InitDefault(sp)
+	}
 	if err := logger.Init(&cfg.Log); err != nil {
 		return nil, err
 	}

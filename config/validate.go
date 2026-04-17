@@ -26,6 +26,7 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateScheduler()...)
 	errs = append(errs, a.validateCORS()...)
 	errs = append(errs, a.validateOutbound()...)
+	errs = append(errs, a.validateStorage()...)
 	if len(errs) > 0 {
 		return fmt.Errorf("invalid config: %s", strings.Join(errs, "; "))
 	}
@@ -159,6 +160,58 @@ func (a *App) validateOutbound() []string {
 	var errs []string
 	if a.Outbound.TimeoutMS < 0 || a.Outbound.RetryMax < 0 || a.Outbound.RetryBackoffMS < 0 || a.Outbound.CircuitThreshold < 0 || a.Outbound.CircuitOpenSec < 0 {
 		errs = append(errs, "outbound values must be >= 0")
+	}
+	return errs
+}
+
+func (a *App) validateStorage() []string {
+	if !a.Storage.Enabled {
+		return nil
+	}
+	var errs []string
+	driver := strings.ToLower(strings.TrimSpace(a.Storage.Driver))
+	if driver == "" {
+		driver = "local"
+	}
+	switch driver {
+	case "local":
+		if strings.TrimSpace(a.Storage.LocalDir) == "" {
+			errs = append(errs, "storage.local_dir is required when storage.driver=local")
+		}
+	case "s3", "minio":
+		if strings.TrimSpace(a.Storage.S3Endpoint) == "" {
+			errs = append(errs, "storage.s3_endpoint is required when storage.driver is s3/minio")
+		}
+		if strings.TrimSpace(a.Storage.S3Bucket) == "" {
+			errs = append(errs, "storage.s3_bucket is required when storage.driver is s3/minio")
+		}
+		if strings.TrimSpace(a.Storage.S3AccessKey) == "" {
+			errs = append(errs, "storage.s3_access_key is required when storage.driver is s3/minio")
+		}
+		if strings.TrimSpace(a.Storage.S3SecretKey) == "" {
+			errs = append(errs, "storage.s3_secret_key is required when storage.driver is s3/minio")
+		}
+	default:
+		errs = append(errs, "storage.driver must be local, s3, or minio")
+	}
+	if strings.TrimSpace(a.Storage.SignSecret) == "" {
+		errs = append(errs, "storage.sign_secret is required when storage.enabled=true")
+	}
+	if a.Storage.MaxUploadMB <= 0 {
+		errs = append(errs, "storage.max_upload_mb must be > 0 when storage.enabled=true")
+	}
+	if a.Storage.URLExpireSec <= 0 {
+		errs = append(errs, "storage.url_expire_sec must be > 0 when storage.enabled=true")
+	}
+	if strings.TrimSpace(a.Storage.AllowedMIME) == "" {
+		errs = append(errs, "storage.allowed_mime is required when storage.enabled=true")
+	} else {
+		for _, part := range strings.Split(a.Storage.AllowedMIME, ",") {
+			if strings.TrimSpace(part) == "" {
+				errs = append(errs, "storage.allowed_mime must not contain empty entries")
+				break
+			}
+		}
 	}
 	return errs
 }

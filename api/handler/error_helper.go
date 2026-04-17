@@ -35,6 +35,26 @@ func FailInternal(c *gin.Context, err error) {
 	response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, msg)
 }
 
+// FailUnauthorized 返回统一未授权响应。
+func FailUnauthorized(c *gin.Context, defaultMsg string) {
+	if defaultMsg == "" {
+		defaultMsg = "unauthorized"
+	}
+	response.FailHTTP(c, http.StatusUnauthorized, errcode.Unauthorized, errcode.KeyUnauthorized, defaultMsg)
+}
+
+// FailServiceUnavailable 返回统一服务不可用响应。
+func FailServiceUnavailable(c *gin.Context, err error, defaultMsg string) {
+	msg := defaultMsg
+	if err != nil {
+		msg = err.Error()
+	}
+	if msg == "" {
+		msg = "service unavailable"
+	}
+	response.FailHTTP(c, http.StatusServiceUnavailable, errcode.InternalError, errcode.KeyInternal, msg)
+}
+
 // FailByError 按约定映射业务错误；非业务错误统一返回 500。
 func FailByError(c *gin.Context, err error, defaultBizStatus int, mappings map[int]BizMapping) {
 	var biz *errcode.BizError

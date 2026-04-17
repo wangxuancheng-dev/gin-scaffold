@@ -133,3 +133,13 @@ outbound:
   retry_backoff_ms: 200
   circuit_threshold: 10
   circuit_open_sec: 30
+
+storage:
+  enabled: true
+  driver: local
+  local_dir: "/opt/gin-scaffold/storage"
+  sign_secret: "${STORAGE_SIGN_SECRET}"
+  max_upload_mb: 20
+  allowed_ext: ".jpg,.jpeg,.png,.pdf,.doc,.docx,.xlsx,.txt"
+  allowed_mime: "image/jpeg,image/png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
+  url_expire_sec: 300
