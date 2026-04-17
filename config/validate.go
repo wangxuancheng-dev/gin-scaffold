@@ -27,6 +27,7 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateCORS()...)
 	errs = append(errs, a.validateOutbound()...)
 	errs = append(errs, a.validateStorage()...)
+	errs = append(errs, a.validatePlatform()...)
 	if len(errs) > 0 {
 		return fmt.Errorf("invalid config: %s", strings.Join(errs, "; "))
 	}
@@ -215,6 +216,33 @@ func (a *App) validateStorage() []string {
 				break
 			}
 		}
+	}
+	return errs
+}
+
+func (a *App) validatePlatform() []string {
+	var errs []string
+	p := a.Platform
+	if p.Idempotency.Enabled {
+		if p.Idempotency.TTLSeconds < 60 {
+			errs = append(errs, "platform.idempotency.ttl_seconds must be >= 60 when idempotency is enabled")
+		}
+		if p.Idempotency.LockSeconds < 5 || p.Idempotency.LockSeconds > 900 {
+			errs = append(errs, "platform.idempotency.lock_seconds must be between 5 and 900 when idempotency is enabled")
+		}
+		if p.Idempotency.MaxBodyBytes <= 0 {
+			errs = append(errs, "platform.idempotency.max_body_bytes must be > 0 when idempotency is enabled")
+		}
+		if p.Idempotency.MaxCachedResponseBytes <= 0 {
+			errs = append(errs, "platform.idempotency.max_cached_response_bytes must be > 0 when idempotency is enabled")
+		}
+	}
+	d := strings.ToLower(strings.TrimSpace(p.Notify.Driver))
+	if d == "" {
+		d = "log"
+	}
+	if d != "log" && d != "noop" {
+		errs = append(errs, "platform.notify.driver must be log or noop")
 	}
 	return errs
 }

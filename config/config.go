@@ -22,6 +22,39 @@ type App struct {
 	Scheduler SchedulerConfig `mapstructure:"scheduler"`
 	Outbound  OutboundConfig  `mapstructure:"outbound"`
 	Storage   StorageConfig   `mapstructure:"storage"`
+	Platform  PlatformConfig  `mapstructure:"platform"`
+}
+
+// PlatformConfig 横切能力：审计、幂等、缓存前缀、通知驱动等。
+type PlatformConfig struct {
+	Audit       AuditConfig       `mapstructure:"audit"`
+	Idempotency IdempotencyConfig `mapstructure:"idempotency"`
+	Cache       CacheConfig       `mapstructure:"cache"`
+	Notify      NotifyConfig      `mapstructure:"notify"`
+}
+
+// AuditConfig 写操作 HTTP 审计落库（异步插入，失败仅打日志）。
+type AuditConfig struct {
+	Enabled bool `mapstructure:"enabled"`
+}
+
+// IdempotencyConfig POST 幂等（Redis，需 X-Idempotency-Key）。
+type IdempotencyConfig struct {
+	Enabled                 bool  `mapstructure:"enabled"`
+	TTLSeconds              int   `mapstructure:"ttl_seconds"`
+	LockSeconds             int   `mapstructure:"lock_seconds"`
+	MaxBodyBytes            int64 `mapstructure:"max_body_bytes"`
+	MaxCachedResponseBytes  int64 `mapstructure:"max_cached_response_bytes"`
+}
+
+// CacheConfig 业务缓存键前缀（pkg/cache）。
+type CacheConfig struct {
+	KeyPrefix string `mapstructure:"key_prefix"`
+}
+
+// NotifyConfig 通知通道驱动。
+type NotifyConfig struct {
+	Driver string `mapstructure:"driver"` // log | noop
 }
 
 // HTTPConfig HTTP 服务监听与超时配置。

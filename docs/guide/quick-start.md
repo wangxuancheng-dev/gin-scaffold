@@ -42,6 +42,18 @@ go run ./cmd/migrate up --env dev
 go run ./cmd/server server --env dev
 ```
 
+若你需要在 `test/prod` 环境临时使用 `.env.test` / `.env.prod` 做联调，可先设置：
+
+```bash
+export LOAD_DOTENV_NON_DEV=true
+```
+
+Windows PowerShell:
+
+```powershell
+$env:LOAD_DOTENV_NON_DEV = "true"
+```
+
 ## 6) 验证接口
 
 - `http://localhost:8080/livez`

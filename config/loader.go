@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -111,8 +112,9 @@ func Load(env, profile string) (*App, error) {
 func loadDotEnv(env, profile string) []string {
 	// 生产安全策略：
 	// 1) 非 dev 环境默认不加载 .env 文件，避免与容器/平台注入环境变量冲突。
-	// 2) 使用 Load（非 Overload），仅填充未设置变量，不覆盖进程已有变量。
-	if env != "dev" {
+	// 2) 设置 LOAD_DOTENV_NON_DEV=true 时，允许在 test/prod 等环境加载 .env.{env} 文件（仅建议临时压测/联调）。
+	// 3) 使用 Load（非 Overload），仅填充未设置变量，不覆盖进程已有变量。
+	if env != "dev" && !loadDotEnvNonDevEnabled() {
 		return nil
 	}
 
@@ -132,6 +134,15 @@ func loadDotEnv(env, profile string) []string {
 		}
 	}
 	return loaded
+}
+
+func loadDotEnvNonDevEnabled() bool {
+	raw := strings.TrimSpace(os.Getenv("LOAD_DOTENV_NON_DEV"))
+	if raw == "" {
+		return false
+	}
+	ok, err := strconv.ParseBool(raw)
+	return err == nil && ok
 }
 
 func bindEnvKeys(v *viper.Viper) {
@@ -158,6 +169,11 @@ func bindEnvKeys(v *viper.Viper) {
 		"storage.enabled", "storage.driver", "storage.local_dir", "storage.sign_secret", "storage.max_upload_mb", "storage.allowed_ext", "storage.allowed_mime", "storage.url_expire_sec",
 		"storage.s3_endpoint", "storage.s3_region", "storage.s3_bucket", "storage.s3_access_key", "storage.s3_secret_key", "storage.s3_path_style", "storage.s3_insecure",
 		"storage.readyz_check",
+		"platform.audit.enabled",
+		"platform.idempotency.enabled", "platform.idempotency.ttl_seconds", "platform.idempotency.lock_seconds",
+		"platform.idempotency.max_body_bytes", "platform.idempotency.max_cached_response_bytes",
+		"platform.cache.key_prefix",
+		"platform.notify.driver",
 	}
 	for _, k := range keys {
 		_ = v.BindEnv(k)

@@ -11,6 +11,7 @@ import (
 	adminhandler "gin-scaffold/api/handler/admin"
 	clienthandler "gin-scaffold/api/handler/client"
 	"gin-scaffold/config"
+	"gin-scaffold/internal/app/platform"
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
 	jobhandler "gin-scaffold/internal/job/handler"
@@ -69,6 +70,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	if err := logger.Init(&cfg.Log); err != nil {
 		return nil, err
 	}
+	platform.Init(cfg)
 
 	cleanups := make([]func(context.Context), 0, 4)
 	cleanups = append(cleanups, func(context.Context) { logger.Sync() })
@@ -191,6 +193,7 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 	if err := logger.Init(&cfg.Log); err != nil {
 		return nil, err
 	}
+	platform.Init(cfg)
 
 	cleanups := []func(context.Context){
 		func(context.Context) { logger.Sync() },

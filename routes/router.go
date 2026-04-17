@@ -63,6 +63,8 @@ func Build(opts Options) *gin.Engine {
 	}
 	r.Use(middleware.Recovery(opts.Cfg != nil && opts.Cfg.Debug))
 	r.Use(middleware.AccessLog())
+	r.Use(middleware.Idempotency())
+	r.Use(middleware.Audit())
 	r.Use(middleware.I18n(&opts.Cfg.I18n))
 	r.Use(middleware.CORS(&opts.Cfg.CORS))
 	if opts.Cfg != nil {

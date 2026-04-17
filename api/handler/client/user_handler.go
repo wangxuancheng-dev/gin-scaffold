@@ -1,6 +1,7 @@
 package clienthandler
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"gin-scaffold/internal/pkg/validator"
 	"gin-scaffold/internal/service/port"
 	"gin-scaffold/middleware"
+	"gin-scaffold/pkg/eventbus"
+	"gin-scaffold/pkg/notify"
 )
 
 // UserHandler 客户端用户接口。
@@ -50,6 +53,16 @@ func (h *UserHandler) Register(c *gin.Context) {
 		handler.FailByError(c, err, http.StatusBadRequest, nil)
 		return
 	}
+	_ = notify.Default().Notify(c.Request.Context(), notify.Message{
+		Channel: "user",
+		Title:   "User registered",
+		Body:    u.Username,
+		Meta:    map[string]string{"user_id": fmt.Sprintf("%d", u.ID)},
+	})
+	eventbus.Default().Emit(c.Request.Context(), eventbus.Event{
+		Name:    "user.registered",
+		Payload: map[string]any{"user_id": u.ID, "username": u.Username},
+	})
 	response.OK(c, clientresp.FromUser(u))
 }
 

@@ -7,6 +7,12 @@
 3. `configs/app.{env}.yaml`
 4. `configs/app.yaml`
 
+说明：
+
+- 默认仅 `dev` 环境会自动加载 `.env*` 文件。
+- 若希望在 `test/prod` 也读取 `.env.test` / `.env.prod`（例如临时线上压测），可设置环境变量 `LOAD_DOTENV_NON_DEV=true`。
+- 即便开启该开关，运行时环境变量依然优先于 `.env*` 与 YAML。
+
 ## 关键配置组
 
 ## `http`
@@ -62,6 +68,16 @@
 - `s3_endpoint` / `s3_region` / `s3_bucket` / `s3_access_key` / `s3_secret_key`：`s3`/`minio` 驱动必填
 - `s3_path_style`：是否路径风格访问（MinIO 通常为 `true`）
 - `s3_insecure`：是否跳过 TLS 证书校验（仅内网/开发）
+- `readyz_check`：`true` 时 `/readyz` 会探测存储（本地目录或 S3 HeadBucket），需 `enabled=true`
+
+## `platform`
+
+审计、幂等、缓存键前缀、通知驱动等；详见 [平台横切能力](/guide/platform)。
+
+- `audit.enabled`：是否将写类 HTTP 请求异步写入 `audit_logs`（需迁移）
+- `idempotency.*`：基于 Redis 的 POST 幂等（`X-Idempotency-Key`），见专页说明
+- `cache.key_prefix`：`pkg/cache` 使用的 Redis 键前缀
+- `notify.driver`：`log`（写应用日志）或 `noop`
 
 ## 启动校验（Fail Fast）
 

@@ -65,6 +65,14 @@ func Set(ctx context.Context, key string, val interface{}, ttl time.Duration) er
 	return client.Set(ctx, key, val, ttl).Err()
 }
 
+// SetNX 仅在键不存在时设置，成功返回 true。
+func SetNX(ctx context.Context, key string, val interface{}, ttl time.Duration) (bool, error) {
+	if client == nil {
+		return false, fmt.Errorf("redis not initialized")
+	}
+	return client.SetNX(ctx, key, val, ttl).Result()
+}
+
 // Del 删除键。
 func Del(ctx context.Context, keys ...string) error {
 	if client == nil {

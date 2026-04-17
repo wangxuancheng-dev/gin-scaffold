@@ -10,6 +10,7 @@ const (
 	NotFound        = 404
 	TooManyReq      = 429
 	PayloadTooLarge = 413
+	Conflict        = 409
 	InternalError   = 500
 
 	// 业务用户模块 1xxxx
@@ -26,6 +27,7 @@ const (
 	KeyForbidden           = "forbidden"
 	KeyRateLimited         = "rate_limited"
 	KeyPayloadTooLarge     = "payload_too_large"
+	KeyIdempotencyConflict = "idempotency_conflict"
 	KeyInternal            = "internal_error"
 	KeyUserNotFound        = "user_not_found"
 	KeyUserExists          = "user_exists"

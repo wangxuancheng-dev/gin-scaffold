@@ -145,3 +145,17 @@ storage:
   allowed_mime: "image/jpeg,image/png,application/pdf,text/plain"
   url_expire_sec: 300
   readyz_check: false
+
+platform:
+  audit:
+    enabled: false
+  idempotency:
+    enabled: false
+    ttl_seconds: 86400
+    lock_seconds: 120
+    max_body_bytes: 262144
+    max_cached_response_bytes: 524288
+  cache:
+    key_prefix: "gin-scaffold:"
+  notify:
+    driver: log

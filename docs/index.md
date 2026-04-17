@@ -18,6 +18,7 @@
 - [配置说明](/guide/configuration)
 - [文件存储](/guide/file-storage)
 - [错误码与错误响应规范](/guide/error-handling)
+- [平台横切能力（审计 / 幂等 / 事件 / 通知）](/guide/platform)
 - [命令系统](/guide/commands)
 - [定时任务中心](/guide/scheduler)
 - [日志与可观测](/guide/logging-observability)
