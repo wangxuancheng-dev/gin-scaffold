@@ -19,7 +19,7 @@ func registerClientRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, base *handler.B
 		client.POST("/users", user.Register)
 		client.POST("/auth/login", user.Login)
 		client.POST("/auth/refresh", user.Refresh)
-		client.GET("/files/*key/download", file.Download)
+		client.GET("/files/download", file.Download)
 		client.GET("/ws", ws.Handle)
 		client.GET("/sse/stream", sse.Stream)
 	}
@@ -32,5 +32,5 @@ func registerClientRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, base *handler.B
 	clientAuth.POST("/auth/logout", user.Logout)
 	clientAuth.POST("/files/upload", file.Upload)
 	clientAuth.POST("/files/presign", file.PresignPut)
-	clientAuth.GET("/files/*key/url", file.SignURL)
+	clientAuth.GET("/files/url", file.SignURL)
 }

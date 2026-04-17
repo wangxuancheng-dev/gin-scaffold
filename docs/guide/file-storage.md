@@ -4,8 +4,8 @@
 
 - 上传：`POST /api/v1/client/files/upload`（JWT）
 - 直传预签名（仅 `s3`/`minio`）：`POST /api/v1/client/files/presign`（JWT）
-- 生成签名下载地址：`GET /api/v1/client/files/*key/url`（JWT）
-- 下载：`GET /api/v1/client/files/*key/download?e=<unix>&sig=<hmac>`
+- 生成签名下载地址：`GET /api/v1/client/files/url?key=<object_key>`（JWT）
+- 下载：`GET /api/v1/client/files/download?key=<object_key>&e=<unix>&sig=<hmac>`
 
 ## 上传约定
 
@@ -36,7 +36,7 @@ curl -X POST "http://localhost:8080/api/v1/client/files/upload" \
 2) 获取签名下载地址：
 
 ```bash
-curl "http://localhost:8080/api/v1/client/files/<key>/url?expire_sec=300" \
+curl "http://localhost:8080/api/v1/client/files/url?key=<key>&expire_sec=300" \
   -H "Authorization: Bearer ${TOKEN}"
 ```
 

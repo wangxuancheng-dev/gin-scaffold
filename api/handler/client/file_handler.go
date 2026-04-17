@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -154,17 +155,21 @@ func (h *FileHandler) PresignPut(c *gin.Context) {
 // @Summary 生成签名下载地址
 // @Tags client-file
 // @Produce json
-// @Param key path string true "文件 key"
+// @Param key query string true "文件 key"
 // @Param expire_sec query int false "过期秒数，默认使用 storage.url_expire_sec"
 // @Success 200 {object} response.Body
-// @Router /api/v1/client/files/{key}/url [get]
+// @Router /api/v1/client/files/url [get]
 func (h *FileHandler) SignURL(c *gin.Context) {
 	provider, err := storage.Require()
 	if err != nil {
 		handler.FailServiceUnavailable(c, err, "storage not configured")
 		return
 	}
-	key := strings.TrimPrefix(c.Param("key"), "/")
+	key := strings.TrimSpace(c.Query("key"))
+	if key == "" {
+		handler.FailInvalidParam(c, fmt.Errorf("key is required"))
+		return
+	}
 	expireSec := h.defaultExpireSec()
 	if v := strings.TrimSpace(c.Query("expire_sec")); v != "" {
 		n, convErr := strconv.Atoi(v)
@@ -180,26 +185,30 @@ func (h *FileHandler) SignURL(c *gin.Context) {
 		handler.FailInternal(c, err)
 		return
 	}
-	url := fmt.Sprintf("/api/v1/client/files/%s/download?e=%d&sig=%s", key, expires, sig)
-	response.OK(c, gin.H{"url": url, "expires": expires})
+	dl := fmt.Sprintf("/api/v1/client/files/download?key=%s&e=%d&sig=%s", url.QueryEscape(key), expires, url.QueryEscape(sig))
+	response.OK(c, gin.H{"url": dl, "expires": expires})
 }
 
 // Download 通过签名 URL 下载文件。
 // @Summary 下载文件（签名）
 // @Tags client-file
 // @Produce application/octet-stream
-// @Param key path string true "文件 key"
+// @Param key query string true "文件 key"
 // @Param e query int true "过期时间（Unix 秒）"
 // @Param sig query string true "签名"
 // @Success 200 {file} file
-// @Router /api/v1/client/files/{key}/download [get]
+// @Router /api/v1/client/files/download [get]
 func (h *FileHandler) Download(c *gin.Context) {
 	provider, err := storage.Require()
 	if err != nil {
 		handler.FailServiceUnavailable(c, err, "storage not configured")
 		return
 	}
-	key := strings.TrimPrefix(c.Param("key"), "/")
+	key := strings.TrimSpace(c.Query("key"))
+	if key == "" {
+		handler.FailInvalidParam(c, fmt.Errorf("key is required"))
+		return
+	}
 	expires, err := strconv.ParseInt(strings.TrimSpace(c.Query("e")), 10, 64)
 	if err != nil || expires <= 0 || time.Now().Unix() > expires {
 		handler.FailUnauthorized(c, "download link expired")
