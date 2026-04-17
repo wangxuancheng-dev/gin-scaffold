@@ -317,7 +317,7 @@ func (s *UserService) Login(ctx context.Context, username, password string) (acc
 	if err != nil {
 		return "", err
 	}
-	token, err := s.jwt.IssueAccess(u.ID, role)
+	token, err := s.jwt.IssueAccess(u.ID, role, "")
 	if err != nil {
 		return "", err
 	}
@@ -343,7 +343,7 @@ func (s *UserService) LoginWithRefresh(ctx context.Context, username, password s
 	if err != nil {
 		return "", "", err
 	}
-	access, err := s.jwt.IssueAccess(u.ID, role)
+	access, err := s.jwt.IssueAccess(u.ID, role, "")
 	if err != nil {
 		return "", "", err
 	}
@@ -384,7 +384,7 @@ func (s *UserService) RefreshAccess(ctx context.Context, refreshToken string) (s
 	if err != nil {
 		return "", "", err
 	}
-	access, err := s.jwt.IssueAccess(u.ID, role)
+	access, err := s.jwt.IssueAccess(u.ID, role, "")
 	if err != nil {
 		return "", "", err
 	}

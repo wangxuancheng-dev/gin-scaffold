@@ -9,9 +9,16 @@ import (
 // SystemSetting 系统参数（键值配置）。
 type SystemSetting struct {
 	ID        int64          `gorm:"primaryKey;autoIncrement" json:"id"`
-	Key       string         `gorm:"size:128;uniqueIndex;not null" json:"key"`
+	TenantID  string         `gorm:"size:64;not null;default:default;uniqueIndex:uk_system_settings_tenant_key,priority:1;index:idx_system_settings_tenant" json:"tenant_id"`
+	Key       string         `gorm:"size:128;not null;uniqueIndex:uk_system_settings_tenant_key,priority:2" json:"key"`
 	Value     string         `gorm:"type:text;not null" json:"value"`
 	ValueType string         `gorm:"size:16;not null;default:string" json:"value_type"`
+	DraftValue string        `gorm:"type:text;not null" json:"draft_value"`
+	DraftValueType string    `gorm:"size:16;not null;default:string" json:"draft_value_type"`
+	IsPublished bool         `gorm:"not null;default:true" json:"is_published"`
+	PublishedAt *time.Time   `json:"published_at"`
+	PublishedBy int64        `gorm:"not null;default:0" json:"published_by"`
+	PublishNote string       `gorm:"size:255;not null;default:''" json:"publish_note"`
 	GroupName string         `gorm:"size:64;not null;default:''" json:"group_name"`
 	Remark    string         `gorm:"size:255;not null;default:''" json:"remark"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -56,6 +63,7 @@ func (SystemSettingHistory) TableName() string {
 }
 
 type SettingActor struct {
-	UserID int64
-	Role   string
+	UserID   int64
+	Role     string
+	TenantID string
 }

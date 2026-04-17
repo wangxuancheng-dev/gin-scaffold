@@ -157,3 +157,8 @@ platform:
     key_prefix: "gin-scaffold-test:"
   notify:
     driver: log
+
+tenant:
+  enabled: false
+  header: "X-Tenant-ID"
+  default_id: "default"

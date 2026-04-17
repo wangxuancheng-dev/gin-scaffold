@@ -57,15 +57,17 @@
   - `POST /api/v1/admin/system-settings`（`sys:config:write`）
   - `PUT /api/v1/admin/system-settings/{id}`（`sys:config:write`）
   - `DELETE /api/v1/admin/system-settings/{id}`（`sys:config:write`）
+  - `POST /api/v1/admin/system-settings/{id}/publish`（`sys:config:publish`）
   - `POST /api/v1/admin/system-settings/{id}/rollback`（`sys:config:rollback`）
-- 数据表：`system_settings`（迁移：`202504171500_create_system_settings`）。
+- 数据表：`system_settings`（包含草稿/发布字段与租户字段，迁移：`202504171500_create_system_settings`、`202604171900_alter_system_settings_publish_tenant`）。
 - 变更历史表：`system_setting_histories`（迁移：`202604171030_create_system_setting_histories`）。
-- 升级后执行 seed：`202504171510_seed_system_setting_permissions` 与 `202604171040_seed_system_setting_rollback_permission`，为 admin 注入参数管理权限与回滚权限。
+- 升级后执行 seed：`202504171510_seed_system_setting_permissions`、`202604171040_seed_system_setting_rollback_permission`、`202604171910_seed_system_setting_publish_permission`。
 - 业务读取建议使用 `pkg/settings`：
   - `settings.GetString(ctx, "your.key")`
   - `settings.GetInt64(ctx, "your.key")`
   - `settings.GetBool(ctx, "your.key")`
   - 内置短 TTL 缓存，减少高频读取数据库压力。
+  - 默认只读取 `is_published=1` 的已发布配置。
 
 ## 用户异步导出（仅任务模式）
 

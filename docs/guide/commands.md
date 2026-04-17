@@ -84,3 +84,17 @@ go test -tags=integration ./tests/integration -v
 # 或
 .\scripts\make.ps1 -Target integration-all
 ```
+
+## OpenAPI SDK Artifacts
+
+```bash
+bash ./scripts/gen-openapi-sdk.sh
+```
+
+该命令会刷新：
+
+- `docs/swagger.json`
+- `docs/swagger.yaml`
+- `docs/docs.go`
+- `pkg/sdk/openapi/swagger.json`
+- `pkg/sdk/openapi/swagger.sha256`

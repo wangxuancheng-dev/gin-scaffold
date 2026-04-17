@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"gin-scaffold/internal/model"
+	"gin-scaffold/internal/pkg/tenant"
 )
 
 // AuditLogListQuery 审计日志查询条件。
@@ -54,6 +55,12 @@ func (d *AuditLogDAO) Create(ctx context.Context, row *model.AuditLog) error {
 	if d == nil || d.db == nil || row == nil {
 		return nil
 	}
+	if row.TenantID == "" {
+		row.TenantID = tenant.FromContext(ctx)
+		if row.TenantID == "" {
+			row.TenantID = "default"
+		}
+	}
 	return d.db.WithContext(ctx).Create(row).Error
 }
 
@@ -68,7 +75,7 @@ func (d *AuditLogDAO) List(ctx context.Context, q AuditLogListQuery) ([]model.Au
 	if q.PageSize <= 0 || q.PageSize > 200 {
 		q.PageSize = 20
 	}
-	query := d.db.WithContext(ctx).Model(&model.AuditLog{})
+	query := tenant.ApplyScope(ctx, d.db.WithContext(ctx).Model(&model.AuditLog{}), "tenant_id")
 	if q.UserID > 0 {
 		query = query.Where("user_id = ?", q.UserID)
 	}
@@ -110,7 +117,7 @@ func (d *AuditLogDAO) ListForExport(ctx context.Context, q AuditLogListQuery, ma
 	if maxRows <= 0 || maxRows > 10000 {
 		maxRows = 5000
 	}
-	query := d.db.WithContext(ctx).Model(&model.AuditLog{})
+	query := tenant.ApplyScope(ctx, d.db.WithContext(ctx).Model(&model.AuditLog{}), "tenant_id")
 	if q.UserID > 0 {
 		query = query.Where("user_id = ?", q.UserID)
 	}
@@ -147,7 +154,7 @@ func (d *AuditLogDAO) ListExportChunk(ctx context.Context, q AuditLogListQuery, 
 	if size <= 0 || size > 2000 {
 		size = 1000
 	}
-	query := d.db.WithContext(ctx).Model(&model.AuditLog{}).Where("id > ?", lastID)
+	query := tenant.ApplyScope(ctx, d.db.WithContext(ctx).Model(&model.AuditLog{}), "tenant_id").Where("id > ?", lastID)
 	if q.UserID > 0 {
 		query = query.Where("user_id = ?", q.UserID)
 	}

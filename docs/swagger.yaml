@@ -25,6 +25,23 @@ definitions:
     - key
     - value
     type: object
+  adminreq.SystemSettingPublishRequest:
+    properties:
+      note:
+        maxLength: 255
+        type: string
+    type: object
+  adminreq.SystemSettingRollbackRequest:
+    properties:
+      history_id:
+        minimum: 1
+        type: integer
+      reason:
+        maxLength: 255
+        type: string
+    required:
+    - history_id
+    type: object
   adminreq.SystemSettingUpdateRequest:
     properties:
       group_name:
@@ -422,6 +439,83 @@ paths:
           schema:
             $ref: '#/definitions/response.Body'
       summary: 更新系统参数（后台）
+      tags:
+      - admin-system-setting
+  /api/v1/admin/system-settings/{id}/history:
+    get:
+      parameters:
+      - description: 参数ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 系统参数变更历史（后台）
+      tags:
+      - admin-system-setting
+  /api/v1/admin/system-settings/{id}/publish:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 参数ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 发布备注
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/adminreq.SystemSettingPublishRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 发布系统参数（后台）
+      tags:
+      - admin-system-setting
+  /api/v1/admin/system-settings/{id}/rollback:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 参数ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 回滚请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/adminreq.SystemSettingRollbackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 回滚系统参数（后台）
       tags:
       - admin-system-setting
   /api/v1/admin/task-queues/{queue}/failed/{task_id}/archive:

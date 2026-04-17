@@ -20,6 +20,7 @@ This directory contains opt-in integration tests for key online flows.
 
 - Application is already running (for example in `test` env).
 - Database/Redis are ready and seeded with an admin user.
+- Fixture SQL is available at `tests/integration/fixtures/base.sql` for stable export data.
 
 ## Required Environment Variables
 
@@ -47,5 +48,6 @@ This command will:
 
 1. start `mysql` + `redis` via Docker Compose
 2. create `scaffold_test` database and run migrations (`--env test`)
-3. start API server and worker in `test` env
-4. run integration tests and then stop server/worker
+3. load `tests/integration/fixtures/base.sql`
+4. start API server and worker in `test` env
+5. run integration tests and then stop server/worker

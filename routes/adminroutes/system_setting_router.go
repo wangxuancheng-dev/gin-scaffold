@@ -14,5 +14,6 @@ func registerAdminSystemSettingRoutes(admin *gin.RouterGroup, h *adminhandler.Sy
 	admin.POST("/system-settings", middleware.RequirePermission("sys:config:write"), h.Create)
 	admin.PUT("/system-settings/:id", middleware.RequirePermission("sys:config:write"), h.Update)
 	admin.DELETE("/system-settings/:id", middleware.RequirePermission("sys:config:write"), h.Delete)
+	admin.POST("/system-settings/:id/publish", middleware.RequirePermission("sys:config:publish"), h.Publish)
 	admin.POST("/system-settings/:id/rollback", middleware.RequirePermission("sys:config:rollback"), h.Rollback)
 }

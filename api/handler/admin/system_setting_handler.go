@@ -216,13 +216,58 @@ func (h *SystemSettingHandler) Rollback(c *gin.Context) {
 	response.OK(c, gin.H{"rolled_back": true, "item": row})
 }
 
+// Publish 发布系统参数草稿（后台）。
+// @Summary 发布系统参数（后台）
+// @Tags admin-system-setting
+// @Accept json
+// @Produce json
+// @Param id path int true "参数ID"
+// @Param body body adminreq.SystemSettingPublishRequest false "发布备注"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id}/publish [post]
+func (h *SystemSettingHandler) Publish(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	var req adminreq.SystemSettingPublishRequest
+	_ = c.ShouldBindJSON(&req)
+	if err := validator.V().Struct(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	row, err := h.svc.Publish(c.Request.Context(), uri.ID, req.Note, currentSettingActor(c))
+	if err != nil {
+		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+			errcode.NotFound: {Status: http.StatusNotFound},
+		})
+		return
+	}
+	response.OK(c, row)
+}
+
 func currentSettingActor(c *gin.Context) model.SettingActor {
 	claims, ok := middleware.Claims(c)
 	if !ok || claims == nil {
+		if v, ok := c.Get("tenant_id"); ok {
+			if tid, ok := v.(string); ok {
+				return model.SettingActor{TenantID: strings.TrimSpace(tid)}
+			}
+		}
 		return model.SettingActor{}
 	}
+	tenantID := strings.TrimSpace(claims.TenantID)
+	if tenantID == "" {
+		if v, ok := c.Get("tenant_id"); ok {
+			if tid, ok := v.(string); ok {
+				tenantID = strings.TrimSpace(tid)
+			}
+		}
+	}
 	return model.SettingActor{
-		UserID: claims.UserID,
-		Role:   claims.Role,
+		UserID:   claims.UserID,
+		Role:     claims.Role,
+		TenantID: tenantID,
 	}
 }

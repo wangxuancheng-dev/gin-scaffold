@@ -23,6 +23,13 @@ type App struct {
 	Outbound  OutboundConfig  `mapstructure:"outbound"`
 	Storage   StorageConfig   `mapstructure:"storage"`
 	Platform  PlatformConfig  `mapstructure:"platform"`
+	Tenant    TenantConfig    `mapstructure:"tenant"`
+}
+
+type TenantConfig struct {
+	Enabled   bool   `mapstructure:"enabled"`
+	Header    string `mapstructure:"header"`
+	DefaultID string `mapstructure:"default_id"`
 }
 
 // PlatformConfig 横切能力：审计、幂等、缓存前缀、通知驱动等。

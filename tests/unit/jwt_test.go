@@ -19,7 +19,7 @@ func TestJWT_IssueAndParseAccess(t *testing.T) {
 		Issuer:           "unit-test",
 	})
 
-	token, err := m.IssueAccess(42, "user")
+	token, err := m.IssueAccess(42, "user", "")
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
 

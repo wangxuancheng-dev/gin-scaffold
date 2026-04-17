@@ -54,6 +54,14 @@ jobs:
           diff -q docs/docs.go "$tmpdir/docs.go"
           diff -q docs/swagger.yaml "$tmpdir/swagger.yaml"
 
+      - name: Verify OpenAPI SDK artifacts are up to date
+        run: |
+          set -e
+          bash ./scripts/gen-openapi-sdk.sh
+          diff -q docs/swagger.json pkg/sdk/openapi/swagger.json
+          sha=$(sha256sum docs/swagger.json | awk '{print $1}')
+          test "$sha" = "$(cat pkg/sdk/openapi/swagger.sha256)"
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:

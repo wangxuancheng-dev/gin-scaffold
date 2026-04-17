@@ -49,6 +49,7 @@ function Initialize-TestDB {
 
     docker compose exec -T mysql mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS scaffold_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
     go run ./cmd/migrate up --env test --driver mysql --dsn "root:root@tcp(127.0.0.1:3306)/scaffold_test?charset=utf8mb4&parseTime=True"
+    Get-Content ".\tests\integration\fixtures\base.sql" | docker compose exec -T mysql mysql -uroot -proot scaffold_test
 }
 
 function Invoke-IntegrationTests {

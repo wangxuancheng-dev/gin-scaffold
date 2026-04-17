@@ -5,6 +5,7 @@ import "time"
 // AuditLog HTTP 写操作审计（不含请求体，避免敏感数据落库）。
 type AuditLog struct {
 	ID          int64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	TenantID    string    `gorm:"size:64;not null;default:default;index:idx_audit_tenant_created,priority:1" json:"tenant_id"`
 	RequestID   string    `gorm:"size:64;index:idx_audit_request" json:"request_id"`
 	UserID      int64     `gorm:"index:idx_audit_user_created,priority:1" json:"user_id"`
 	Role        string    `gorm:"size:32" json:"role"`
@@ -15,7 +16,7 @@ type AuditLog struct {
 	Status      int       `gorm:"not null" json:"status"`
 	LatencyMS   int       `gorm:"not null" json:"latency_ms"`
 	ClientIP    string    `gorm:"size:64" json:"client_ip"`
-	CreatedAt   time.Time `gorm:"index:idx_audit_user_created,priority:2;index:idx_audit_created" json:"created_at"`
+	CreatedAt   time.Time `gorm:"index:idx_audit_user_created,priority:2;index:idx_audit_created;index:idx_audit_tenant_created,priority:2" json:"created_at"`
 }
 
 // TableName 表名。

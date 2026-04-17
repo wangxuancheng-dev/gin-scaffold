@@ -10,6 +10,7 @@ import (
 
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
+	"gin-scaffold/internal/pkg/tenant"
 	"gin-scaffold/pkg/cache"
 )
 
@@ -63,12 +64,22 @@ func (s *SystemSettingService) Create(ctx context.Context, key, value, valueType
 		return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
 	}
 	row := &model.SystemSetting{
-		Key:       key,
-		Value:     value,
-		ValueType: normalizeSettingType(valueType),
-		GroupName: strings.TrimSpace(groupName),
-		Remark:    strings.TrimSpace(remark),
+		TenantID:       strings.TrimSpace(actor.TenantID),
+		Key:            key,
+		Value:          value,
+		ValueType:      normalizeSettingType(valueType),
+		DraftValue:     value,
+		DraftValueType: normalizeSettingType(valueType),
+		IsPublished:    true,
+		PublishedBy:    actor.UserID,
+		GroupName:      strings.TrimSpace(groupName),
+		Remark:         strings.TrimSpace(remark),
 	}
+	if row.TenantID == "" {
+		row.TenantID = "default"
+	}
+	now := time.Now()
+	row.PublishedAt = &now
 	if err := s.dao.Create(ctx, row); err != nil {
 		return nil, err
 	}
@@ -86,13 +97,17 @@ func (s *SystemSettingService) Update(ctx context.Context, id int64, value, valu
 		return nil, err
 	}
 	updates := map[string]any{
-		"updated_at": time.Now(),
+		"updated_at":   time.Now(),
+		"is_published": false,
 	}
+	beforeDraft := cloneSetting(before)
 	if value != nil {
-		updates["value"] = *value
+		updates["draft_value"] = *value
+		beforeDraft.Value = before.DraftValue
 	}
 	if valueType != nil {
-		updates["value_type"] = normalizeSettingType(*valueType)
+		updates["draft_value_type"] = normalizeSettingType(*valueType)
+		beforeDraft.ValueType = before.DraftValueType
 	}
 	if groupName != nil {
 		updates["group_name"] = strings.TrimSpace(*groupName)
@@ -104,8 +119,10 @@ func (s *SystemSettingService) Update(ctx context.Context, id int64, value, valu
 	if err != nil {
 		return nil, err
 	}
-	_ = s.recordHistory(ctx, row.ID, row.Key, "update", before, row, "", actor)
-	_ = s.cacheSet(ctx, row)
+	afterDraft := cloneSetting(row)
+	afterDraft.Value = row.DraftValue
+	afterDraft.ValueType = row.DraftValueType
+	_ = s.recordHistory(ctx, row.ID, row.Key, "update", beforeDraft, afterDraft, "", actor)
 	return row, nil
 }
 
@@ -123,6 +140,32 @@ func (s *SystemSettingService) Delete(ctx context.Context, id int64, actor model
 	_ = s.recordHistory(ctx, row.ID, row.Key, "delete", row, nil, "", actor)
 	_ = s.cacheDel(ctx, row.Key)
 	return nil
+}
+
+func (s *SystemSettingService) Publish(ctx context.Context, id int64, note string, actor model.SettingActor) (*model.SystemSetting, error) {
+	before, err := s.dao.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errcode.New(errcode.NotFound, errcode.KeyNotFound)
+		}
+		return nil, err
+	}
+	updates := map[string]any{
+		"value":          before.DraftValue,
+		"value_type":     normalizeSettingType(before.DraftValueType),
+		"is_published":   true,
+		"published_at":   time.Now(),
+		"published_by":   actor.UserID,
+		"publish_note":   strings.TrimSpace(note),
+		"updated_at":     time.Now(),
+	}
+	row, err := s.dao.Update(ctx, id, updates)
+	if err != nil {
+		return nil, err
+	}
+	_ = s.recordHistory(ctx, row.ID, row.Key, "publish", before, row, strings.TrimSpace(note), actor)
+	_ = s.cacheSet(ctx, row)
+	return row, nil
 }
 
 func (s *SystemSettingService) ListHistory(ctx context.Context, id int64, page, pageSize int) ([]model.SystemSettingHistory, int64, error) {
@@ -152,11 +195,17 @@ func (s *SystemSettingService) Rollback(ctx context.Context, id int64, historyID
 		return nil, err
 	}
 	updates := map[string]any{
-		"value":      his.BeforeValue,
-		"value_type": normalizeSettingType(his.BeforeType),
-		"group_name": strings.TrimSpace(his.BeforeGroup),
-		"remark":     strings.TrimSpace(his.BeforeRemark),
-		"updated_at": time.Now(),
+		"value":            his.BeforeValue,
+		"value_type":       normalizeSettingType(his.BeforeType),
+		"draft_value":      his.BeforeValue,
+		"draft_value_type": normalizeSettingType(his.BeforeType),
+		"is_published":     true,
+		"group_name":       strings.TrimSpace(his.BeforeGroup),
+		"remark":           strings.TrimSpace(his.BeforeRemark),
+		"updated_at":       time.Now(),
+		"published_at":     time.Now(),
+		"published_by":     actor.UserID,
+		"publish_note":     "rollback",
 	}
 
 	if his.BeforeDeleted {
@@ -194,25 +243,32 @@ func normalizeSettingType(in string) string {
 	}
 }
 
-func (s *SystemSettingService) cacheKey(key string) string {
+func (s *SystemSettingService) cacheKey(ctx context.Context, key string) string {
 	if s == nil || s.cache == nil {
 		return ""
 	}
-	return s.cache.Key("sys_setting", strings.TrimSpace(key))
+	tenantID := "default"
+	if id := strings.TrimSpace(tenant.FromContext(ctx)); id != "" {
+		tenantID = id
+	}
+	return s.cache.Key("sys_setting", tenantID, strings.TrimSpace(key))
 }
 
 func (s *SystemSettingService) cacheSet(ctx context.Context, row *model.SystemSetting) error {
 	if s == nil || s.cache == nil || row == nil || strings.TrimSpace(row.Key) == "" {
 		return nil
 	}
-	return s.cache.SetJSON(ctx, s.cacheKey(row.Key), row, 10*time.Minute)
+	if !row.IsPublished {
+		return nil
+	}
+	return s.cache.SetJSON(ctx, s.cacheKey(ctx, row.Key), row, 10*time.Minute)
 }
 
 func (s *SystemSettingService) cacheDel(ctx context.Context, key string) error {
 	if s == nil || s.cache == nil || strings.TrimSpace(key) == "" {
 		return nil
 	}
-	return s.cache.Del(ctx, s.cacheKey(key))
+	return s.cache.Del(ctx, s.cacheKey(ctx, key))
 }
 
 func (s *SystemSettingService) recordHistory(ctx context.Context, settingID int64, settingKey, action string, before, after *model.SystemSetting, reason string, actor model.SettingActor) error {
@@ -251,4 +307,12 @@ func (s *SystemSettingService) recordHistory(ctx context.Context, settingID int6
 		}
 	}
 	return s.dao.CreateHistory(ctx, row)
+}
+
+func cloneSetting(in *model.SystemSetting) *model.SystemSetting {
+	if in == nil {
+		return nil
+	}
+	out := *in
+	return &out
 }

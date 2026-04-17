@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"gin-scaffold/internal/model"
+	"gin-scaffold/internal/pkg/tenant"
 )
 
 // UserDAO 用户表 DAO。
@@ -24,13 +25,19 @@ func NewUserDAO(db *gorm.DB) *UserDAO {
 
 // Create 插入用户。
 func (d *UserDAO) Create(ctx context.Context, u *model.User) error {
+	if u != nil && u.TenantID == "" {
+		u.TenantID = tenant.FromContext(ctx)
+		if u.TenantID == "" {
+			u.TenantID = "default"
+		}
+	}
 	return d.db.WithContext(ctx).Create(u).Error
 }
 
 // GetByID 主键查询。
 func (d *UserDAO) GetByID(ctx context.Context, id int64) (*model.User, error) {
 	var u model.User
-	if err := d.db.WithContext(ctx).First(&u, id).Error; err != nil {
+	if err := tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id").First(&u, id).Error; err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -39,7 +46,7 @@ func (d *UserDAO) GetByID(ctx context.Context, id int64) (*model.User, error) {
 // GetByUsername 按用户名查询。
 func (d *UserDAO) GetByUsername(ctx context.Context, name string) (*model.User, error) {
 	var u model.User
-	if err := d.db.WithContext(ctx).Where("username = ?", name).First(&u).Error; err != nil {
+	if err := tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id").Where("username = ?", name).First(&u).Error; err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -48,7 +55,7 @@ func (d *UserDAO) GetByUsername(ctx context.Context, name string) (*model.User, 
 // GetByUsernameWithDeleted 按用户名查询（包含软删除）。
 func (d *UserDAO) GetByUsernameWithDeleted(ctx context.Context, name string) (*model.User, error) {
 	var u model.User
-	if err := d.db.WithContext(ctx).Unscoped().Where("username = ?", name).First(&u).Error; err != nil {
+	if err := tenant.ApplyScope(ctx, d.db.WithContext(ctx).Unscoped(), "tenant_id").Where("username = ?", name).First(&u).Error; err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -66,13 +73,13 @@ func (d *UserDAO) applyFilters(tx *gorm.DB, q model.UserQuery) *gorm.DB {
 
 // List 分页列表。
 func (d *UserDAO) List(ctx context.Context, q model.UserQuery, offset, limit int) ([]model.User, int64, error) {
-	tx := d.applyFilters(d.db.WithContext(ctx).Model(&model.User{}), q)
+	tx := d.applyFilters(tenant.ApplyScope(ctx, d.db.WithContext(ctx).Model(&model.User{}), "tenant_id"), q)
 	var total int64
 	if err := tx.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	var rows []model.User
-	if err := d.applyFilters(d.db.WithContext(ctx), q).Order("id desc").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
+	if err := d.applyFilters(tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id"), q).Order("id desc").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
 	return rows, total, nil
@@ -81,7 +88,7 @@ func (d *UserDAO) List(ctx context.Context, q model.UserQuery, offset, limit int
 // ListForExport 导出列表（不返回 total）。
 func (d *UserDAO) ListForExport(ctx context.Context, q model.UserQuery, limit int) ([]model.User, error) {
 	var rows []model.User
-	if err := d.applyFilters(d.db.WithContext(ctx), q).Order("id desc").Limit(limit).Find(&rows).Error; err != nil {
+	if err := d.applyFilters(tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id"), q).Order("id desc").Limit(limit).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	return rows, nil
@@ -89,7 +96,7 @@ func (d *UserDAO) ListForExport(ctx context.Context, q model.UserQuery, limit in
 
 // ListAfterID 按主键增量扫描，适合大数据导出。
 func (d *UserDAO) ListAfterID(ctx context.Context, q model.UserQuery, lastID int64, limit int) ([]model.User, error) {
-	tx := d.applyFilters(d.db.WithContext(ctx), q)
+	tx := d.applyFilters(tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id"), q)
 	if lastID > 0 {
 		tx = tx.Where("id > ?", lastID)
 	}
@@ -133,7 +140,7 @@ func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error
 
 // Restore 通过主键恢复软删除用户并更新关键字段。
 func (d *UserDAO) Restore(ctx context.Context, id int64, hashedPassword, nickname string) (*model.User, error) {
-	if err := d.db.WithContext(ctx).Unscoped().Model(&model.User{}).Where("id = ?", id).Updates(map[string]interface{}{
+	if err := tenant.ApplyScope(ctx, d.db.WithContext(ctx).Unscoped().Model(&model.User{}), "tenant_id").Where("id = ?", id).Updates(map[string]interface{}{
 		"password":   hashedPassword,
 		"nickname":   nickname,
 		"deleted_at": nil,
@@ -142,7 +149,7 @@ func (d *UserDAO) Restore(ctx context.Context, id int64, hashedPassword, nicknam
 		return nil, err
 	}
 	var u model.User
-	if err := d.db.WithContext(ctx).Where("id = ?", id).First(&u).Error; err != nil {
+	if err := tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id").Where("id = ?", id).First(&u).Error; err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -159,7 +166,7 @@ func (d *UserDAO) Update(ctx context.Context, id int64, nickname *string, hashed
 	if hashedPassword != nil && *hashedPassword != "" {
 		updates["password"] = *hashedPassword
 	}
-	if err := d.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+	if err := tenant.ApplyScope(ctx, d.db.WithContext(ctx).Model(&model.User{}), "tenant_id").Where("id = ?", id).Updates(updates).Error; err != nil {
 		return nil, err
 	}
 	return d.GetByID(ctx, id)
@@ -167,7 +174,7 @@ func (d *UserDAO) Update(ctx context.Context, id int64, nickname *string, hashed
 
 // SoftDelete 软删除用户。
 func (d *UserDAO) SoftDelete(ctx context.Context, id int64) error {
-	return d.db.WithContext(ctx).Delete(&model.User{}, id).Error
+	return tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id").Delete(&model.User{}, id).Error
 }
 
 // SetRole 将用户角色切换为给定角色（软删历史角色，保留审计）。

@@ -58,6 +58,9 @@ func Build(opts Options) *gin.Engine {
 	r := gin.New()
 	r.Use(middleware.RequestID())
 	if opts.Cfg != nil {
+		r.Use(middleware.Tenant(&opts.Cfg.Tenant))
+	}
+	if opts.Cfg != nil {
 		r.Use(middleware.BodyLimit(opts.Cfg.HTTP.MaxBodyBytes))
 	}
 	if opts.Cfg != nil && opts.Cfg.Debug {

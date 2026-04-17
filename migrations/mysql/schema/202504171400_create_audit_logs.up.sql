@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS `audit_logs` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `tenant_id` VARCHAR(64) NOT NULL DEFAULT 'default',
   `request_id` VARCHAR(64) NULL,
   `user_id` BIGINT NOT NULL DEFAULT 0,
   `role` VARCHAR(32) NULL,
@@ -14,5 +15,6 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
   PRIMARY KEY (`id`),
   KEY `idx_audit_request` (`request_id`),
   KEY `idx_audit_created` (`created_at`),
-  KEY `idx_audit_user_created` (`user_id`, `created_at`)
+  KEY `idx_audit_user_created` (`user_id`, `created_at`),
+  KEY `idx_audit_tenant_created` (`tenant_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -35,3 +35,7 @@ type SystemSettingRollbackRequest struct {
 	HistoryID int64  `json:"history_id" binding:"required,min=1"`
 	Reason    string `json:"reason" binding:"omitempty,max=255"`
 }
+
+type SystemSettingPublishRequest struct {
+	Note string `json:"note" binding:"omitempty,max=255"`
+}

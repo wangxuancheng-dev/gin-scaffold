@@ -174,6 +174,7 @@ func bindEnvKeys(v *viper.Viper) {
 		"platform.idempotency.max_body_bytes", "platform.idempotency.max_cached_response_bytes",
 		"platform.cache.key_prefix",
 		"platform.notify.driver",
+		"tenant.enabled", "tenant.header", "tenant.default_id",
 	}
 	for _, k := range keys {
 		_ = v.BindEnv(k)

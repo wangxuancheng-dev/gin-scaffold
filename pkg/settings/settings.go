@@ -12,6 +12,7 @@ import (
 
 	"gin-scaffold/pkg/cache"
 	"gin-scaffold/pkg/db"
+	"gin-scaffold/internal/pkg/tenant"
 )
 
 var ErrNotFound = errors.New("setting not found")
@@ -20,6 +21,7 @@ type valueRow struct {
 	Key       string `json:"key"`
 	Value     string `json:"value"`
 	ValueType string `json:"value_type"`
+	TenantID  string `json:"tenant_id"`
 }
 
 func GetString(ctx context.Context, key string) (string, error) {
@@ -77,8 +79,9 @@ func getValue(ctx context.Context, key string) (*valueRow, error) {
 	var row valueRow
 	err := gdb.WithContext(ctx).
 		Table("system_settings").
-		Select("`key`, `value`, `value_type`").
-		Where("`key` = ? AND deleted_at IS NULL", key).
+		Select("tenant_id, `key`, `value`, `value_type`").
+		Where("`key` = ? AND deleted_at IS NULL AND is_published = 1", key).
+		Where("tenant_id = ?", tenantIDFromContext(ctx)).
 		Order("id DESC").
 		Limit(1).
 		Take(&row).Error
@@ -107,12 +110,12 @@ func cacheKey(c *cache.Client, key string) string {
 	if c == nil {
 		return ""
 	}
-	return c.Key("sys_setting", key)
+	return c.Key("sys_setting", tenantIDFromContext(context.Background()), key)
 }
 
 func getCached(ctx context.Context, key string) (*valueRow, bool) {
 	c := cache.NewFromConfig()
-	ck := cacheKey(c, key)
+	ck := c.Key("sys_setting", tenantIDFromContext(ctx), key)
 	if ck == "" {
 		return nil, false
 	}
@@ -128,9 +131,17 @@ func setCached(ctx context.Context, row *valueRow) {
 		return
 	}
 	c := cache.NewFromConfig()
-	ck := cacheKey(c, row.Key)
+	ck := c.Key("sys_setting", tenantIDFromContext(ctx), row.Key)
 	if ck == "" {
 		return
 	}
 	_ = c.SetJSON(ctx, ck, row, 2*time.Minute)
+}
+
+func tenantIDFromContext(ctx context.Context) string {
+	id := strings.TrimSpace(tenant.FromContext(ctx))
+	if id == "" {
+		return "default"
+	}
+	return id
 }

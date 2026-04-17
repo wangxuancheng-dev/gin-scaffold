@@ -15,8 +15,9 @@ import (
 
 // Claims 访问令牌载荷。
 type Claims struct {
-	UserID int64  `json:"uid"`
-	Role   string `json:"role"`
+	UserID    int64  `json:"uid"`
+	Role      string `json:"role"`
+	TenantID  string `json:"tenant_id,omitempty"`
 	jwtlib.RegisteredClaims
 }
 
@@ -44,11 +45,12 @@ func NewManager(cfg *config.JWTConfig) *Manager {
 }
 
 // IssueAccess 签发访问令牌。
-func (m *Manager) IssueAccess(userID int64, role string) (string, error) {
+func (m *Manager) IssueAccess(userID int64, role string, tenantID string) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		UserID: userID,
-		Role:   role,
+		UserID:   userID,
+		Role:     role,
+		TenantID: tenantID,
 		RegisteredClaims: jwtlib.RegisteredClaims{
 			Issuer:    m.iss,
 			IssuedAt:  jwtlib.NewNumericDate(now),
