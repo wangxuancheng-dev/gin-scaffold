@@ -8,7 +8,7 @@ import (
 	"gin-scaffold/middleware"
 )
 
-func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler, menu *adminhandler.MenuHandler, ops *adminhandler.OpsHandler, task *adminhandler.TaskHandler) {
+func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler, menu *adminhandler.MenuHandler, ops *adminhandler.OpsHandler, task *adminhandler.TaskHandler, sys *adminhandler.SystemSettingHandler, queue *adminhandler.TaskQueueHandler, generatedAnnouncement *adminhandler.AnnouncementHandler) {
 	if jwtMgr == nil {
 		return
 	}
@@ -37,4 +37,13 @@ func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandl
 	admin.POST("/tasks/:id/toggle", middleware.RequirePermission("task:toggle"), task.Toggle)
 	admin.POST("/tasks/:id/run", middleware.RequirePermission("task:run"), task.RunNow)
 	admin.GET("/tasks/:id/logs", middleware.RequirePermission("task:read"), task.Logs)
+	admin.GET("/task-queues/failed", middleware.RequirePermission("task:read"), queue.FailedList)
+	admin.POST("/task-queues/:queue/failed/:task_id/retry", middleware.RequirePermission("task:run"), queue.Retry)
+	admin.POST("/task-queues/:queue/failed/:task_id/archive", middleware.RequirePermission("task:update"), queue.Archive)
+	admin.GET("/system-settings", middleware.RequirePermission("sys:config:read"), sys.List)
+	admin.GET("/system-settings/:id", middleware.RequirePermission("sys:config:read"), sys.Get)
+	admin.POST("/system-settings", middleware.RequirePermission("sys:config:write"), sys.Create)
+	admin.PUT("/system-settings/:id", middleware.RequirePermission("sys:config:write"), sys.Update)
+	admin.DELETE("/system-settings/:id", middleware.RequirePermission("sys:config:write"), sys.Delete)
+	registerAdminAnnouncementRoutes(admin, generatedAnnouncement)
 }

@@ -59,3 +59,7 @@ $env:LOAD_DOTENV_NON_DEV = "true"
 - `http://localhost:8080/livez`
 - `http://localhost:8080/readyz`
 - `http://localhost:8080/swagger/index.html`
+
+## 7) 变更记录
+
+- 版本更新说明见：`docs/changelog.md`

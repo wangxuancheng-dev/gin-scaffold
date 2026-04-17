@@ -1,5 +1,48 @@
 basePath: /
 definitions:
+  adminreq.SystemSettingCreateRequest:
+    properties:
+      group_name:
+        maxLength: 64
+        type: string
+      key:
+        maxLength: 128
+        minLength: 1
+        type: string
+      remark:
+        maxLength: 255
+        type: string
+      value:
+        type: string
+      value_type:
+        enum:
+        - string
+        - int
+        - bool
+        - json
+        type: string
+    required:
+    - key
+    - value
+    type: object
+  adminreq.SystemSettingUpdateRequest:
+    properties:
+      group_name:
+        maxLength: 64
+        type: string
+      remark:
+        maxLength: 255
+        type: string
+      value:
+        type: string
+      value_type:
+        enum:
+        - string
+        - int
+        - bool
+        - json
+        type: string
+    type: object
   adminreq.UserCreateRequest:
     properties:
       nickname:
@@ -272,6 +315,190 @@ paths:
       summary: 菜单列表（后台）
       tags:
       - admin-menu
+  /api/v1/admin/system-settings:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 键名模糊匹配
+        in: query
+        name: key
+        type: string
+      - description: 分组名精确匹配
+        in: query
+        name: group_name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 系统参数列表（后台）
+      tags:
+      - admin-system-setting
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/adminreq.SystemSettingCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 新增系统参数（后台）
+      tags:
+      - admin-system-setting
+  /api/v1/admin/system-settings/{id}:
+    delete:
+      parameters:
+      - description: 参数ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 删除系统参数（后台）
+      tags:
+      - admin-system-setting
+    get:
+      parameters:
+      - description: 参数ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 系统参数详情（后台）
+      tags:
+      - admin-system-setting
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 参数ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/adminreq.SystemSettingUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 更新系统参数（后台）
+      tags:
+      - admin-system-setting
+  /api/v1/admin/task-queues/{queue}/failed/{task_id}/archive:
+    post:
+      parameters:
+      - description: 队列名
+        in: path
+        name: queue
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 归档失败任务（后台）
+      tags:
+      - admin-task
+  /api/v1/admin/task-queues/{queue}/failed/{task_id}/retry:
+    post:
+      parameters:
+      - description: 队列名
+        in: path
+        name: queue
+        required: true
+        type: string
+      - description: 任务ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 重试失败任务（后台）
+      tags:
+      - admin-task
+  /api/v1/admin/task-queues/failed:
+    get:
+      parameters:
+      - description: 队列名，默认 default
+        in: query
+        name: queue
+        type: string
+      - description: retry(默认) 或 archived
+        in: query
+        name: state
+        type: string
+      - description: 页码，默认 1
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数，默认 20，最大 100
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 查询失败任务队列（后台）
+      tags:
+      - admin-task
   /api/v1/admin/users:
     get:
       parameters:

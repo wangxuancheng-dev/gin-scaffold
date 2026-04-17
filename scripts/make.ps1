@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("help", "tidy", "build", "run", "run-worker", "migrate-up", "migrate-down", "test-unit", "test", "swagger", "clean")]
+    [ValidateSet("help", "tidy", "build", "run", "run-worker", "migrate-up", "migrate-down", "test-unit", "test", "swagger", "integration-test", "integration-all", "clean")]
     [string]$Target,
     [string]$Env = "dev",
     [string]$Profile = "",
@@ -24,6 +24,8 @@ switch ($Target) {
         Write-Host "  .\scripts\make.ps1 -Target test-unit"
         Write-Host "  .\scripts\make.ps1 -Target test"
         Write-Host "  .\scripts\make.ps1 -Target swagger"
+        Write-Host "  .\scripts\make.ps1 -Target integration-test"
+        Write-Host "  .\scripts\make.ps1 -Target integration-all"
         Write-Host "  .\scripts\make.ps1 -Target clean"
     }
     "tidy" { go mod tidy }
@@ -44,6 +46,8 @@ switch ($Target) {
     "test-unit" { go test ./tests/unit/... }
     "test" { go test ./... }
     "swagger" { go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs -d ./cmd/server,./api }
+    "integration-test" { & ".\scripts\integration.ps1" -Action test }
+    "integration-all" { & ".\scripts\integration.ps1" -Action all }
     "clean" {
         if (Test-Path "bin") { Remove-Item -Recurse -Force "bin" }
     }

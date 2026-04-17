@@ -20,9 +20,12 @@ func registerAPIV1(
 	adminMenu *adminhandler.MenuHandler,
 	adminOps *adminhandler.OpsHandler,
 	adminTask *adminhandler.TaskHandler,
+	adminSys *adminhandler.SystemSettingHandler,
+	adminQueue *adminhandler.TaskQueueHandler,
+	adminAnnouncement *adminhandler.AnnouncementHandler,
 	ws *handler.WSHandler,
 	sse *handler.SSEHandler,
 ) {
 	registerClientRoutes(r, jwtMgr, base, clientUser, clientFile, ws, sse)
-	registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask)
+	registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, adminAnnouncement)
 }

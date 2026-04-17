@@ -48,6 +48,17 @@
 
 - `policy.SameUser(actorID, ownerID)`：判断资源是否属于当前用户，可与 RBAC 组合使用。
 
+## 系统参数（System Settings）
+
+- 后台接口（权限）：
+  - `GET /api/v1/admin/system-settings`（`sys:config:read`）
+  - `GET /api/v1/admin/system-settings/{id}`（`sys:config:read`）
+  - `POST /api/v1/admin/system-settings`（`sys:config:write`）
+  - `PUT /api/v1/admin/system-settings/{id}`（`sys:config:write`）
+  - `DELETE /api/v1/admin/system-settings/{id}`（`sys:config:write`）
+- 数据表：`system_settings`（迁移：`202504171500_create_system_settings`）。
+- 升级后执行 seed：`202504171510_seed_system_setting_permissions`，为 admin 注入参数管理权限和菜单。
+
 ## 用户异步导出（仅任务模式）
 
 用户导出已统一为异步任务接口，不再提供同步 `GET /api/v1/admin/users/export`。

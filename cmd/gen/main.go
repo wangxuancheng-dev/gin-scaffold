@@ -5,16 +5,35 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/spf13/cobra"
 )
 
 type crudOptions struct {
-	module string
-	table  string
-	force  bool
+	module      string
+	table       string
+	template    string
+	force       bool
+	noWire      bool
+	dryRun      bool
+	fields      []string
+	previewFile string
+	previewFull bool
+	outDir      string
+}
+
+type genField struct {
+	Name     string
+	JSONName string
+	GoType   string
+	SQLType  string
+	Validate string
+	Optional bool
+	Default  string
 }
 
 func main() {
@@ -38,7 +57,14 @@ func main() {
 	}
 	crudCmd.Flags().StringVar(&opt.module, "module", "", "module name, e.g. order")
 	crudCmd.Flags().StringVar(&opt.table, "table", "", "table name, default: <module>s")
+	crudCmd.Flags().StringVar(&opt.template, "template", "full", "generation template: full|simple")
 	crudCmd.Flags().BoolVar(&opt.force, "force", false, "overwrite existing files")
+	crudCmd.Flags().BoolVar(&opt.noWire, "no-wire", false, "only generate files, do not auto wire routes/bootstrap")
+	crudCmd.Flags().BoolVar(&opt.dryRun, "dry-run", false, "preview files to be generated without writing")
+	crudCmd.Flags().StringArrayVar(&opt.fields, "field", nil, "field definition, format: name:type[:validate][,default=value]. type can end with ? for optional create field")
+	crudCmd.Flags().StringVar(&opt.previewFile, "preview-file", "", "write generation preview into a markdown file")
+	crudCmd.Flags().BoolVar(&opt.previewFull, "preview-full", false, "when used with --preview-file, include full file contents")
+	crudCmd.Flags().StringVar(&opt.outDir, "out-dir", ".", "output base directory for generated files")
 	_ = crudCmd.MarkFlagRequired("module")
 	rootCmd.AddCommand(crudCmd)
 	if err := rootCmd.Execute(); err != nil {
@@ -49,10 +75,11 @@ func main() {
 
 func usage() {
 	fmt.Println("Usage:")
-	fmt.Println("  go run ./cmd/gen crud --module <name> [--table <table_name>] [--force]")
+	fmt.Println("  go run ./cmd/gen crud --module <name> [--table <table_name>] [--template full|simple] [--field name:type[:validate]] [--force] [--no-wire] [--dry-run] [--preview-file <path>] [--preview-full] [--out-dir <path>]")
 	fmt.Println("")
 	fmt.Println("Example:")
-	fmt.Println("  go run ./cmd/gen crud --module order --table orders --force")
+	fmt.Println("  go run ./cmd/gen crud --module order --template full --field title:string:required,max=64 --field status:string:oneof=draft published,default=draft --dry-run --preview-file ./tmp/order-preview.md --preview-full")
+	fmt.Println("  go run ./cmd/gen crud --module order --no-wire --out-dir ./tmp/scaffold-preview")
 }
 
 func runCRUD(opt crudOptions) error {
@@ -60,51 +87,115 @@ func runCRUD(opt crudOptions) error {
 	if opt.module == "" {
 		return errors.New("module is required")
 	}
-	if opt.table == "" {
-		opt.table = toSnake(opt.module) + "s"
+	templateForcesNoWire, err := normalizeCrudOptions(&opt)
+	if err != nil {
+		return err
+	}
+	parsedFields, err := parseFields(opt.fields)
+	if err != nil {
+		return err
 	}
 
 	modelName := toPascal(opt.module)
-	fieldName := lowerFirst(modelName)
 	moduleSnake := toSnake(opt.module)
 	daoName := modelName + "DAO"
 	serviceName := modelName + "Service"
+	permPrefix := moduleSnake
+	now := time.Now().Format("200601021504")
+	migrationBase := fmt.Sprintf("%s_create_%s", now, opt.table)
+	seedBase := fmt.Sprintf("%s_seed_%s_permission", now, moduleSnake)
 
 	files := map[string]string{
-		filepath.Join("internal", "model", moduleSnake+".go"):                   modelTemplate(modelName, opt.table),
+		filepath.Join("internal", "model", moduleSnake+".go"):                   modelTemplate(modelName, opt.table, parsedFields),
 		filepath.Join("internal", "dao", moduleSnake+"_dao.go"):                 daoTemplate(modelName, daoName),
 		filepath.Join("internal", "service", "port", moduleSnake+"_service.go"): portTemplate(modelName, serviceName),
 		filepath.Join("internal", "service", moduleSnake+"_service.go"):         serviceTemplate(modelName, serviceName),
-		filepath.Join("api", "request", "admin", moduleSnake+"_request.go"):     requestTemplate(modelName),
-		filepath.Join("api", "handler", "admin", moduleSnake+"_handler.go"):     adminHandlerTemplate(modelName, serviceName, fieldName),
+		filepath.Join("api", "request", "admin", moduleSnake+"_request.go"):     requestTemplate(modelName, parsedFields),
+		filepath.Join("api", "handler", "admin", moduleSnake+"_handler.go"):     adminHandlerTemplate(modelName, serviceName, parsedFields),
 		filepath.Join("routes", "admin_"+moduleSnake+"_router.go"):              adminRouteTemplate(modelName),
+	}
+	if opt.template == "full" {
+		files[filepath.Join("migrations", "mysql", "schema", migrationBase+".up.sql")] = schemaUpTemplate(opt.table, parsedFields)
+		files[filepath.Join("migrations", "mysql", "schema", migrationBase+".down.sql")] = schemaDownTemplate(opt.table)
+		files[filepath.Join("migrations", "mysql", "seed", seedBase+".up.sql")] = seedPermUpTemplate(permPrefix)
+		files[filepath.Join("migrations", "mysql", "seed", seedBase+".down.sql")] = seedPermDownTemplate(permPrefix)
 	}
 
 	for p, content := range files {
-		if err := writeFile(p, content, opt.force); err != nil {
+		if err := writeFile(opt.outDir, p, content, opt.force, opt.dryRun); err != nil {
+			return err
+		}
+	}
+	if err := writePreview(opt.previewFile, opt, files); err != nil {
+		return err
+	}
+
+	if !opt.noWire && opt.template == "full" {
+		if err := wireGeneratedCRUD(moduleSnake, modelName, daoName, serviceName); err != nil {
 			return err
 		}
 	}
 
-	if err := wireGeneratedCRUD(moduleSnake, modelName, daoName, serviceName); err != nil {
-		return err
+	if opt.dryRun {
+		fmt.Println("Dry run only. Planned files:")
+	} else {
+		fmt.Println("CRUD scaffold generated:")
 	}
-
-	fmt.Println("CRUD scaffold generated:")
+	if templateForcesNoWire {
+		fmt.Println("Note: template=simple forces --no-wire mode.")
+	}
 	for p := range files {
 		fmt.Println(" -", p)
 	}
 	fmt.Println("")
 	fmt.Println("Next steps:")
-	fmt.Println("  1) fill request/response field mapping in generated handler")
-	fmt.Println("  2) add migration SQL for table:", opt.table)
-	fmt.Println("  3) add permissions and role mapping for module:", strings.ToLower(modelName))
+	fmt.Println("  1) review request validation tags and generated handler field mapping")
+	if opt.template == "full" {
+		fmt.Println("  2) review generated migration/seed SQL for table:", opt.table)
+		fmt.Println("  3) apply migration: go run ./cmd/migrate up --env dev")
+	} else {
+		fmt.Println("  2) simple template skips migration/seed and auto-wiring")
+	}
+	if opt.noWire || opt.template == "simple" {
+		fmt.Println("  3) wire route/bootstrap manually")
+	}
 
 	return nil
 }
 
-func writeFile(relPath, content string, force bool) error {
-	abs := filepath.Clean(relPath)
+func normalizeCrudOptions(opt *crudOptions) (templateForcesNoWire bool, err error) {
+	if opt == nil {
+		return false, errors.New("nil options")
+	}
+	if opt.table == "" {
+		opt.table = toSnake(opt.module) + "s"
+	}
+	opt.template = strings.ToLower(strings.TrimSpace(opt.template))
+	if opt.template == "" {
+		opt.template = "full"
+	}
+	if opt.template != "full" && opt.template != "simple" {
+		return false, fmt.Errorf("invalid --template %q, expected full|simple", opt.template)
+	}
+	if opt.template == "simple" && !opt.noWire {
+		opt.noWire = true
+		templateForcesNoWire = true
+	}
+	opt.outDir = strings.TrimSpace(opt.outDir)
+	if opt.outDir == "" {
+		opt.outDir = "."
+	}
+	if filepath.Clean(opt.outDir) != "." && !opt.noWire {
+		return false, errors.New("--out-dir with non-root path requires --no-wire to avoid modifying current project wiring")
+	}
+	return templateForcesNoWire, nil
+}
+
+func writeFile(outDir, relPath, content string, force bool, dryRun bool) error {
+	abs := filepath.Join(filepath.Clean(outDir), filepath.Clean(relPath))
+	if dryRun {
+		return nil
+	}
 	if _, err := os.Stat(abs); err == nil && !force {
 		return fmt.Errorf("file exists: %s (use --force to overwrite)", relPath)
 	}
@@ -112,6 +203,42 @@ func writeFile(relPath, content string, force bool) error {
 		return err
 	}
 	return os.WriteFile(abs, []byte(content), 0o644)
+}
+
+func writePreview(previewFile string, opt crudOptions, files map[string]string) error {
+	previewFile = strings.TrimSpace(previewFile)
+	if previewFile == "" {
+		return nil
+	}
+	keys := make([]string, 0, len(files))
+	for p := range files {
+		keys = append(keys, p)
+	}
+	sort.Strings(keys)
+	var out strings.Builder
+	out.WriteString("# CRUD Generation Preview\n\n")
+	out.WriteString(fmt.Sprintf("- module: `%s`\n", opt.module))
+	out.WriteString(fmt.Sprintf("- table: `%s`\n", opt.table))
+	out.WriteString(fmt.Sprintf("- template: `%s`\n", opt.template))
+	out.WriteString(fmt.Sprintf("- dry_run: `%t`\n", opt.dryRun))
+	out.WriteString(fmt.Sprintf("- no_wire: `%t`\n", opt.noWire))
+	out.WriteString(fmt.Sprintf("- preview_full: `%t`\n\n", opt.previewFull))
+	out.WriteString("## Planned Files\n\n")
+	for _, p := range keys {
+		out.WriteString("- `" + p + "`\n")
+	}
+	out.WriteString("\n## File Snippets\n")
+	for _, p := range keys {
+		content := files[p]
+		if !opt.previewFull && len(content) > 600 {
+			content = content[:600] + "\n// ... truncated ..."
+		}
+		out.WriteString("\n### `" + p + "`\n\n```text\n" + content + "\n```\n")
+	}
+	if err := os.MkdirAll(filepath.Dir(previewFile), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(previewFile, []byte(out.String()), 0o644)
 }
 
 func wireGeneratedCRUD(moduleSnake, modelName, daoName, serviceName string) error {
@@ -142,8 +269,8 @@ func wireRouterOptions(modelName string) error {
 	if !strings.Contains(text, fieldLine) {
 		text = strings.Replace(
 			text,
-			"\tAdminOps   *adminhandler.OpsHandler\n",
-			"\tAdminOps   *adminhandler.OpsHandler\n"+fieldLine,
+			"\tAdminQueue *adminhandler.TaskQueueHandler\n",
+			"\tAdminQueue *adminhandler.TaskQueueHandler\n"+fieldLine,
 			1,
 		)
 	}
@@ -152,8 +279,8 @@ func wireRouterOptions(modelName string) error {
 	if !strings.Contains(text, arg) {
 		text = strings.Replace(
 			text,
-			"opts.AdminOps, opts.WS, opts.SSE",
-			fmt.Sprintf("opts.AdminOps, %s, opts.WS, opts.SSE", arg),
+			"opts.AdminSys, opts.AdminQueue, opts.WS, opts.SSE",
+			fmt.Sprintf("opts.AdminSys, opts.AdminQueue, %s, opts.WS, opts.SSE", arg),
 			1,
 		)
 	}
@@ -173,18 +300,18 @@ func wireAPIRouter(modelName string) error {
 	if !strings.Contains(text, paramLine) {
 		text = strings.Replace(
 			text,
-			"\tadminOps *adminhandler.OpsHandler,\n",
-			"\tadminOps *adminhandler.OpsHandler,\n"+paramLine,
+			"\tadminQueue *adminhandler.TaskQueueHandler,\n",
+			"\tadminQueue *adminhandler.TaskQueueHandler,\n"+paramLine,
 			1,
 		)
 	}
 
 	arg := fmt.Sprintf("admin%s", modelName)
-	if !strings.Contains(text, "registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, "+arg+")") {
+	if !strings.Contains(text, ", "+arg+")") {
 		text = strings.Replace(
 			text,
-			"registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps)",
-			"registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, "+arg+")",
+			"registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue)",
+			"registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, "+arg+")",
 			1,
 		)
 	}
@@ -204,15 +331,15 @@ func wireAdminRouter(modelName string) error {
 	if !strings.Contains(text, param) {
 		text = strings.Replace(
 			text,
-			"ops *adminhandler.OpsHandler",
-			"ops *adminhandler.OpsHandler, "+param,
+			"queue *adminhandler.TaskQueueHandler",
+			"queue *adminhandler.TaskQueueHandler, "+param,
 			1,
 		)
 	}
 
 	callLine := fmt.Sprintf("\tregisterAdmin%sRoutes(admin, generated%s)\n", modelName, modelName)
 	if !strings.Contains(text, callLine) {
-		text = strings.Replace(text, "\tadmin.GET(\"/dbping\", middleware.RequirePermission(\"db:ping\"), ops.DBPing)\n", "\tadmin.GET(\"/dbping\", middleware.RequirePermission(\"db:ping\"), ops.DBPing)\n"+callLine, 1)
+		text = strings.Replace(text, "\tadmin.DELETE(\"/system-settings/:id\", middleware.RequirePermission(\"sys:config:write\"), sys.Delete)\n", "\tadmin.DELETE(\"/system-settings/:id\", middleware.RequirePermission(\"sys:config:write\"), sys.Delete)\n"+callLine, 1)
 	}
 
 	return os.WriteFile(path, []byte(text), 0o644)
@@ -228,22 +355,22 @@ func wireBootstrap(moduleSnake, modelName, daoName, serviceName string) error {
 
 	daoLine := fmt.Sprintf("\t%sDAO := dao.New%s(gdb)\n", lowerFirst(modelName), daoName)
 	if !strings.Contains(text, daoLine) {
-		text = strings.Replace(text, "\tauthzDAO := dao.NewAuthzDAO(gdb)\n", "\tauthzDAO := dao.NewAuthzDAO(gdb)\n"+daoLine, 1)
+		text = strings.Replace(text, "\tauthzDAO := dao.NewAuthzDAO(gdb)\n", daoLine+"\tauthzDAO := dao.NewAuthzDAO(gdb)\n", 1)
 	}
 
 	svcLine := fmt.Sprintf("\t%sSvc := service.New%s(%sDAO)\n", lowerFirst(modelName), serviceName, lowerFirst(modelName))
 	if !strings.Contains(text, svcLine) {
-		text = strings.Replace(text, "\tmenuSvc := service.NewMenuService(menuDAO)\n", "\tmenuSvc := service.NewMenuService(menuDAO)\n"+svcLine, 1)
+		text = strings.Replace(text, "\tsysSettingSvc := service.NewSystemSettingService(sysSettingDAO)\n", "\tsysSettingSvc := service.NewSystemSettingService(sysSettingDAO)\n"+svcLine, 1)
 	}
 
 	handlerLine := fmt.Sprintf("\tadmin%sH := adminhandler.New%sHandler(%sSvc)\n", modelName, modelName, lowerFirst(modelName))
 	if !strings.Contains(text, handlerLine) {
-		text = strings.Replace(text, "\tadminOpsH := adminhandler.NewOpsHandler()\n", "\tadminOpsH := adminhandler.NewOpsHandler()\n"+handlerLine, 1)
+		text = strings.Replace(text, "\tadminQueueH := adminhandler.NewTaskQueueHandler(inspector)\n", "\tadminQueueH := adminhandler.NewTaskQueueHandler(inspector)\n"+handlerLine, 1)
 	}
 
 	optLine := fmt.Sprintf("\t\tAdmin%s:  admin%sH,\n", modelName, modelName)
 	if !strings.Contains(text, optLine) {
-		text = strings.Replace(text, "\t\tAdminOps:   adminOpsH,\n", "\t\tAdminOps:   adminOpsH,\n"+optLine, 1)
+		text = strings.Replace(text, "\t\tAdminQueue: adminQueueH,\n", "\t\tAdminQueue: adminQueueH,\n"+optLine, 1)
 	}
 
 	return os.WriteFile(path, []byte(text), 0o644)
@@ -289,7 +416,99 @@ func lowerFirst(s string) string {
 	return string(r)
 }
 
-func modelTemplate(modelName, table string) string {
+func parseFields(raw []string) ([]genField, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	out := make([]genField, 0, len(raw))
+	seen := make(map[string]struct{}, len(raw))
+	for _, item := range raw {
+		s := strings.TrimSpace(item)
+		if s == "" {
+			continue
+		}
+		parts := strings.SplitN(s, ":", 3)
+		if len(parts) < 2 {
+			return nil, fmt.Errorf("invalid --field %q, expected name:type[:validate]", s)
+		}
+		jsonName := toSnake(strings.TrimSpace(parts[0]))
+		if jsonName == "" {
+			return nil, fmt.Errorf("invalid --field %q, empty name", s)
+		}
+		if _, ok := seen[jsonName]; ok {
+			return nil, fmt.Errorf("duplicated --field name: %s", jsonName)
+		}
+		typeRaw := strings.TrimSpace(parts[1])
+		optional := strings.HasSuffix(typeRaw, "?")
+		if optional {
+			typeRaw = strings.TrimSuffix(typeRaw, "?")
+		}
+		goType, sqlType, ok := resolveFieldTypes(typeRaw)
+		if !ok {
+			return nil, fmt.Errorf("unsupported field type %q (supported: string,int,int64,bool,float64)", parts[1])
+		}
+		validate := ""
+		defaultVal := ""
+		if len(parts) == 3 {
+			validate, defaultVal = parseValidateAndDefault(strings.TrimSpace(parts[2]))
+		}
+		out = append(out, genField{
+			Name:     toPascal(jsonName),
+			JSONName: jsonName,
+			GoType:   goType,
+			SQLType:  sqlType,
+			Validate: validate,
+			Optional: optional,
+			Default:  defaultVal,
+		})
+		seen[jsonName] = struct{}{}
+	}
+	return out, nil
+}
+
+func resolveFieldTypes(t string) (goType string, sqlType string, ok bool) {
+	switch strings.ToLower(strings.TrimSpace(t)) {
+	case "string":
+		return "string", "VARCHAR(255)", true
+	case "int":
+		return "int", "INT", true
+	case "int64":
+		return "int64", "BIGINT", true
+	case "bool":
+		return "bool", "TINYINT(1)", true
+	case "float64":
+		return "float64", "DOUBLE", true
+	default:
+		return "", "", false
+	}
+}
+
+func parseValidateAndDefault(in string) (validate string, defaultValue string) {
+	s := strings.TrimSpace(in)
+	if s == "" {
+		return "", ""
+	}
+	parts := strings.Split(s, ",")
+	rules := make([]string, 0, len(parts))
+	for _, p := range parts {
+		r := strings.TrimSpace(p)
+		if r == "" {
+			continue
+		}
+		if strings.HasPrefix(strings.ToLower(r), "default=") {
+			defaultValue = strings.TrimSpace(strings.TrimPrefix(r, "default="))
+			continue
+		}
+		rules = append(rules, r)
+	}
+	return strings.Join(rules, ","), defaultValue
+}
+
+func modelTemplate(modelName, table string, fields []genField) string {
+	var fieldLines strings.Builder
+	for _, f := range fields {
+		fieldLines.WriteString(fmt.Sprintf("\t%s %s `gorm:\"not null\" json:\"%s\"`\n", f.Name, f.GoType, f.JSONName))
+	}
 	return fmt.Sprintf(`package model
 
 import (
@@ -301,7 +520,7 @@ import (
 // %s generated by cmd/gen crud.
 type %s struct {
 	ID        int64          %s
-	CreatedAt time.Time      %s
+%s	CreatedAt time.Time      %s
 	UpdatedAt time.Time      %s
 	DeletedAt gorm.DeletedAt %s
 }
@@ -309,7 +528,7 @@ type %s struct {
 func (%s) TableName() string {
 	return %q
 }
-`, modelName, modelName, "`gorm:\"primaryKey;autoIncrement\" json:\"id\"`", "`json:\"created_at\"`", "`json:\"updated_at\"`", "`gorm:\"index\" json:\"-\"`", modelName, table)
+`, modelName, modelName, "`gorm:\"primaryKey;autoIncrement\" json:\"id\"`", fieldLines.String(), "`json:\"created_at\"`", "`json:\"updated_at\"`", "`gorm:\"index\" json:\"-\"`", modelName, table)
 }
 
 func daoTemplate(modelName, daoName string) string {
@@ -441,23 +660,53 @@ func (s *%s) Delete(ctx context.Context, id int64) error {
 `, serviceName, modelName, modelName, modelName, modelName, serviceName, serviceName, serviceName, serviceName, serviceName, serviceName, serviceName, serviceName, modelName, serviceName, modelName, serviceName, modelName, serviceName, modelName, serviceName)
 }
 
-func requestTemplate(modelName string) string {
+func requestTemplate(modelName string, fields []genField) string {
+	var createFields strings.Builder
+	var updateFields strings.Builder
+	for _, f := range fields {
+		createBinding := strings.TrimSpace(f.Validate)
+		if createBinding == "" && !f.Optional {
+			createBinding = "required"
+		}
+		updateBinding := strings.TrimSpace(f.Validate)
+		if updateBinding != "" {
+			updateBinding = "omitempty," + updateBinding
+		}
+		if createBinding != "" {
+			createFields.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\" binding:\"%s\"`\n", f.Name, f.GoType, f.JSONName, createBinding))
+		} else {
+			createFields.WriteString(fmt.Sprintf("\t%s %s `json:\"%s\"`\n", f.Name, f.GoType, f.JSONName))
+		}
+		if updateBinding != "" {
+			updateFields.WriteString(fmt.Sprintf("\t%s *%s `json:\"%s\" binding:\"%s\"`\n", f.Name, f.GoType, f.JSONName, updateBinding))
+		} else {
+			updateFields.WriteString(fmt.Sprintf("\t%s *%s `json:\"%s\"`\n", f.Name, f.GoType, f.JSONName))
+		}
+	}
 	return fmt.Sprintf(`package adminreq
 
 // %sCreateRequest generated by cmd/gen crud.
-type %sCreateRequest struct{}
+type %sCreateRequest struct {
+%s}
 
 // %sUpdateRequest generated by cmd/gen crud.
-type %sUpdateRequest struct{}
+type %sUpdateRequest struct {
+%s}
 
 // %sIDURI generated by cmd/gen crud.
 type %sIDURI struct {
 	ID int64 %s
 }
-`, modelName, modelName, modelName, modelName, modelName, modelName, "`uri:\"id\" binding:\"required,min=1\"`")
+`, modelName, modelName, createFields.String(), modelName, modelName, updateFields.String(), modelName, modelName, "`uri:\"id\" binding:\"required,min=1\"`")
 }
 
-func adminHandlerTemplate(modelName, serviceName, fieldName string) string {
+func adminHandlerTemplate(modelName, serviceName string, fields []genField) string {
+	var createAssign strings.Builder
+	var updateAssign strings.Builder
+	for _, f := range fields {
+		createAssign.WriteString(fmt.Sprintf("\t\t%s: req.%s,\n", f.Name, f.Name))
+		updateAssign.WriteString(fmt.Sprintf("\tif req.%s != nil {\n\t\tin.%s = *req.%s\n\t}\n", f.Name, f.Name, f.Name))
+	}
 	tpl := `package adminhandler
 
 import (
@@ -498,12 +747,12 @@ func (h *{{Model}}Handler) Get(c *gin.Context) {
 		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
 		return
 	}
-	{{Field}}, err := h.svc.GetByID(c.Request.Context(), uri.ID)
+	row, err := h.svc.GetByID(c.Request.Context(), uri.ID)
 	if err != nil {
 		response.FailHTTP(c, http.StatusNotFound, errcode.NotFound, errcode.KeyInvalidParam, err.Error())
 		return
 	}
-	response.OK(c, {{Field}})
+	response.OK(c, row)
 }
 
 func (h *{{Model}}Handler) Create(c *gin.Context) {
@@ -512,8 +761,8 @@ func (h *{{Model}}Handler) Create(c *gin.Context) {
 		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
 		return
 	}
-	// TODO: map req to model.{{Model}} fields.
-	in := &model.{{Model}}{}
+	in := &model.{{Model}}{
+{{CreateAssign}}	}
 	if err := h.svc.Create(c.Request.Context(), in); err != nil {
 		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
 		return
@@ -532,9 +781,8 @@ func (h *{{Model}}Handler) Update(c *gin.Context) {
 		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
 		return
 	}
-	// TODO: map req to model.{{Model}} fields.
 	in := &model.{{Model}}{ID: uri.ID}
-	if err := h.svc.Update(c.Request.Context(), in); err != nil {
+{{UpdateAssign}}	if err := h.svc.Update(c.Request.Context(), in); err != nil {
 		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
 		return
 	}
@@ -557,7 +805,8 @@ func (h *{{Model}}Handler) Delete(c *gin.Context) {
 	replacer := strings.NewReplacer(
 		"{{Model}}", modelName,
 		"{{Service}}", serviceName,
-		"{{Field}}", fieldName,
+		"{{CreateAssign}}", createAssign.String(),
+		"{{UpdateAssign}}", updateAssign.String(),
 	)
 	return replacer.Replace(tpl)
 }
@@ -588,4 +837,51 @@ func registerAdmin{{Model}}Routes(admin *gin.RouterGroup, h *adminhandler.{{Mode
 		"{{perm}}", lower,
 	)
 	return replacer.Replace(tpl)
+}
+
+func schemaUpTemplate(table string, fields []genField) string {
+	var cols strings.Builder
+	for _, f := range fields {
+		def := formatSQLDefault(f)
+		if def != "" {
+			cols.WriteString(fmt.Sprintf("  `%s` %s NOT NULL DEFAULT %s,\n", f.JSONName, f.SQLType, def))
+		} else {
+			cols.WriteString(fmt.Sprintf("  `%s` %s NOT NULL,\n", f.JSONName, f.SQLType))
+		}
+	}
+	return fmt.Sprintf("CREATE TABLE IF NOT EXISTS `%s` (\n  `id` BIGINT NOT NULL AUTO_INCREMENT,\n%s  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),\n  `deleted_at` DATETIME(3) NULL,\n  PRIMARY KEY (`id`),\n  KEY `idx_%s_deleted_at` (`deleted_at`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n", table, cols.String(), table)
+}
+
+func formatSQLDefault(f genField) string {
+	v := strings.TrimSpace(f.Default)
+	if v == "" {
+		return ""
+	}
+	switch f.GoType {
+	case "string":
+		return "'" + strings.ReplaceAll(v, "'", "''") + "'"
+	case "bool":
+		l := strings.ToLower(v)
+		if l == "true" || l == "1" {
+			return "1"
+		}
+		return "0"
+	default:
+		return v
+	}
+}
+
+func schemaDownTemplate(table string) string {
+	return fmt.Sprintf("DROP TABLE IF EXISTS %q;\n", table)
+}
+
+func seedPermUpTemplate(prefix string) string {
+	return fmt.Sprintf(`INSERT IGNORE INTO role_permissions (role, permission, created_at, updated_at) VALUES
+  ('admin', '%s:read', NOW(), NOW()),
+  ('admin', '%s:write', NOW(), NOW());
+`, prefix, prefix)
+}
+
+func seedPermDownTemplate(prefix string) string {
+	return fmt.Sprintf("DELETE FROM role_permissions WHERE role = 'admin' AND permission IN ('%s:read', '%s:write');\n", prefix, prefix)
 }

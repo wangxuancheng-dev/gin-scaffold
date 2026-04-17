@@ -105,6 +105,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	}
 
 	var q *job.Client
+	var inspector = job.NewInspector(cfg.Asynq.RedisAddr, cfg.Asynq.RedisPassword, cfg.Asynq.RedisDB)
 	if cfg.Asynq.RedisAddr != "" {
 		q = job.NewClient(
 			cfg.Asynq.RedisAddr,
@@ -123,12 +124,16 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	menuDAO := dao.NewMenuDAO(gdb)
 	taskDAO := dao.NewScheduledTaskDAO(gdb)
 	auditDAO := dao.NewAuditLogDAO(gdb)
+	sysSettingDAO := dao.NewSystemSettingDAO(gdb)
+	announcementDAO := dao.NewAnnouncementDAO(gdb)
 	authzDAO := dao.NewAuthzDAO(gdb)
 	middleware.SetPermissionChecker(authz.NewDBPermissionChecker(authzDAO, cfg.RBAC.SuperAdminUserID))
 	middleware.SetSuperAdminUserID(cfg.RBAC.SuperAdminUserID)
 	userSvc := service.NewUserService(userDAO, q, jm, cfg.RBAC.SuperAdminUserID)
 	menuSvc := service.NewMenuService(menuDAO)
 	taskSvc := service.NewScheduledTaskService(taskDAO, cfg.Scheduler)
+	sysSettingSvc := service.NewSystemSettingService(sysSettingDAO)
+	announcementSvc := service.NewAnnouncementService(announcementDAO)
 	hub := websocketpkg.NewHub()
 	wsSvc := service.NewWSService(hub)
 	sseSvc := service.NewSSEService()
@@ -140,6 +145,9 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	adminMenuH := adminhandler.NewMenuHandler(menuSvc)
 	adminOpsH := adminhandler.NewOpsHandler(auditDAO, q)
 	adminTaskH := adminhandler.NewTaskHandler(taskSvc)
+	adminSysH := adminhandler.NewSystemSettingHandler(sysSettingSvc)
+	adminQueueH := adminhandler.NewTaskQueueHandler(inspector)
+	adminAnnouncementH := adminhandler.NewAnnouncementHandler(announcementSvc)
 	wsH := handler.NewWSHandler(wsSvc)
 	sseH := handler.NewSSEHandler(sseSvc)
 
@@ -161,6 +169,9 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		AdminMenu:  adminMenuH,
 		AdminOps:   adminOpsH,
 		AdminTask:  adminTaskH,
+		AdminSys:   adminSysH,
+		AdminQueue: adminQueueH,
+		AdminAnnouncement:  adminAnnouncementH,
 		WS:         wsH,
 		SSE:        sseH,
 		TraceOn:    cfg.Trace.Enabled,

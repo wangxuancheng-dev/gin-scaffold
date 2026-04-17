@@ -28,6 +28,7 @@ const (
 	KeyRateLimited         = "rate_limited"
 	KeyPayloadTooLarge     = "payload_too_large"
 	KeyIdempotencyConflict = "idempotency_conflict"
+	KeyNotFound            = "not_found"
 	KeyInternal            = "internal_error"
 	KeyUserNotFound        = "user_not_found"
 	KeyUserExists          = "user_exists"

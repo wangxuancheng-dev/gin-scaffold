@@ -6,6 +6,7 @@
   "rate_limited": "请求过于频繁",
   "payload_too_large": "请求体过大",
   "idempotency_conflict": "相同幂等键的请求正在处理或发生冲突",
+  "not_found": "资源不存在",
   "internal_error": "服务内部错误",
   "user_not_found": "用户不存在",
   "user_exists": "用户已存在",

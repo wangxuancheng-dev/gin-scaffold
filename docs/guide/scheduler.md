@@ -28,6 +28,12 @@
 
 ## 死信任务运维
 
+后台 API（需 admin + 任务权限）：
+
+- `GET /api/v1/admin/task-queues/failed?queue=default&state=retry`
+- `POST /api/v1/admin/task-queues/{queue}/failed/{task_id}/retry`
+- `POST /api/v1/admin/task-queues/{queue}/failed/{task_id}/archive`
+
 ```bash
 # 查看归档任务（dead letter）
 go run ./cmd/artisan queue:failed list --env prod

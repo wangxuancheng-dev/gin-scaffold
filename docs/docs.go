@@ -247,6 +247,289 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/system-settings": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-system-setting"
+                ],
+                "summary": "系统参数列表（后台）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "键名模糊匹配",
+                        "name": "key",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "分组名精确匹配",
+                        "name": "group_name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-system-setting"
+                ],
+                "summary": "新增系统参数（后台）",
+                "parameters": [
+                    {
+                        "description": "创建参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/adminreq.SystemSettingCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/system-settings/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-system-setting"
+                ],
+                "summary": "系统参数详情（后台）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "参数ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-system-setting"
+                ],
+                "summary": "更新系统参数（后台）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "参数ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/adminreq.SystemSettingUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-system-setting"
+                ],
+                "summary": "删除系统参数（后台）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "参数ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/task-queues/failed": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-task"
+                ],
+                "summary": "查询失败任务队列（后台）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "队列名，默认 default",
+                        "name": "queue",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "retry(默认) 或 archived",
+                        "name": "state",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，默认 20，最大 100",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/task-queues/{queue}/failed/{task_id}/archive": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-task"
+                ],
+                "summary": "归档失败任务（后台）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "队列名",
+                        "name": "queue",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/task-queues/{queue}/failed/{task_id}/retry": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-task"
+                ],
+                "summary": "重试失败任务（后台）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "队列名",
+                        "name": "queue",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "任务ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/users": {
             "get": {
                 "produces": [
@@ -930,6 +1213,65 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "adminreq.SystemSettingCreateRequest": {
+            "type": "object",
+            "required": [
+                "key",
+                "value"
+            ],
+            "properties": {
+                "group_name": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "key": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 1
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "value": {
+                    "type": "string"
+                },
+                "value_type": {
+                    "type": "string",
+                    "enum": [
+                        "string",
+                        "int",
+                        "bool",
+                        "json"
+                    ]
+                }
+            }
+        },
+        "adminreq.SystemSettingUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "group_name": {
+                    "type": "string",
+                    "maxLength": 64
+                },
+                "remark": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "value": {
+                    "type": "string"
+                },
+                "value_type": {
+                    "type": "string",
+                    "enum": [
+                        "string",
+                        "int",
+                        "bool",
+                        "json"
+                    ]
+                }
+            }
+        },
         "adminreq.UserCreateRequest": {
             "type": "object",
             "required": [

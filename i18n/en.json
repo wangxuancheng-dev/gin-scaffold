@@ -6,6 +6,7 @@
   "rate_limited": "rate limited",
   "payload_too_large": "payload too large",
   "idempotency_conflict": "duplicate idempotency request in flight",
+  "not_found": "resource not found",
   "internal_error": "internal error",
   "user_not_found": "user not found",
   "user_exists": "user already exists",
