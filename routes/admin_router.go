@@ -37,6 +37,7 @@ func registerAdminRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandl
 	admin.POST("/tasks/:id/toggle", middleware.RequirePermission("task:toggle"), task.Toggle)
 	admin.POST("/tasks/:id/run", middleware.RequirePermission("task:run"), task.RunNow)
 	admin.GET("/tasks/:id/logs", middleware.RequirePermission("task:read"), task.Logs)
+	admin.GET("/task-queues/summary", middleware.RequirePermission("task:read"), queue.Summary)
 	admin.GET("/task-queues/failed", middleware.RequirePermission("task:read"), queue.FailedList)
 	admin.POST("/task-queues/:queue/failed/:task_id/retry", middleware.RequirePermission("task:run"), queue.Retry)
 	admin.POST("/task-queues/:queue/failed/:task_id/archive", middleware.RequirePermission("task:update"), queue.Archive)

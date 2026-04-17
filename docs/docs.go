@@ -460,6 +460,25 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/task-queues/summary": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-task"
+                ],
+                "summary": "队列任务统计（后台）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/task-queues/{queue}/failed/{task_id}/archive": {
             "post": {
                 "produces": [

@@ -499,6 +499,18 @@ paths:
       summary: 查询失败任务队列（后台）
       tags:
       - admin-task
+  /api/v1/admin/task-queues/summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 队列任务统计（后台）
+      tags:
+      - admin-task
   /api/v1/admin/users:
     get:
       parameters:

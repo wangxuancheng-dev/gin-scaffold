@@ -11,11 +11,13 @@ import (
 	"gin-scaffold/api/handler"
 	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/response"
+	"gin-scaffold/config"
 )
 
 type queueInspector interface {
 	ListRetryTasks(queue string, opts ...asynq.ListOption) ([]*asynq.TaskInfo, error)
 	ListArchivedTasks(queue string, opts ...asynq.ListOption) ([]*asynq.TaskInfo, error)
+	GetQueueInfo(queue string) (*asynq.QueueInfo, error)
 	RunTask(queue, id string) error
 	ArchiveTask(queue, id string) error
 }
@@ -26,6 +28,42 @@ type TaskQueueHandler struct {
 
 func NewTaskQueueHandler(i queueInspector) *TaskQueueHandler {
 	return &TaskQueueHandler{inspector: i}
+}
+
+// Summary 返回队列任务统计概览。
+// @Summary 队列任务统计（后台）
+// @Tags admin-task
+// @Produce json
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/task-queues/summary [get]
+func (h *TaskQueueHandler) Summary(c *gin.Context) {
+	if h == nil || h.inspector == nil {
+		handler.FailServiceUnavailable(c, nil, "asynq inspector unavailable")
+		return
+	}
+	queues := defaultQueueNames()
+	rows := make([]gin.H, 0, len(queues))
+	for _, q := range queues {
+		info, err := h.inspector.GetQueueInfo(q)
+		if err != nil {
+			rows = append(rows, gin.H{
+				"queue": q,
+				"error": err.Error(),
+			})
+			continue
+		}
+		rows = append(rows, gin.H{
+			"queue":       q,
+			"pending":     info.Pending,
+			"active":      info.Active,
+			"scheduled":   info.Scheduled,
+			"retry":       info.Retry,
+			"archived":    info.Archived,
+			"completed":   info.Completed,
+			"aggregating": info.Aggregating,
+		})
+	}
+	response.OK(c, gin.H{"queues": rows})
 }
 
 // FailedList 查询失败任务（retry/archived）。
@@ -160,4 +198,29 @@ func formatQueueTaskTime(t time.Time) string {
 		return ""
 	}
 	return t.Format(time.RFC3339)
+}
+
+func defaultQueueNames() []string {
+	out := []string{"default", "critical", "low"}
+	cfg := config.Get()
+	if cfg == nil || len(cfg.Asynq.Queues) == 0 {
+		return out
+	}
+	seen := map[string]struct{}{}
+	out = out[:0]
+	for name := range cfg.Asynq.Queues {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+	if len(out) == 0 {
+		return []string{"default"}
+	}
+	return out
 }

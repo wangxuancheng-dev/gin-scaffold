@@ -30,6 +30,7 @@
 
 后台 API（需 admin + 任务权限）：
 
+- `GET /api/v1/admin/task-queues/summary`
 - `GET /api/v1/admin/task-queues/failed?queue=default&state=retry`
 - `POST /api/v1/admin/task-queues/{queue}/failed/{task_id}/retry`
 - `POST /api/v1/admin/task-queues/{queue}/failed/{task_id}/archive`

@@ -58,6 +58,11 @@
   - `DELETE /api/v1/admin/system-settings/{id}`（`sys:config:write`）
 - 数据表：`system_settings`（迁移：`202504171500_create_system_settings`）。
 - 升级后执行 seed：`202504171510_seed_system_setting_permissions`，为 admin 注入参数管理权限和菜单。
+- 业务读取建议使用 `pkg/settings`：
+  - `settings.GetString(ctx, "your.key")`
+  - `settings.GetInt64(ctx, "your.key")`
+  - `settings.GetBool(ctx, "your.key")`
+  - 内置短 TTL 缓存，减少高频读取数据库压力。
 
 ## 用户异步导出（仅任务模式）
 
