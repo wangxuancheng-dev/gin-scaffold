@@ -28,6 +28,14 @@ func (d *SystemSettingDAO) GetByID(ctx context.Context, id int64) (*model.System
 	return &row, nil
 }
 
+func (d *SystemSettingDAO) GetByIDAny(ctx context.Context, id int64) (*model.SystemSetting, error) {
+	var row model.SystemSetting
+	if err := d.db.WithContext(ctx).Unscoped().First(&row, id).Error; err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
 func (d *SystemSettingDAO) GetByKey(ctx context.Context, key string) (*model.SystemSetting, error) {
 	var row model.SystemSetting
 	if err := d.db.WithContext(ctx).Where("`key` = ?", key).First(&row).Error; err != nil {
@@ -68,4 +76,37 @@ func (d *SystemSettingDAO) Update(ctx context.Context, id int64, updates map[str
 
 func (d *SystemSettingDAO) SoftDelete(ctx context.Context, id int64) error {
 	return d.db.WithContext(ctx).Delete(&model.SystemSetting{}, id).Error
+}
+
+func (d *SystemSettingDAO) Restore(ctx context.Context, id int64, updates map[string]any) (*model.SystemSetting, error) {
+	updates["deleted_at"] = nil
+	if err := d.db.WithContext(ctx).Unscoped().Model(&model.SystemSetting{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	return d.GetByID(ctx, id)
+}
+
+func (d *SystemSettingDAO) CreateHistory(ctx context.Context, row *model.SystemSettingHistory) error {
+	return d.db.WithContext(ctx).Create(row).Error
+}
+
+func (d *SystemSettingDAO) GetHistoryByID(ctx context.Context, id int64) (*model.SystemSettingHistory, error) {
+	var row model.SystemSettingHistory
+	if err := d.db.WithContext(ctx).First(&row, id).Error; err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+func (d *SystemSettingDAO) ListHistory(ctx context.Context, settingID int64, offset, limit int) ([]model.SystemSettingHistory, int64, error) {
+	query := d.db.WithContext(ctx).Model(&model.SystemSettingHistory{}).Where("setting_id = ?", settingID)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var rows []model.SystemSettingHistory
+	if err := query.Order("id desc").Offset(offset).Limit(limit).Find(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
 }

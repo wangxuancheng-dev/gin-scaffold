@@ -1,2 +1,2 @@
 ALTER TABLE `scheduled_tasks`
-ADD COLUMN `concurrency_policy` VARCHAR(16) NOT NULL DEFAULT 'forbid' AFTER `timeout_sec`;
+ADD COLUMN `concurrency_policy` VARCHAR(16) NOT NULL DEFAULT 'forbid';

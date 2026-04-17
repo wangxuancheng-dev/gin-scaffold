@@ -53,11 +53,14 @@
 - 后台接口（权限）：
   - `GET /api/v1/admin/system-settings`（`sys:config:read`）
   - `GET /api/v1/admin/system-settings/{id}`（`sys:config:read`）
+  - `GET /api/v1/admin/system-settings/{id}/history`（`sys:config:read`）
   - `POST /api/v1/admin/system-settings`（`sys:config:write`）
   - `PUT /api/v1/admin/system-settings/{id}`（`sys:config:write`）
   - `DELETE /api/v1/admin/system-settings/{id}`（`sys:config:write`）
+  - `POST /api/v1/admin/system-settings/{id}/rollback`（`sys:config:rollback`）
 - 数据表：`system_settings`（迁移：`202504171500_create_system_settings`）。
-- 升级后执行 seed：`202504171510_seed_system_setting_permissions`，为 admin 注入参数管理权限和菜单。
+- 变更历史表：`system_setting_histories`（迁移：`202604171030_create_system_setting_histories`）。
+- 升级后执行 seed：`202504171510_seed_system_setting_permissions` 与 `202604171040_seed_system_setting_rollback_permission`，为 admin 注入参数管理权限与回滚权限。
 - 业务读取建议使用 `pkg/settings`：
   - `settings.GetString(ctx, "your.key")`
   - `settings.GetInt64(ctx, "your.key")`

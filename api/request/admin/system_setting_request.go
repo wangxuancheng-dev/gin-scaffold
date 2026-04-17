@@ -11,6 +11,11 @@ type SystemSettingListQuery struct {
 	GroupName string `form:"group_name"`
 }
 
+type SystemSettingHistoryQuery struct {
+	Page     int `form:"page"`
+	PageSize int `form:"page_size"`
+}
+
 type SystemSettingCreateRequest struct {
 	Key       string `json:"key" binding:"required,min=1,max=128"`
 	Value     string `json:"value" binding:"required"`
@@ -24,4 +29,9 @@ type SystemSettingUpdateRequest struct {
 	ValueType *string `json:"value_type" binding:"omitempty,oneof=string int bool json"`
 	GroupName *string `json:"group_name" binding:"omitempty,max=64"`
 	Remark    *string `json:"remark" binding:"omitempty,max=255"`
+}
+
+type SystemSettingRollbackRequest struct {
+	HistoryID int64  `json:"history_id" binding:"required,min=1"`
+	Reason    string `json:"reason" binding:"omitempty,max=255"`
 }

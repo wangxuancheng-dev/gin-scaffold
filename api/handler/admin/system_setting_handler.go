@@ -13,6 +13,7 @@ import (
 	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/internal/pkg/validator"
 	"gin-scaffold/internal/service/port"
+	"gin-scaffold/middleware"
 )
 
 type SystemSettingHandler struct {
@@ -88,7 +89,7 @@ func (h *SystemSettingHandler) Create(c *gin.Context) {
 		handler.FailInvalidParam(c, err)
 		return
 	}
-	row, err := h.svc.Create(c.Request.Context(), req.Key, req.Value, req.ValueType, req.GroupName, req.Remark)
+	row, err := h.svc.Create(c.Request.Context(), req.Key, req.Value, req.ValueType, req.GroupName, req.Remark, currentSettingActor(c))
 	if err != nil {
 		handler.FailByError(c, err, http.StatusBadRequest, nil)
 		return
@@ -120,7 +121,7 @@ func (h *SystemSettingHandler) Update(c *gin.Context) {
 		handler.FailInvalidParam(c, err)
 		return
 	}
-	row, err := h.svc.Update(c.Request.Context(), uri.ID, req.Value, req.ValueType, req.GroupName, req.Remark)
+	row, err := h.svc.Update(c.Request.Context(), uri.ID, req.Value, req.ValueType, req.GroupName, req.Remark, currentSettingActor(c))
 	if err != nil {
 		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
 			errcode.NotFound: {Status: http.StatusNotFound},
@@ -143,11 +144,85 @@ func (h *SystemSettingHandler) Delete(c *gin.Context) {
 		handler.FailInvalidParam(c, err)
 		return
 	}
-	if err := h.svc.Delete(c.Request.Context(), uri.ID); err != nil {
+	if err := h.svc.Delete(c.Request.Context(), uri.ID, currentSettingActor(c)); err != nil {
 		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
 			errcode.NotFound: {Status: http.StatusNotFound},
 		})
 		return
 	}
 	response.OK(c, gin.H{"deleted": true})
+}
+
+// History 系统参数变更历史（后台）。
+// @Summary 系统参数变更历史（后台）
+// @Tags admin-system-setting
+// @Produce json
+// @Param id path int true "参数ID"
+// @Param page query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id}/history [get]
+func (h *SystemSettingHandler) History(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	var q adminreq.SystemSettingHistoryQuery
+	_ = c.ShouldBindQuery(&q)
+	rows, total, err := h.svc.ListHistory(c.Request.Context(), uri.ID, q.Page, q.PageSize)
+	if err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	response.OK(c, gin.H{"total": total, "list": rows})
+}
+
+// Rollback 回滚系统参数到历史版本（后台）。
+// @Summary 回滚系统参数（后台）
+// @Tags admin-system-setting
+// @Accept json
+// @Produce json
+// @Param id path int true "参数ID"
+// @Param body body adminreq.SystemSettingRollbackRequest true "回滚请求"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id}/rollback [post]
+func (h *SystemSettingHandler) Rollback(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	var req adminreq.SystemSettingRollbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	if err := validator.V().Struct(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	row, err := h.svc.Rollback(c.Request.Context(), uri.ID, req.HistoryID, req.Reason, currentSettingActor(c))
+	if err != nil {
+		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+			errcode.NotFound: {Status: http.StatusNotFound},
+		})
+		return
+	}
+	if row == nil {
+		response.OK(c, gin.H{"rolled_back": true, "deleted": true})
+		return
+	}
+	response.OK(c, gin.H{"rolled_back": true, "item": row})
+}
+
+func currentSettingActor(c *gin.Context) model.SettingActor {
+	claims, ok := middleware.Claims(c)
+	if !ok || claims == nil {
+		return model.SettingActor{}
+	}
+	return model.SettingActor{
+		UserID: claims.UserID,
+		Role:   claims.Role,
+	}
 }

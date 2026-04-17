@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS `system_setting_histories` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `setting_id` BIGINT NOT NULL,
+  `setting_key` VARCHAR(128) NOT NULL,
+  `action` VARCHAR(16) NOT NULL,
+  `before_value` TEXT NOT NULL,
+  `before_type` VARCHAR(16) NOT NULL DEFAULT '',
+  `before_group` VARCHAR(64) NOT NULL DEFAULT '',
+  `before_remark` VARCHAR(255) NOT NULL DEFAULT '',
+  `before_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `after_value` TEXT NOT NULL,
+  `after_type` VARCHAR(16) NOT NULL DEFAULT '',
+  `after_group` VARCHAR(64) NOT NULL DEFAULT '',
+  `after_remark` VARCHAR(255) NOT NULL DEFAULT '',
+  `after_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+  `operator_user_id` BIGINT NOT NULL DEFAULT 0,
+  `operator_role` VARCHAR(32) NOT NULL DEFAULT '',
+  `reason` VARCHAR(255) NOT NULL DEFAULT '',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `idx_sys_setting_hist_setting_created` (`setting_id`, `created_at`),
+  KEY `idx_sys_setting_hist_key_created` (`setting_key`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
