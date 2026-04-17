@@ -1,19 +1,19 @@
-INSERT IGNORE INTO `roles` (`code`, `name`, `created_at`, `updated_at`) VALUES
-  ('admin', '管理员', NOW(), NOW()),
-  ('user', '普通用户', NOW(), NOW());
+INSERT IGNORE INTO `roles` (`tenant_id`, `code`, `name`, `created_at`, `updated_at`) VALUES
+  ('default', 'admin', '管理员', NOW(), NOW()),
+  ('default', 'user', '普通用户', NOW(), NOW());
 
-INSERT IGNORE INTO `role_permissions` (`role`, `permission`, `created_at`, `updated_at`) VALUES
-  ('admin', 'db:ping', NOW(), NOW()),
-  ('admin', 'user:read', NOW(), NOW()),
-  ('admin', 'user:create', NOW(), NOW()),
-  ('admin', 'user:update', NOW(), NOW()),
-  ('admin', 'user:delete', NOW(), NOW()),
-  ('admin', 'user:export', NOW(), NOW()),
-  ('admin', 'task:read', NOW(), NOW()),
-  ('admin', 'task:create', NOW(), NOW()),
-  ('admin', 'task:update', NOW(), NOW()),
-  ('admin', 'task:delete', NOW(), NOW()),
-  ('admin', 'task:toggle', NOW(), NOW()),
-  ('admin', 'task:run', NOW(), NOW()),
-  ('admin', 'menu:read', NOW(), NOW()),
-  ('user', 'user:read', NOW(), NOW());
+INSERT IGNORE INTO `role_permissions` (`tenant_id`, `role`, `permission`, `created_at`, `updated_at`) VALUES
+  ('default', 'admin', 'db:ping', NOW(), NOW()),
+  ('default', 'admin', 'user:read', NOW(), NOW()),
+  ('default', 'admin', 'user:create', NOW(), NOW()),
+  ('default', 'admin', 'user:update', NOW(), NOW()),
+  ('default', 'admin', 'user:delete', NOW(), NOW()),
+  ('default', 'admin', 'user:export', NOW(), NOW()),
+  ('default', 'admin', 'task:read', NOW(), NOW()),
+  ('default', 'admin', 'task:create', NOW(), NOW()),
+  ('default', 'admin', 'task:update', NOW(), NOW()),
+  ('default', 'admin', 'task:delete', NOW(), NOW()),
+  ('default', 'admin', 'task:toggle', NOW(), NOW()),
+  ('default', 'admin', 'task:run', NOW(), NOW()),
+  ('default', 'admin', 'menu:read', NOW(), NOW()),
+  ('default', 'user', 'user:read', NOW(), NOW());

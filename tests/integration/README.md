@@ -7,6 +7,7 @@ This directory contains opt-in integration tests for key online flows.
 - Admin authentication flow:
   - login via `POST /api/v1/client/auth/login`
   - access protected admin endpoint `GET /api/v1/admin/users`
+  - tenant isolation check (default tenant login succeeds; other tenant login is rejected)
 - User async export flow:
   - create task `POST /api/v1/admin/users/export/tasks`
   - poll status `GET /api/v1/admin/users/export/tasks/{task_id}`
@@ -28,6 +29,7 @@ This directory contains opt-in integration tests for key online flows.
 INTEGRATION_BASE_URL=http://127.0.0.1:8080
 INTEGRATION_ADMIN_USERNAME=admin
 INTEGRATION_ADMIN_PASSWORD=admin123456
+INTEGRATION_TENANT_ID=default # optional
 ```
 
 ## Run

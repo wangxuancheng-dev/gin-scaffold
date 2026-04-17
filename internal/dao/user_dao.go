@@ -109,6 +109,10 @@ func (d *UserDAO) ListAfterID(ctx context.Context, q model.UserQuery, lastID int
 
 // BindRole 绑定用户角色（若已存在则跳过）。
 func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error {
+	tenantID := tenant.FromContext(ctx)
+	if tenantID == "" {
+		tenantID = "default"
+	}
 	var row struct {
 		ID        int64
 		DeletedAt *time.Time
@@ -116,7 +120,7 @@ func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error
 	err := d.db.WithContext(ctx).
 		Table("user_roles").
 		Select("id, deleted_at").
-		Where("user_id = ? AND role = ?", userID, role).
+		Where("tenant_id = ? AND user_id = ? AND role = ?", tenantID, userID, role).
 		Order("id ASC").
 		Limit(1).
 		Take(&row).Error
@@ -124,7 +128,7 @@ func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error
 		if row.DeletedAt == nil {
 			return nil
 		}
-		return d.db.WithContext(ctx).Table("user_roles").Where("id = ?", row.ID).Updates(map[string]interface{}{
+		return d.db.WithContext(ctx).Table("user_roles").Where("tenant_id = ? AND id = ?", tenantID, row.ID).Updates(map[string]interface{}{
 			"deleted_at": nil,
 			"updated_at": time.Now(),
 		}).Error
@@ -133,8 +137,9 @@ func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error
 		return err
 	}
 	return d.db.WithContext(ctx).Table("user_roles").Create(map[string]interface{}{
-		"user_id": userID,
-		"role":    role,
+		"tenant_id": tenantID,
+		"user_id":   userID,
+		"role":      role,
 	}).Error
 }
 
@@ -179,8 +184,12 @@ func (d *UserDAO) SoftDelete(ctx context.Context, id int64) error {
 
 // SetRole 将用户角色切换为给定角色（软删历史角色，保留审计）。
 func (d *UserDAO) SetRole(ctx context.Context, userID int64, role string) error {
+	tenantID := tenant.FromContext(ctx)
+	if tenantID == "" {
+		tenantID = "default"
+	}
 	if err := d.db.WithContext(ctx).Table("user_roles").
-		Where("user_id = ? AND deleted_at IS NULL", userID).
+		Where("tenant_id = ? AND user_id = ? AND deleted_at IS NULL", tenantID, userID).
 		Updates(map[string]interface{}{
 			"deleted_at": time.Now(),
 			"updated_at": time.Now(),
@@ -192,13 +201,17 @@ func (d *UserDAO) SetRole(ctx context.Context, userID int64, role string) error 
 
 // GetPrimaryRole 查询用户主角色（按 user_roles.id 最早一条）。
 func (d *UserDAO) GetPrimaryRole(ctx context.Context, userID int64) (string, error) {
+	tenantID := tenant.FromContext(ctx)
+	if tenantID == "" {
+		tenantID = "default"
+	}
 	var row struct {
 		Role string
 	}
 	err := d.db.WithContext(ctx).
 		Table("user_roles").
 		Select("role").
-		Where("user_id = ? AND deleted_at IS NULL", userID).
+		Where("tenant_id = ? AND user_id = ? AND deleted_at IS NULL", tenantID, userID).
 		Order("id ASC").
 		Limit(1).
 		Take(&row).Error
@@ -214,10 +227,14 @@ func (d *UserDAO) GetPrimaryRoles(ctx context.Context, userIDs []int64) (map[int
 	if len(userIDs) == 0 {
 		return out, nil
 	}
+	tenantID := tenant.FromContext(ctx)
+	if tenantID == "" {
+		tenantID = "default"
+	}
 	sub := d.db.WithContext(ctx).
 		Table("user_roles").
 		Select("user_id, MIN(id) AS min_id").
-		Where("deleted_at IS NULL AND user_id IN ?", userIDs).
+		Where("tenant_id = ? AND deleted_at IS NULL AND user_id IN ?", tenantID, userIDs).
 		Group("user_id")
 
 	var rows []struct {
@@ -228,6 +245,7 @@ func (d *UserDAO) GetPrimaryRoles(ctx context.Context, userIDs []int64) (map[int
 		Table("user_roles ur").
 		Select("ur.user_id, ur.role").
 		Joins("JOIN (?) t ON ur.user_id = t.user_id AND ur.id = t.min_id", sub).
+		Where("ur.tenant_id = ?", tenantID).
 		Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("batch get roles: %w", err)
 	}

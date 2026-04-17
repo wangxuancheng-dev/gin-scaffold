@@ -15,6 +15,7 @@ import (
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
+	"gin-scaffold/internal/pkg/tenant"
 	"gin-scaffold/pkg/logger"
 	appredis "gin-scaffold/pkg/redis"
 )
@@ -317,7 +318,7 @@ func (s *UserService) Login(ctx context.Context, username, password string) (acc
 	if err != nil {
 		return "", err
 	}
-	token, err := s.jwt.IssueAccess(u.ID, role, "")
+	token, err := s.jwt.IssueAccess(u.ID, role, resolveTenantID(ctx, u))
 	if err != nil {
 		return "", err
 	}
@@ -343,7 +344,7 @@ func (s *UserService) LoginWithRefresh(ctx context.Context, username, password s
 	if err != nil {
 		return "", "", err
 	}
-	access, err := s.jwt.IssueAccess(u.ID, role, "")
+	access, err := s.jwt.IssueAccess(u.ID, role, resolveTenantID(ctx, u))
 	if err != nil {
 		return "", "", err
 	}
@@ -384,7 +385,7 @@ func (s *UserService) RefreshAccess(ctx context.Context, refreshToken string) (s
 	if err != nil {
 		return "", "", err
 	}
-	access, err := s.jwt.IssueAccess(u.ID, role, "")
+	access, err := s.jwt.IssueAccess(u.ID, role, resolveTenantID(ctx, u))
 	if err != nil {
 		return "", "", err
 	}
@@ -415,4 +416,14 @@ func (s *UserService) getPrimaryRole(ctx context.Context, userID int64) (string,
 		return "", err
 	}
 	return "user", nil
+}
+
+func resolveTenantID(ctx context.Context, u *model.User) string {
+	if u != nil && u.TenantID != "" {
+		return u.TenantID
+	}
+	if tid := tenant.FromContext(ctx); tid != "" {
+		return tid
+	}
+	return "default"
 }

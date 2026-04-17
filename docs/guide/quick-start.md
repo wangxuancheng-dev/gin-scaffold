@@ -28,6 +28,9 @@ HTTP_SHUTDOWN_TIMEOUT_SEC=10
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret
+TENANT_ENABLED=false
+TENANT_HEADER=X-Tenant-ID
+TENANT_DEFAULT_ID=default
 ```
 
 ## 4) 执行迁移
@@ -63,3 +66,19 @@ $env:LOAD_DOTENV_NON_DEV = "true"
 ## 7) 变更记录
 
 - 版本更新说明见：`docs/changelog.md`
+
+## 8) 多租户启用（可选）
+
+```bash
+export TENANT_ENABLED=true
+export TENANT_HEADER=X-Tenant-ID
+export TENANT_DEFAULT_ID=default
+```
+
+Windows PowerShell:
+
+```powershell
+$env:TENANT_ENABLED = "true"
+$env:TENANT_HEADER = "X-Tenant-ID"
+$env:TENANT_DEFAULT_ID = "default"
+```

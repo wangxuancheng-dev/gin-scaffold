@@ -4,7 +4,8 @@ param(
     [string]$Action = "help",
     [string]$BaseUrl = "http://127.0.0.1:18080",
     [string]$AdminUsername = "admin",
-    [string]$SecretEnvName = "INTEGRATION_ADMIN_PASSWORD"
+    [string]$SecretEnvName = "INTEGRATION_ADMIN_PASSWORD",
+    [string]$TenantID = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,6 +61,7 @@ function Invoke-IntegrationTests {
     $env:INTEGRATION_BASE_URL = $BaseUrl
     $env:INTEGRATION_ADMIN_USERNAME = $AdminUsername
     $env:INTEGRATION_ADMIN_PASSWORD = $adminSecret
+    $env:INTEGRATION_TENANT_ID = $TenantID
     go test -tags=integration ./tests/integration -v
 }
 

@@ -69,6 +69,24 @@
   - 内置短 TTL 缓存，减少高频读取数据库压力。
   - 默认只读取 `is_published=1` 的已发布配置。
 
+## 多租户（Tenant Foundation）
+
+- 配置入口：`tenant.enabled`、`tenant.header`、`tenant.default_id`。
+- 解析优先级（启用后）：
+  - 先读请求头（默认 `X-Tenant-ID`）
+  - 为空则读 JWT `tenant_id`
+  - 仍为空则回退 `tenant.default_id`（默认 `default`）
+- 目前已租户隔离的数据主链路：
+  - 用户与角色权限（`users` / `user_roles` / `role_permissions` / `roles`）
+  - 菜单与角色菜单（`menus` / `role_menus`）
+  - 定时任务与任务日志（`scheduled_tasks` / `scheduled_task_logs`）
+  - 审计日志（`audit_logs`）
+  - 系统参数（`system_settings` / `system_setting_histories`）
+- 关键约束：
+  - 默认 seed 全部写入租户 `default`
+  - 权限判断（RBAC）按当前租户查询，不跨租户复用
+  - 建议生产环境启用 `tenant.enabled=true`，并统一由网关注入 `X-Tenant-ID`
+
 ## 用户异步导出（仅任务模式）
 
 用户导出已统一为异步任务接口，不再提供同步 `GET /api/v1/admin/users/export`。

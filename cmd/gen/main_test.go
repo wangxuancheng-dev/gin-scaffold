@@ -75,6 +75,7 @@ func TestSchemaUpTemplate_Defaults(t *testing.T) {
 		{Name: "Priority", JSONName: "priority", GoType: "int", SQLType: "INT", Default: "3"},
 	})
 	wants := []string{
+		"`tenant_id` VARCHAR(64) NOT NULL DEFAULT 'default'",
 		"`status` VARCHAR(32) NOT NULL DEFAULT 'open'",
 		"`paid` TINYINT(1) NOT NULL DEFAULT 1",
 		"`priority` INT NOT NULL DEFAULT 3",
@@ -82,6 +83,34 @@ func TestSchemaUpTemplate_Defaults(t *testing.T) {
 	for _, want := range wants {
 		if !strings.Contains(src, want) {
 			t.Fatalf("schema should contain %q, got: %s", want, src)
+		}
+	}
+}
+
+func TestModelTemplate_ContainsTenantField(t *testing.T) {
+	t.Parallel()
+	src := modelTemplate("Ticket", "tickets", []genField{
+		{Name: "Title", JSONName: "title", GoType: "string"},
+	})
+	if !strings.Contains(src, "TenantID  string") {
+		t.Fatalf("model template should contain TenantID field: %s", src)
+	}
+	if !strings.Contains(src, "json:\"tenant_id\"") {
+		t.Fatalf("model template should expose tenant_id json tag: %s", src)
+	}
+}
+
+func TestDAOTemplate_ContainsTenantScope(t *testing.T) {
+	t.Parallel()
+	src := daoTemplate("Ticket", "TicketDAO")
+	wants := []string{
+		"internal/pkg/tenant",
+		"in.TenantID = tenant.FromContext(ctx)",
+		"tenant.ApplyScope(ctx",
+	}
+	for _, want := range wants {
+		if !strings.Contains(src, want) {
+			t.Fatalf("dao template should contain %q, got: %s", want, src)
 		}
 	}
 }

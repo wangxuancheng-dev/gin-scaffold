@@ -36,6 +36,7 @@ go run ./cmd/server server --env dev
 
 - 快速开始：`/guide/quick-start`
 - 配置说明：`/guide/configuration`
+- 多租户基础：`/guide/platform`
 - 命令系统：`/guide/commands`
 - 版本变更记录：`/changelog`
 - 定时任务中心：`/guide/scheduler`

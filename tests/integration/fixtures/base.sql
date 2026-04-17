@@ -7,5 +7,5 @@ ON DUPLICATE KEY UPDATE
   `nickname` = VALUES(`nickname`),
   `updated_at` = NOW();
 
-INSERT IGNORE INTO `user_roles` (`user_id`, `role`, `created_at`, `updated_at`)
-SELECT `id`, 'user', NOW(), NOW() FROM `users` WHERE `username` IN ('it_user_1', 'it_user_2');
+INSERT IGNORE INTO `user_roles` (`tenant_id`, `user_id`, `role`, `created_at`, `updated_at`)
+SELECT 'default', `id`, 'user', NOW(), NOW() FROM `users` WHERE `username` IN ('it_user_1', 'it_user_2');
