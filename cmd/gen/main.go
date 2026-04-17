@@ -112,7 +112,7 @@ func runCRUD(opt crudOptions) error {
 		filepath.Join("internal", "service", moduleSnake+"_service.go"):         serviceTemplate(modelName, serviceName),
 		filepath.Join("api", "request", "admin", moduleSnake+"_request.go"):     requestTemplate(modelName, parsedFields),
 		filepath.Join("api", "handler", "admin", moduleSnake+"_handler.go"):     adminHandlerTemplate(modelName, serviceName, parsedFields),
-		filepath.Join("routes", "admin_"+moduleSnake+"_router.go"):              adminRouteTemplate(modelName),
+		filepath.Join("routes", "adminroutes", moduleSnake+"_router.go"):        adminRouteTemplate(modelName),
 	}
 	if opt.template == "full" {
 		files[filepath.Join("migrations", "mysql", "schema", migrationBase+".up.sql")] = schemaUpTemplate(opt.table, parsedFields)
@@ -277,12 +277,21 @@ func wireRouterOptions(modelName string) error {
 
 	arg := fmt.Sprintf("opts.Admin%s", modelName)
 	if !strings.Contains(text, arg) {
-		text = strings.Replace(
-			text,
-			"opts.AdminSys, opts.AdminQueue, opts.WS, opts.SSE",
-			fmt.Sprintf("opts.AdminSys, opts.AdminQueue, %s, opts.WS, opts.SSE", arg),
-			1,
-		)
+		if strings.Contains(text, "opts.AdminSys, opts.AdminQueue, opts.AdminAnnouncement, opts.WS, opts.SSE") {
+			text = strings.Replace(
+				text,
+				"opts.AdminSys, opts.AdminQueue, opts.AdminAnnouncement, opts.WS, opts.SSE",
+				fmt.Sprintf("opts.AdminSys, opts.AdminQueue, %s, opts.AdminAnnouncement, opts.WS, opts.SSE", arg),
+				1,
+			)
+		} else {
+			text = strings.Replace(
+				text,
+				"opts.AdminSys, opts.AdminQueue, opts.WS, opts.SSE",
+				fmt.Sprintf("opts.AdminSys, opts.AdminQueue, %s, opts.WS, opts.SSE", arg),
+				1,
+			)
+		}
 	}
 
 	return os.WriteFile(path, []byte(text), 0o644)
@@ -310,8 +319,8 @@ func wireAPIRouter(modelName string) error {
 	if !strings.Contains(text, ", "+arg+")") {
 		text = strings.Replace(
 			text,
-			"registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue)",
-			"registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, "+arg+")",
+			"adminroutes.Register(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, adminAnnouncement)",
+			"adminroutes.Register(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, "+arg+", adminAnnouncement)",
 			1,
 		)
 	}
@@ -320,10 +329,22 @@ func wireAPIRouter(modelName string) error {
 }
 
 func wireAdminRouter(modelName string) error {
-	path := filepath.Join("routes", "admin_router.go")
+	path := filepath.Join("routes", "adminroutes", "register.go")
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		if !os.IsNotExist(err) {
+			return err
+		}
+		if mkErr := os.MkdirAll(filepath.Dir(path), 0o755); mkErr != nil {
+			return mkErr
+		}
+		if writeErr := os.WriteFile(path, []byte(adminRegisterTemplate()), 0o644); writeErr != nil {
+			return writeErr
+		}
+		data, err = os.ReadFile(path)
+		if err != nil {
+			return err
+		}
 	}
 	text := string(data)
 
@@ -331,15 +352,15 @@ func wireAdminRouter(modelName string) error {
 	if !strings.Contains(text, param) {
 		text = strings.Replace(
 			text,
-			"queue *adminhandler.TaskQueueHandler",
-			"queue *adminhandler.TaskQueueHandler, "+param,
+			"generatedAnnouncement *adminhandler.AnnouncementHandler",
+			param+", generatedAnnouncement *adminhandler.AnnouncementHandler",
 			1,
 		)
 	}
 
 	callLine := fmt.Sprintf("\tregisterAdmin%sRoutes(admin, generated%s)\n", modelName, modelName)
 	if !strings.Contains(text, callLine) {
-		text = strings.Replace(text, "\tadmin.DELETE(\"/system-settings/:id\", middleware.RequirePermission(\"sys:config:write\"), sys.Delete)\n", "\tadmin.DELETE(\"/system-settings/:id\", middleware.RequirePermission(\"sys:config:write\"), sys.Delete)\n"+callLine, 1)
+		text = strings.Replace(text, "\tregisterAdminAnnouncementRoutes(admin, generatedAnnouncement)\n", callLine+"\tregisterAdminAnnouncementRoutes(admin, generatedAnnouncement)\n", 1)
 	}
 
 	return os.WriteFile(path, []byte(text), 0o644)
@@ -813,7 +834,7 @@ func (h *{{Model}}Handler) Delete(c *gin.Context) {
 
 func adminRouteTemplate(modelName string) string {
 	lower := strings.ToLower(modelName)
-	tpl := `package routes
+	tpl := `package adminroutes
 
 import (
 	"github.com/gin-gonic/gin"
@@ -837,6 +858,36 @@ func registerAdmin{{Model}}Routes(admin *gin.RouterGroup, h *adminhandler.{{Mode
 		"{{perm}}", lower,
 	)
 	return replacer.Replace(tpl)
+}
+
+func adminRegisterTemplate() string {
+	return `package adminroutes
+
+import (
+	"github.com/gin-gonic/gin"
+
+	adminhandler "gin-scaffold/api/handler/admin"
+	jwtpkg "gin-scaffold/internal/pkg/jwt"
+	"gin-scaffold/middleware"
+)
+
+func Register(r *gin.Engine, jwtMgr *jwtpkg.Manager, user *adminhandler.UserHandler, menu *adminhandler.MenuHandler, ops *adminhandler.OpsHandler, task *adminhandler.TaskHandler, sys *adminhandler.SystemSettingHandler, queue *adminhandler.TaskQueueHandler, generatedAnnouncement *adminhandler.AnnouncementHandler) {
+	if jwtMgr == nil {
+		return
+	}
+
+	admin := r.Group("/api/v1/admin")
+	admin.Use(middleware.JWTAuth(jwtMgr))
+	admin.Use(middleware.RequireRoles("admin"))
+	registerAdminUserRoutes(admin, user)
+	registerAdminMenuRoutes(admin, menu)
+	registerAdminOpsRoutes(admin, ops)
+	registerAdminTaskRoutes(admin, task)
+	registerAdminTaskQueueRoutes(admin, queue)
+	registerAdminSystemSettingRoutes(admin, sys)
+	registerAdminAnnouncementRoutes(admin, generatedAnnouncement)
+}
+`
 }
 
 func schemaUpTemplate(table string, fields []genField) string {

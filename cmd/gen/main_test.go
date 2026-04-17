@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -114,5 +115,35 @@ func TestNormalizeCrudOptions_OutDirGuard(t *testing.T) {
 	_, err := normalizeCrudOptions(opt)
 	if err == nil {
 		t.Fatal("expected out-dir guard error")
+	}
+}
+
+func TestWireAdminRouter_CreatesRegisterWhenMissing(t *testing.T) {
+	tmp := t.TempDir()
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(oldWD)
+	}()
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatalf("chdir tmp: %v", err)
+	}
+
+	if err := wireAdminRouter("Demo"); err != nil {
+		t.Fatalf("wireAdminRouter error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join("routes", "adminroutes", "register.go"))
+	if err != nil {
+		t.Fatalf("read register.go: %v", err)
+	}
+	text := string(data)
+	if !strings.Contains(text, "generatedDemo *adminhandler.DemoHandler") {
+		t.Fatalf("missing generated demo param in register.go: %s", text)
+	}
+	if !strings.Contains(text, "registerAdminDemoRoutes(admin, generatedDemo)") {
+		t.Fatalf("missing generated demo route registration in register.go: %s", text)
 	}
 }

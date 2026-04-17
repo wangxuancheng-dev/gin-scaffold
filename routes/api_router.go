@@ -7,6 +7,7 @@ import (
 	adminhandler "gin-scaffold/api/handler/admin"
 	clienthandler "gin-scaffold/api/handler/client"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
+	"gin-scaffold/routes/adminroutes"
 )
 
 // registerAPIV1 注册 /api/v1 下客户端与后台路由。
@@ -27,5 +28,5 @@ func registerAPIV1(
 	sse *handler.SSEHandler,
 ) {
 	registerClientRoutes(r, jwtMgr, base, clientUser, clientFile, ws, sse)
-	registerAdminRoutes(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, adminAnnouncement)
+	adminroutes.Register(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, adminAnnouncement)
 }

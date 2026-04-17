@@ -32,7 +32,7 @@ go run ./cmd/gen crud --module order --field title:string:required,max=64 --fiel
 - `internal/service/<module>_service.go`
 - `api/request/admin/<module>_request.go`
 - `api/handler/admin/<module>_handler.go`
-- `routes/admin_<module>_router.go`
+- `routes/adminroutes/<module>_router.go`
 - `migrations/mysql/schema/*_create_<table>.up.sql`
 - `migrations/mysql/schema/*_create_<table>.down.sql`
 - `migrations/mysql/seed/*_seed_<module>_permission.up.sql`
