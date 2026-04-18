@@ -184,24 +184,28 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		lim = limiter.NewRedisStore(prefix, ws, cfg.Limiter.IPRPS, cfg.Limiter.IPBurst, cfg.Limiter.RouteRPS, cfg.Limiter.RouteBurst)
 	}
 
-	engine := routes.Build(routes.Options{
-		Cfg:        cfg,
-		JWT:        jm,
-		Base:       baseH,
-		ClientUser: clientUserH,
-		ClientFile: clientFileH,
-		AdminUser:  adminUserH,
-		AdminMenu:  adminMenuH,
-		AdminOps:   adminOpsH,
-		AdminTask:  adminTaskH,
-		AdminSys:   adminSysH,
-		AdminQueue: adminQueueH,
-		AdminAnnouncement:  adminAnnouncementH,
-		WS:         wsH,
-		SSE:        sseH,
-		TraceOn:    cfg.Trace.Enabled,
-		Limiter:    lim,
+	engine, err := routes.Build(routes.Options{
+		Cfg:               cfg,
+		JWT:               jm,
+		Base:              baseH,
+		ClientUser:        clientUserH,
+		ClientFile:        clientFileH,
+		AdminUser:         adminUserH,
+		AdminMenu:         adminMenuH,
+		AdminOps:          adminOpsH,
+		AdminTask:         adminTaskH,
+		AdminSys:          adminSysH,
+		AdminQueue:        adminQueueH,
+		AdminAnnouncement: adminAnnouncementH,
+		WS:                wsH,
+		SSE:               sseH,
+		TraceOn:           cfg.Trace.Enabled,
+		Limiter:           lim,
 	})
+	if err != nil {
+		runCleanups(context.Background(), cleanups)
+		return nil, fmt.Errorf("routes: %w", err)
+	}
 
 	return &ServerDeps{
 		Cfg:    cfg,

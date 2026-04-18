@@ -46,10 +46,15 @@ go run ./cmd/migrate up --env test --driver mysql --dsn "root:root@tcp(127.0.0.1
 go run ./cmd/migrate seed up --env test --driver mysql --dsn "root:root@tcp(127.0.0.1:3306)/scaffold_test?charset=utf8mb4&parseTime=True"
 docker compose exec -T mysql mysql -uroot -proot scaffold_test <tests/integration/fixtures/base.sql
 
+echo "[integration] building server binary..."
+mkdir -p bin
+IT_BIN="$ROOT/bin/scaffold-integration"
+go build -o "$IT_BIN" ./cmd/server
+
 echo "[integration] starting server and worker..."
-go run ./cmd/server server --env test &
+"$IT_BIN" server --env test &
 SERVER_PID=$!
-go run ./cmd/server worker --env test &
+"$IT_BIN" worker --env test &
 WORKER_PID=$!
 
 echo "[integration] waiting for ${INTEGRATION_BASE_URL}/livez ..."

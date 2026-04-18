@@ -70,8 +70,19 @@ function Invoke-All {
     Start-ComposeDeps
     Initialize-TestDB
 
-    $server = Start-Process -FilePath "go" -ArgumentList @("run", "./cmd/server", "server", "--env", "test") -PassThru -NoNewWindow
-    $worker = Start-Process -FilePath "go" -ArgumentList @("run", "./cmd/server", "worker", "--env", "test") -PassThru -NoNewWindow
+    $binDir = Join-Path $root "bin"
+    if (-not (Test-Path $binDir)) {
+        New-Item -ItemType Directory -Path $binDir | Out-Null
+    }
+    $itBin = Join-Path $binDir "scaffold-integration.exe"
+    Write-Host "[integration] go build -> $itBin"
+    & go build -o $itBin ./cmd/server
+    if ($LASTEXITCODE -ne 0) {
+        throw "go build failed"
+    }
+
+    $server = Start-Process -FilePath $itBin -ArgumentList @("server", "--env", "test") -WorkingDirectory $root -PassThru -NoNewWindow
+    $worker = Start-Process -FilePath $itBin -ArgumentList @("worker", "--env", "test") -WorkingDirectory $root -PassThru -NoNewWindow
     try {
         Wait-HttpReady -Url "$BaseUrl/livez" -TimeoutSec 90
         Invoke-IntegrationTests

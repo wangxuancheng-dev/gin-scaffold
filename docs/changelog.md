@@ -13,6 +13,7 @@
 ### Changed
 
 - `configs/app.prod.yaml`：全局限流默认 `redis` 多实例共享；`metrics` 默认私网/回环 CIDR 白名单。
+- `routes.Build` 返回 `error`（指标网段解析失败不再 `panic`）；集成脚本先 `go build` 再启动以缩短 CI 耗时。
 
 ### Fixed
 

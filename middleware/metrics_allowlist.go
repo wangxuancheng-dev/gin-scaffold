@@ -36,9 +36,17 @@ func peerIP(r *http.Request) net.IP {
 	addr := strings.TrimSpace(r.RemoteAddr)
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		return net.ParseIP(addr)
+		host = addr
 	}
-	return net.ParseIP(host)
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return nil
+	}
+	// IPv4-mapped IPv6（::ffff:a.b.c.d）规范为 4 字节，便于与仅含 IPv4 CIDR 的 allowlist 一致匹配。
+	if v4 := ip.To4(); v4 != nil {
+		return v4
+	}
+	return ip
 }
 
 // MetricsAllowlist 限制仅 metricsPath 且客户端 TCP 源 IP 命中 allow 时才进入后续 handler（与 X-Forwarded-For 无关，避免伪造）。

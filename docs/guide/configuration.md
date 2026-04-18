@@ -30,7 +30,7 @@
 ## `metrics`
 
 - `enabled` / `path`
-- `allowed_networks`: CIDR 列表；非空时仅当请求的 **TCP 对端地址**（`RemoteAddr` 解析出的 IP，**不使用** `X-Forwarded-For`）落入任一网段时才返回 Prometheus 指标，否则返回 404。空列表表示不校验（依赖 Nginx / 网络策略）。生产模板默认填入私网与回环，便于同 VPC 抓取；公网 Prometheus 请置 `[]` 并仅用网关控制访问。
+- `allowed_networks`: CIDR 列表；非空时仅当请求的 **TCP 对端地址**（`RemoteAddr` 解析出的 IP，**不使用** `X-Forwarded-For`）落入任一网段时才返回 Prometheus 指标，否则返回 404。对端为 IPv4-mapped IPv6（`::ffff:x.x.x.x`）时会先规范为 IPv4 再与网段匹配。空列表表示不校验（依赖 Nginx / 网络策略）。生产模板默认填入私网与回环，便于同 VPC 抓取；公网 Prometheus 请置 `[]` 并仅用网关控制访问。
 
 ## `db`
 

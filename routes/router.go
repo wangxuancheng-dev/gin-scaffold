@@ -42,7 +42,7 @@ type Options struct {
 }
 
 // Build 构建 *gin.Engine。
-func Build(opts Options) *gin.Engine {
+func Build(opts Options) (*gin.Engine, error) {
 	if opts.Cfg != nil && opts.Cfg.Debug {
 		gin.SetMode(gin.DebugMode)
 		gin.ForceConsoleColor()
@@ -92,7 +92,7 @@ func Build(opts Options) *gin.Engine {
 	if opts.Cfg != nil && opts.Cfg.Metrics.Enabled {
 		nets, err := middleware.ParseMetricsAllowlistNets(opts.Cfg.Metrics.AllowedNetworks)
 		if err != nil {
-			panic("metrics allowlist: " + err.Error())
+			return nil, fmt.Errorf("metrics allowlist: %w", err)
 		}
 		r.Use(middleware.MetricsAllowlist(opts.Cfg.Metrics.Path, nets))
 		middleware.Metrics(r, "gin", opts.Cfg.Metrics.Path)
@@ -117,7 +117,7 @@ func Build(opts Options) *gin.Engine {
 
 	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.ClientFile, opts.AdminUser, opts.AdminMenu, opts.AdminOps, opts.AdminTask, opts.AdminSys, opts.AdminQueue, opts.AdminAnnouncement, opts.WS, opts.SSE)
 
-	return r
+	return r, nil
 }
 
 func truncatePath(p string, max int) string {
