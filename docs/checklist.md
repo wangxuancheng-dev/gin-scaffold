@@ -7,7 +7,7 @@
 - [ ] 拉取目标发布版本代码（tag/commit 已确认）
 - [ ] 执行 `go test ./...` 通过
 - [ ] 执行 `golangci-lint run` 通过（本地可用 `bash scripts/go-lint.sh` 或 `scripts/go-lint.ps1`）
-- [ ] 执行覆盖率门禁（`bash scripts/go-cover.sh` 或 `scripts/go-cover.ps1`）达到阈值（默认 `14%`）
+- [ ] 执行覆盖率门禁（`bash scripts/go-cover.sh` 或 `scripts/go-cover.ps1`，或 `bash scripts/quality.sh`）达到阈值（默认 `16%`）
 - [ ] 执行 `go build -o bin/server ./cmd/server` 成功
 - [ ] 执行 `go build -o bin/migrate ./cmd/migrate` 成功
 

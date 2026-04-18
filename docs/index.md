@@ -27,3 +27,4 @@
 - [安全实践](/guide/security-practices) · [RBAC 与权限](/guide/rbac-and-permissions) · [管理端 API 总览](/guide/admin-api-overview) · [错误与响应](/guide/error-handling)
 - [日志与可观测](/guide/logging-observability) · [出站 HTTP](/guide/outbound-httpclient)
 - [文档贡献规范](/meta/docs-maintenance)
+- 代码贡献、漏洞披露与许可证：仓库根目录 `CONTRIBUTING.md`、`SECURITY.md`、`LICENSE`（与 CI、Dependabot、PR 模板、`scripts/quality.sh` 配套）

@@ -1,6 +1,6 @@
 ﻿param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("help", "tidy", "build", "run", "run-worker", "migrate-up", "migrate-down", "test-unit", "test", "cover", "swagger", "integration-test", "integration-all", "clean")]
+    [ValidateSet("help", "tidy", "build", "run", "run-worker", "migrate-up", "migrate-down", "test-unit", "test", "cover", "quality", "swagger", "integration-test", "integration-all", "clean")]
     [string]$Target,
     [string]$Env = "dev",
     [string]$Profile = "",
@@ -22,7 +22,9 @@ switch ($Target) {
         Write-Host "  .\scripts\make.ps1 -Target migrate-up -Dsn <database_dsn>   # schema + seed"
         Write-Host "  .\scripts\make.ps1 -Target migrate-down -Dsn <database_dsn> # one schema rollback"
         Write-Host "  .\scripts\make.ps1 -Target test-unit"
-        Write-Host "  .\scripts\make.ps1 -Target test"`n        Write-Host "  .\scripts\make.ps1 -Target cover"
+        Write-Host "  .\scripts\make.ps1 -Target test"
+        Write-Host "  .\scripts\make.ps1 -Target cover"
+        Write-Host "  .\scripts\make.ps1 -Target quality   # gofmt + test + coverage gate"
         Write-Host "  .\scripts\make.ps1 -Target swagger"
         Write-Host "  .\scripts\make.ps1 -Target integration-test"
         Write-Host "  .\scripts\make.ps1 -Target integration-all"
@@ -45,7 +47,19 @@ switch ($Target) {
         go run ./cmd/migrate down --driver $Driver --dsn $Dsn --time-zone $TimeZone
     }
     "test-unit" { go test ./tests/unit/... }
-    "test" { go test ./... }`n    "cover" { & ".\scripts\go-cover.ps1" }
+    "test" { go test ./... }
+    "cover" { & ".\scripts\go-cover.ps1" }
+    "quality" {
+        $unformatted = gofmt -l .
+        if ($unformatted) {
+            throw "gofmt required on:`n$unformatted"
+        }
+        go test ./...
+        if ($env:CGO_ENABLED -eq "1") {
+            go test -race ./...
+        }
+        & ".\scripts\go-cover.ps1"
+    }
     "swagger" { go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs -d ./cmd/server,./api }
     "integration-test" { & ".\scripts\integration.ps1" -Action test }
     "integration-all" { & ".\scripts\integration.ps1" -Action all }

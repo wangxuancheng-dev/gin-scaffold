@@ -11,7 +11,8 @@
 - `metrics.allowed_networks`: optional CIDR allowlist for `/metrics` by TCP source IP.
 - `scripts/integration.sh` and CI job `integration` (Docker MySQL/Redis + integration tests).
 - `deploy/systemd/gin-scaffold-worker.service.example`: standalone worker unit.
-- Test coverage additions for `internal/pkg/*`, `pkg/db` / `pkg/cache` / `pkg/policy` / `pkg/httpclient` / `pkg/limiter`, `routes`, `api/handler`, `internal/model`, `internal/console/commands`, `internal/dao` (sqlmock), `pkg/redis` (miniredis), `pkg/loginthrottle`.
+- Test coverage additions for `internal/pkg/*`, `pkg/db` / `pkg/cache` / `pkg/policy` / `pkg/httpclient` / `pkg/limiter`, `routes`, `api/handler`, `internal/model`, `internal/console/commands`, `internal/dao` (sqlmock), `pkg/redis` (miniredis), `pkg/loginthrottle`, `internal/app/bootstrap`, `internal/service` (menu/system settings/WS/SSE/announcement/outbox dispatcher/admin create), `internal/service/authz`.
+- OSS hygiene: `LICENSE` (MIT), `CONTRIBUTING.md`, `SECURITY.md`, Dependabot (`gomod` + GitHub Actions), PR template, `.editorconfig`, `scripts/quality.sh`, `make.ps1 -Target quality`; CI runs `go test -race ./...` on Linux.
 
 ### Changed
 
@@ -20,7 +21,7 @@
 - Integration scripts prebuild migrate binary and improve handler error-helper gate scanning.
 - Checklist consolidated to `docs/checklist.md` as single source of truth.
 - Local quality scripts added: `scripts/go-lint.sh` / `go-lint.ps1`, `scripts/go-cover.sh` / `go-cover.ps1`.
-- CI `test-build` now enforces coverage gate (`COVERAGE_THRESHOLD`, default `14`).
+- CI `test-build` now enforces coverage gate (`COVERAGE_THRESHOLD`, default `16`) and runs the race detector on `go test -race ./...`.
 
 ### Fixed
 
