@@ -19,6 +19,7 @@ import (
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/model"
+	"gin-scaffold/internal/pkg/timefmt"
 	"gin-scaffold/middleware"
 	"gin-scaffold/pkg/db"
 	"gin-scaffold/pkg/storage"
@@ -268,7 +269,7 @@ func parseAuditQuery(c *gin.Context, exportMode bool) (dao.AuditLogListQuery, bo
 		RequestID: req.RequestID,
 	}
 	if req.From != "" {
-		t, err := time.Parse(time.RFC3339, req.From)
+		t, err := timefmt.ParseRFC3339(req.From)
 		if err != nil {
 			handler.FailInvalidParam(c, fmt.Errorf("from must be RFC3339"))
 			return dao.AuditLogListQuery{}, false
@@ -276,7 +277,7 @@ func parseAuditQuery(c *gin.Context, exportMode bool) (dao.AuditLogListQuery, bo
 		daoQuery.From = &t
 	}
 	if req.To != "" {
-		t, err := time.Parse(time.RFC3339, req.To)
+		t, err := timefmt.ParseRFC3339(req.To)
 		if err != nil {
 			handler.FailInvalidParam(c, fmt.Errorf("to must be RFC3339"))
 			return dao.AuditLogListQuery{}, false

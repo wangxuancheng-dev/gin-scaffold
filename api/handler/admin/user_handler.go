@@ -10,7 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 
 	"gin-scaffold/api/handler"
 	adminreq "gin-scaffold/api/request/admin"
@@ -56,9 +55,10 @@ func (h *UserHandler) List(c *gin.Context) {
 		handler.FailInternal(c, err)
 		return
 	}
-	list := lo.Map(rows, func(u model.User, _ int) clientresp.UserVO {
-		return clientresp.FromUser(&u)
-	})
+	list := make([]clientresp.UserVO, len(rows))
+	for i := range rows {
+		list[i] = clientresp.FromUser(&rows[i])
+	}
 	response.OK(c, gin.H{"total": total, "list": list})
 }
 

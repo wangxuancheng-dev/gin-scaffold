@@ -16,6 +16,7 @@ import (
 
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
+	"gin-scaffold/internal/pkg/timefmt"
 	"gin-scaffold/pkg/db"
 	"gin-scaffold/pkg/storage"
 )
@@ -46,11 +47,11 @@ func (AuditExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error 
 	if err != nil {
 		return markExportFailed(ctx, p.TaskID, err)
 	}
-	from, err := time.Parse(time.RFC3339, p.From)
+	from, err := timefmt.ParseRFC3339(p.From)
 	if err != nil {
 		return markExportFailed(ctx, p.TaskID, fmt.Errorf("invalid from"))
 	}
-	to, err := time.Parse(time.RFC3339, p.To)
+	to, err := timefmt.ParseRFC3339(p.To)
 	if err != nil {
 		return markExportFailed(ctx, p.TaskID, fmt.Errorf("invalid to"))
 	}
