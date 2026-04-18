@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
@@ -24,6 +25,7 @@ import (
 	"gin-scaffold/middleware"
 	"gin-scaffold/pkg/db"
 	"gin-scaffold/pkg/httpclient"
+	"gin-scaffold/pkg/limiter"
 	"gin-scaffold/pkg/logger"
 	"gin-scaffold/pkg/redis"
 	"gin-scaffold/pkg/storage"
@@ -163,6 +165,25 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	stopOutboxDispatcher := service.NewOutboxDispatcher(outboxDAO, cfg.Outbox).Start()
 	cleanups = append(cleanups, func(context.Context) { stopOutboxDispatcher() })
 
+	var lim limiter.Backend = limiter.NewStore(cfg.Limiter.IPRPS, cfg.Limiter.IPBurst, cfg.Limiter.RouteRPS, cfg.Limiter.RouteBurst)
+	if strings.ToLower(strings.TrimSpace(cfg.Limiter.Mode)) == "redis" {
+		ws := cfg.Limiter.WindowSec
+		if ws <= 0 {
+			ws = 1
+		}
+		prefix := strings.TrimSpace(cfg.Limiter.RedisKeyPrefix)
+		if prefix == "" {
+			prefix = strings.TrimSpace(cfg.Platform.Cache.KeyPrefix)
+		}
+		if prefix != "" && !strings.HasSuffix(prefix, ":") {
+			prefix += ":"
+		}
+		if prefix == "" {
+			prefix = "app:"
+		}
+		lim = limiter.NewRedisStore(prefix, ws, cfg.Limiter.IPRPS, cfg.Limiter.IPBurst, cfg.Limiter.RouteRPS, cfg.Limiter.RouteBurst)
+	}
+
 	engine := routes.Build(routes.Options{
 		Cfg:        cfg,
 		JWT:        jm,
@@ -179,6 +200,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		WS:         wsH,
 		SSE:        sseH,
 		TraceOn:    cfg.Trace.Enabled,
+		Limiter:    lim,
 	})
 
 	return &ServerDeps{

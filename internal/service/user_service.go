@@ -16,10 +16,12 @@ import (
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/model"
+	"gin-scaffold/internal/pkg/clientip"
 	"gin-scaffold/internal/pkg/errcode"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
 	"gin-scaffold/internal/pkg/tenant"
 	"gin-scaffold/pkg/logger"
+	"gin-scaffold/pkg/loginthrottle"
 	appredis "gin-scaffold/pkg/redis"
 )
 
@@ -390,14 +392,26 @@ func (s *UserService) emitExportRows(
 
 // Login 校验密码并签发访问令牌。
 func (s *UserService) Login(ctx context.Context, username, password string) (access string, err error) {
+	cfg, tid, ip, cp, secOn := loginSecurityParams(ctx)
+	if secOn {
+		if locked, _ := loginthrottle.IsLocked(ctx, cfg.Platform.LoginSecurity, cp, tid, ip, username); locked {
+			return "", errcode.New(errcode.TooManyReq, errcode.KeyRateLimited)
+		}
+	}
 	u, err := s.dao.GetByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if secOn {
+				_, _ = loginthrottle.RegisterFailure(ctx, cfg.Platform.LoginSecurity, cp, tid, ip, username)
+			}
 			return "", errcode.New(errcode.Unauthorized, errcode.KeyUnauthorized)
 		}
 		return "", err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)); err != nil {
+		if secOn {
+			_, _ = loginthrottle.RegisterFailure(ctx, cfg.Platform.LoginSecurity, cp, tid, ip, username)
+		}
 		return "", errcode.New(errcode.Unauthorized, errcode.KeyUnauthorized)
 	}
 	if s.jwt == nil {
@@ -411,19 +425,34 @@ func (s *UserService) Login(ctx context.Context, username, password string) (acc
 	if err != nil {
 		return "", err
 	}
+	if secOn {
+		loginthrottle.Clear(ctx, cfg.Platform.LoginSecurity, cp, tid, ip, username)
+	}
 	return token, nil
 }
 
 // LoginWithRefresh 登录后同时签发 access 与 refresh token。
 func (s *UserService) LoginWithRefresh(ctx context.Context, username, password string) (string, string, error) {
+	cfg, tid, ip, cp, secOn := loginSecurityParams(ctx)
+	if secOn {
+		if locked, _ := loginthrottle.IsLocked(ctx, cfg.Platform.LoginSecurity, cp, tid, ip, username); locked {
+			return "", "", errcode.New(errcode.TooManyReq, errcode.KeyRateLimited)
+		}
+	}
 	u, err := s.dao.GetByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if secOn {
+				_, _ = loginthrottle.RegisterFailure(ctx, cfg.Platform.LoginSecurity, cp, tid, ip, username)
+			}
 			return "", "", errcode.New(errcode.Unauthorized, errcode.KeyUnauthorized)
 		}
 		return "", "", err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)); err != nil {
+		if secOn {
+			_, _ = loginthrottle.RegisterFailure(ctx, cfg.Platform.LoginSecurity, cp, tid, ip, username)
+		}
 		return "", "", errcode.New(errcode.Unauthorized, errcode.KeyUnauthorized)
 	}
 	if s.jwt == nil {
@@ -447,6 +476,9 @@ func (s *UserService) LoginWithRefresh(ctx context.Context, username, password s
 	}
 	if err = jwtpkg.SaveRefreshJTI(ctx, u.ID, jti, exp); err != nil {
 		return "", "", err
+	}
+	if secOn {
+		loginthrottle.Clear(ctx, cfg.Platform.LoginSecurity, cp, tid, ip, username)
 	}
 	return access, refresh, nil
 }
@@ -515,4 +547,20 @@ func resolveTenantID(ctx context.Context, u *model.User) string {
 		return tid
 	}
 	return "default"
+}
+
+func loginSecurityParams(ctx context.Context) (cfg *config.App, tenantID, clientIP, cachePrefix string, enabled bool) {
+	cfg = config.Get()
+	if cfg == nil || !cfg.Platform.LoginSecurity.Enabled {
+		return nil, "", "", "", false
+	}
+	tenantID = tenant.FromContext(ctx)
+	if tenantID == "" {
+		tenantID = "default"
+	}
+	clientIP = clientip.FromContext(ctx)
+	if clientIP == "" {
+		clientIP = "unknown"
+	}
+	return cfg, tenantID, clientIP, cfg.Platform.Cache.KeyPrefix, true
 }

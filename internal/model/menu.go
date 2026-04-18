@@ -14,6 +14,7 @@ type Menu struct {
 	Path      string         `gorm:"size:255;not null;uniqueIndex:uk_menus_tenant_path,priority:2" json:"path"`
 	PermCode  string         `gorm:"size:128;not null" json:"perm_code"`
 	Sort      int            `gorm:"not null;default:0" json:"sort"`
+	ParentID  *int64         `gorm:"column:parent_id" json:"parent_id,omitempty"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

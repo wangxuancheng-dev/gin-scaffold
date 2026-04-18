@@ -7,10 +7,12 @@
 
 ## 执行规则
 
-- 迁移入口为 `cmd/migrate`，默认扫描 `migrations/mysql`。
-- 扫描方式为递归扫描子目录，收集全部 `*.up.sql`。
-- 执行顺序按文件名全局字典序排序（不是按目录先后）。
-- 回滚 `down` 仅回滚最后一步（`RollbackLast`）。
+- 迁移入口为 `cmd/migrate`，默认根目录为 `migrations/mysql`。
+- **结构**与 **种子数据** 分开执行（仍共用 gormigrate 的 `migrations` 表记录已执行的 ID）：
+  - `go run ./cmd/migrate up --env dev`：只扫描并执行 `schema/**/*.up.sql`（存在 `schema/` 时）；若没有 `schema/` 子目录则兼容旧布局，扫描整个根目录。
+  - `go run ./cmd/migrate seed up --env dev`：只扫描并执行 `seed/**/*.up.sql`（要求存在 `seed/`）。
+- 各自目录内递归收集 `*.up.sql`，多目录时按文件路径字典序合并排序。
+- `down` / `seed down` 各只回滚对应集合里的最后一步（`RollbackLast`）。
 
 ## 命名规范
 
@@ -49,4 +51,5 @@
 - 不要修改已发布 migration 的历史内容，追加新 migration 修正。
 - 每次提交 migration 后，至少本地验证一次：
   - `go run ./cmd/migrate up --env dev`
-  - `go run ./cmd/migrate down --env dev`
+  - `go run ./cmd/migrate seed up --env dev`
+  - `go run ./cmd/migrate down --env dev` / `go run ./cmd/migrate seed down --env dev`

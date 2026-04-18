@@ -92,6 +92,9 @@ i18n:
     - ./i18n/en.json
 
 limiter:
+  mode: memory
+  redis_key_prefix: ""
+  window_sec: 1
   ip_rps: 50
   ip_burst: 100
   route_rps: 200
@@ -161,6 +164,12 @@ platform:
     key_prefix: "gin-scaffold:"
   notify:
     driver: log
+  login_security:
+    enabled: false
+    max_failed_per_window: 10
+    window_sec: 900
+    lockout_sec: 600
+    redis_key_prefix: ""
 
 tenant:
   enabled: false
@@ -173,3 +182,7 @@ outbox:
   batch_size: 100
   max_attempts: 10
   retry_backoff_sec: 5
+  publish_mode: eventbus
+  http_url: ""
+  http_hmac_secret: ""
+  http_timeout_ms: 5000

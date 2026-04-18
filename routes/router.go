@@ -18,6 +18,7 @@ import (
 	"gin-scaffold/config"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
 	"gin-scaffold/middleware"
+	"gin-scaffold/pkg/limiter"
 )
 
 // Options 路由依赖。
@@ -37,6 +38,7 @@ type Options struct {
 	WS         *handler.WSHandler
 	SSE        *handler.SSEHandler
 	TraceOn    bool
+	Limiter    limiter.Backend
 }
 
 // Build 构建 *gin.Engine。
@@ -57,6 +59,7 @@ func Build(opts Options) *gin.Engine {
 	}
 	r := gin.New()
 	r.Use(middleware.RequestID())
+	r.Use(middleware.ClientIPContext())
 	if opts.Cfg != nil {
 		r.Use(middleware.Tenant(&opts.Cfg.Tenant))
 	}
@@ -73,7 +76,9 @@ func Build(opts Options) *gin.Engine {
 	r.Use(middleware.Audit())
 	r.Use(middleware.I18n(&opts.Cfg.I18n))
 	r.Use(middleware.CORS(&opts.Cfg.CORS))
-	if opts.Cfg != nil {
+	if opts.Limiter != nil {
+		r.Use(middleware.LimiterWithBackend(opts.Limiter))
+	} else if opts.Cfg != nil {
 		r.Use(middleware.Limiter(
 			opts.Cfg.Limiter.IPRPS,
 			opts.Cfg.Limiter.IPBurst,

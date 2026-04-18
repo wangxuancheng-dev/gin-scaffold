@@ -34,19 +34,24 @@ type TenantConfig struct {
 }
 
 type OutboxConfig struct {
-	Enabled         bool `mapstructure:"enabled"`
-	PollIntervalSec int  `mapstructure:"poll_interval_sec"`
-	BatchSize       int  `mapstructure:"batch_size"`
-	MaxAttempts     int  `mapstructure:"max_attempts"`
-	RetryBackoffSec int  `mapstructure:"retry_backoff_sec"`
+	Enabled         bool   `mapstructure:"enabled"`
+	PollIntervalSec int    `mapstructure:"poll_interval_sec"`
+	BatchSize       int    `mapstructure:"batch_size"`
+	MaxAttempts     int    `mapstructure:"max_attempts"`
+	RetryBackoffSec int    `mapstructure:"retry_backoff_sec"`
+	PublishMode     string `mapstructure:"publish_mode"` // eventbus | http
+	HTTPURL         string `mapstructure:"http_url"`
+	HTTPHMACSecret  string `mapstructure:"http_hmac_secret"`
+	HTTPTimeoutMS   int    `mapstructure:"http_timeout_ms"`
 }
 
 // PlatformConfig 横切能力：审计、幂等、缓存前缀、通知驱动等。
 type PlatformConfig struct {
-	Audit       AuditConfig       `mapstructure:"audit"`
-	Idempotency IdempotencyConfig `mapstructure:"idempotency"`
-	Cache       CacheConfig       `mapstructure:"cache"`
-	Notify      NotifyConfig      `mapstructure:"notify"`
+	Audit         AuditConfig         `mapstructure:"audit"`
+	Idempotency   IdempotencyConfig   `mapstructure:"idempotency"`
+	Cache         CacheConfig         `mapstructure:"cache"`
+	Notify        NotifyConfig        `mapstructure:"notify"`
+	LoginSecurity LoginSecurityConfig `mapstructure:"login_security"`
 }
 
 // AuditConfig 写操作 HTTP 审计落库（异步插入，失败仅打日志）。
@@ -71,8 +76,39 @@ type CacheConfig struct {
 }
 
 // NotifyConfig 通知通道驱动。
+// driver 支持：log、noop、smtp、webhook；逗号分隔表示并行投递到多个通道（如 smtp,webhook）。
 type NotifyConfig struct {
-	Driver string `mapstructure:"driver"` // log | noop
+	Driver  string              `mapstructure:"driver"`
+	SMTP    SMTPNotifyConfig    `mapstructure:"smtp"`
+	Webhook WebhookNotifyConfig `mapstructure:"webhook"`
+}
+
+// SMTPNotifyConfig SMTP 通知（driver 含 smtp 时必填 host/port/from）。
+type SMTPNotifyConfig struct {
+	Host         string `mapstructure:"host"`
+	Port         int    `mapstructure:"port"`
+	Username     string `mapstructure:"username"`
+	Password     string `mapstructure:"password"`
+	From         string `mapstructure:"from"`
+	ToDefault    string `mapstructure:"to_default"`
+	ImplicitTLS  bool   `mapstructure:"implicit_tls"` // 465 等隐式 TLS
+	SkipVerify   bool   `mapstructure:"skip_verify"`
+}
+
+// WebhookNotifyConfig Webhook 通知（driver 含 webhook 时必填 url）。
+type WebhookNotifyConfig struct {
+	URL        string            `mapstructure:"url"`
+	HMACSecret string            `mapstructure:"hmac_secret"`
+	Headers    map[string]string `mapstructure:"headers"`
+}
+
+// LoginSecurityConfig 登录防爆破（依赖 Redis）。
+type LoginSecurityConfig struct {
+	Enabled            bool   `mapstructure:"enabled"`
+	MaxFailedPerWindow int    `mapstructure:"max_failed_per_window"`
+	WindowSec          int    `mapstructure:"window_sec"`
+	LockoutSec         int    `mapstructure:"lockout_sec"`
+	RedisKeyPrefix     string `mapstructure:"redis_key_prefix"` // 空则回退到 platform.cache.key_prefix
 }
 
 // HTTPConfig HTTP 服务监听与超时配置。
@@ -187,10 +223,13 @@ type I18nConfig struct {
 
 // LimiterConfig 全局限流默认参数。
 type LimiterConfig struct {
-	IPRPS      float64 `mapstructure:"ip_rps"` // 每 IP 每秒令牌补充速率
-	IPBurst    int     `mapstructure:"ip_burst"`
-	RouteRPS   float64 `mapstructure:"route_rps"` // 每路由每秒
-	RouteBurst int     `mapstructure:"route_burst"`
+	Mode           string  `mapstructure:"mode"` // memory | redis
+	RedisKeyPrefix string  `mapstructure:"redis_key_prefix"`
+	WindowSec      int     `mapstructure:"window_sec"` // Redis 模式下计数窗口（秒）
+	IPRPS          float64 `mapstructure:"ip_rps"`       // 每 IP 每秒令牌补充速率
+	IPBurst        int     `mapstructure:"ip_burst"`
+	RouteRPS       float64 `mapstructure:"route_rps"` // 每路由每秒
+	RouteBurst     int     `mapstructure:"route_burst"`
 }
 
 // SnowflakeConfig 雪花算法节点号（0-1023）。

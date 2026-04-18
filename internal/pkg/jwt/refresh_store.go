@@ -33,3 +33,8 @@ func ValidateRefreshJTI(ctx context.Context, uid int64, jti string) error {
 	}
 	return nil
 }
+
+// ClearRefreshJTI 吊销用户当前 refresh 会话（登出时调用）。
+func ClearRefreshJTI(ctx context.Context, uid int64) error {
+	return appredis.Del(ctx, refreshJTIKey(uid))
+}

@@ -25,8 +25,9 @@ npm run docs:build
 ## 最小启动命令（TL;DR）
 
 ```bash
-# 1) 迁移
+# 1) 迁移（结构 + 种子数据分开执行）
 go run ./cmd/migrate up --env dev
+go run ./cmd/migrate seed up --env dev
 
 # 2) 启动服务
 go run ./cmd/server server --env dev

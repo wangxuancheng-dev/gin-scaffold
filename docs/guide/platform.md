@@ -44,7 +44,7 @@
 - 表：`outbox_events`（迁移：`202604172130_create_outbox_events`）。
 - 运行机制：
   - 业务在事务内写入 outbox 记录（`status=pending`）；客户端注册 `POST /api/v1/client/users` 成功时同事务写入 `user.registered`（`outbox.enabled=true` 且已迁移 `outbox_events` 时生效）。
-  - 后台分发器按 `poll_interval_sec` 扫描待处理记录，发布到 `eventbus`。
+  - 后台分发器按 `poll_interval_sec` 扫描待处理记录；`publish_mode` 为 `eventbus`（默认）时发布到进程内 `eventbus`，为 `http` 时向 `http_url` POST JSON（可配 `http_hmac_secret` 生成 `X-Outbox-Signature`）。
   - 成功后标记 `published`；失败按 `retry_backoff_sec` 退避重试，超过 `max_attempts` 标记 `dead`。
 - 配置项（`outbox`）：
   - `enabled`
@@ -52,12 +52,27 @@
   - `batch_size`
   - `max_attempts`
   - `retry_backoff_sec`
+  - `publish_mode`（`eventbus` | `http`）
+  - `http_url` / `http_hmac_secret` / `http_timeout_ms`（`publish_mode=http` 时）
 
 ## 通知（`platform.notify` + `pkg/notify`）
 
 - `driver: log`：写入应用日志（默认）。
 - `driver: noop`：丢弃。
+- `driver: smtp`：发邮件（需 `platform.notify.smtp.*`；`Meta["to"]` 可覆盖 `to_default`）。
+- `driver: webhook`：向 `platform.notify.webhook.url` POST JSON（可选 `hmac_secret` → `X-Notify-Signature`）。
+- 逗号分隔并行投递，例如 `smtp,webhook`。
 - 示例：注册成功后 `notify.Default().Notify(...)`。
+
+## 全局限流（`limiter`）
+
+- `mode: memory`（默认）：进程内令牌桶。
+- `mode: redis`：多实例共享的固定窗口计数（需 `window_sec`；可选 `redis_key_prefix`，否则回退 `platform.cache.key_prefix`）。
+
+## 登录防爆破（`platform.login_security`）
+
+- `enabled: true` 时依赖 Redis：窗口内失败次数达阈值后锁定 `lockout_sec`；成功登录会清理计数。
+- 需在路由启用 `ClientIPContext`（已挂在全局中间件）以便 `UserService.Login` / `LoginWithRefresh` 读取 IP。
 
 ## 策略辅助（`pkg/policy`）
 
@@ -93,7 +108,7 @@
   - 仍为空则回退 `tenant.default_id`（默认 `default`）
 - 目前已租户隔离的数据主链路：
   - 用户与角色权限（`users` / `user_roles` / `role_permissions` / `roles`）
-  - 菜单与角色菜单（`menus` / `role_menus`）
+  - 菜单与角色菜单（`menus` / `role_menus`；`menus.parent_id` 树形，`GET /api/v1/admin/menus` 与 `/menus/catalog` 返回 `data.tree`）
   - 定时任务与任务日志（`scheduled_tasks` / `scheduled_task_logs`）
   - 审计日志（`audit_logs`）
   - 系统参数（`system_settings` / `system_setting_histories`）

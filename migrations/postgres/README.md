@@ -13,10 +13,9 @@
 
 ## 执行规则
 
-- 迁移入口为 `cmd/migrate`，`--driver postgres` 时默认扫描 `migrations/postgres`。
-- 扫描方式为递归扫描子目录，收集全部 `*.up.sql`。
-- 执行顺序按文件名全局字典序排序（不是按目录先后）。
-- 回滚 `down` 仅回滚最后一步（`RollbackLast`）。
+- 迁移入口为 `cmd/migrate`，`--driver postgres` 时默认根目录为 `migrations/postgres`。
+- 与 MySQL 相同：`up` / `down` 只处理 `schema/`（若不存在则扫描整个根目录）；`seed up` / `seed down` 只处理 `seed/`（目录需存在）。
+- 各自递归收集 `*.up.sql`，按文件路径字典序排序；回滚各集合内最后一步（`RollbackLast`）。
 
 ## 命名规范
 
@@ -55,5 +54,6 @@
 - 不要修改已发布 migration 的历史内容，追加新 migration 修正。
 - 每次提交 migration 后，至少本地验证一次：
   - `go run ./cmd/migrate up --env dev --driver postgres --dsn "<your_pg_dsn>"`
-  - `go run ./cmd/migrate down --env dev --driver postgres --dsn "<your_pg_dsn>"`
+  - `go run ./cmd/migrate seed up --env dev --driver postgres --dsn "<your_pg_dsn>"`
+  - `go run ./cmd/migrate down --env dev --driver postgres --dsn "<your_pg_dsn>"` / `seed down`
 

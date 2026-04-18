@@ -27,6 +27,7 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateCORS()...)
 	errs = append(errs, a.validateOutbound()...)
 	errs = append(errs, a.validateStorage()...)
+	errs = append(errs, a.validateLimiter()...)
 	errs = append(errs, a.validatePlatform()...)
 	errs = append(errs, a.validateOutbox()...)
 	if len(errs) > 0 {
@@ -247,12 +248,102 @@ func (a *App) validatePlatform() []string {
 			errs = append(errs, "platform.idempotency.max_cached_response_bytes must be > 0 when idempotency is enabled")
 		}
 	}
-	d := strings.ToLower(strings.TrimSpace(p.Notify.Driver))
-	if d == "" {
-		d = "log"
+	for _, part := range splitNotifyDrivers(p.Notify.Driver) {
+		switch part {
+		case "log", "noop", "smtp", "webhook":
+		default:
+			errs = append(errs, "platform.notify.driver tokens must be one of log,noop,smtp,webhook (comma-separated allowed)")
+		}
 	}
-	if d != "log" && d != "noop" {
-		errs = append(errs, "platform.notify.driver must be log or noop")
+	errs = append(errs, validateNotifyTargets(p.Notify)...)
+	if p.LoginSecurity.Enabled {
+		if p.LoginSecurity.MaxFailedPerWindow <= 0 {
+			errs = append(errs, "platform.login_security.max_failed_per_window must be > 0 when login_security is enabled")
+		}
+		if p.LoginSecurity.WindowSec <= 0 {
+			errs = append(errs, "platform.login_security.window_sec must be > 0 when login_security is enabled")
+		}
+		if p.LoginSecurity.LockoutSec <= 0 {
+			errs = append(errs, "platform.login_security.lockout_sec must be > 0 when login_security is enabled")
+		}
+	}
+	return errs
+}
+
+func splitNotifyDrivers(driver string) []string {
+	raw := strings.TrimSpace(driver)
+	if raw == "" {
+		return []string{"log"}
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.ToLower(strings.TrimSpace(p))
+		if p == "" {
+			continue
+		}
+		out = append(out, p)
+	}
+	if len(out) == 0 {
+		return []string{"log"}
+	}
+	return out
+}
+
+func validateNotifyTargets(n NotifyConfig) []string {
+	var errs []string
+	tokens := splitNotifyDrivers(n.Driver)
+	needSMTP := false
+	needWH := false
+	for _, t := range tokens {
+		if t == "smtp" {
+			needSMTP = true
+		}
+		if t == "webhook" {
+			needWH = true
+		}
+	}
+	if needSMTP {
+		if strings.TrimSpace(n.SMTP.Host) == "" {
+			errs = append(errs, "platform.notify.smtp.host is required when notify driver includes smtp")
+		}
+		if n.SMTP.Port <= 0 || n.SMTP.Port > 65535 {
+			errs = append(errs, "platform.notify.smtp.port must be between 1 and 65535 when notify driver includes smtp")
+		}
+		if strings.TrimSpace(n.SMTP.From) == "" {
+			errs = append(errs, "platform.notify.smtp.from is required when notify driver includes smtp")
+		}
+		if strings.TrimSpace(n.SMTP.ToDefault) == "" {
+			errs = append(errs, "platform.notify.smtp.to_default is required when notify driver includes smtp (per-message meta[\"to\"] 可覆盖)")
+		}
+	}
+	if needWH {
+		if strings.TrimSpace(n.Webhook.URL) == "" {
+			errs = append(errs, "platform.notify.webhook.url is required when notify driver includes webhook")
+		}
+	}
+	return errs
+}
+
+func (a *App) validateLimiter() []string {
+	var errs []string
+	mode := strings.ToLower(strings.TrimSpace(a.Limiter.Mode))
+	if mode == "" {
+		mode = "memory"
+	}
+	if mode != "memory" && mode != "redis" {
+		errs = append(errs, "limiter.mode must be memory or redis")
+	}
+	if mode == "redis" {
+		if a.Limiter.WindowSec <= 0 {
+			errs = append(errs, "limiter.window_sec must be > 0 when limiter.mode is redis")
+		}
+		if a.Limiter.IPRPS < 0 || a.Limiter.RouteRPS < 0 {
+			errs = append(errs, "limiter ip_rps/route_rps must be >= 0")
+		}
+		if a.Limiter.IPBurst < 0 || a.Limiter.RouteBurst < 0 {
+			errs = append(errs, "limiter ip_burst/route_burst must be >= 0")
+		}
 	}
 	return errs
 }
@@ -273,6 +364,21 @@ func (a *App) validateOutbox() []string {
 	}
 	if a.Outbox.RetryBackoffSec <= 0 {
 		errs = append(errs, "outbox.retry_backoff_sec must be > 0 when outbox is enabled")
+	}
+	pm := strings.ToLower(strings.TrimSpace(a.Outbox.PublishMode))
+	if pm == "" {
+		pm = "eventbus"
+	}
+	if pm != "eventbus" && pm != "http" {
+		errs = append(errs, "outbox.publish_mode must be eventbus or http when outbox is enabled")
+	}
+	if pm == "http" {
+		if strings.TrimSpace(a.Outbox.HTTPURL) == "" {
+			errs = append(errs, "outbox.http_url is required when outbox.publish_mode is http")
+		}
+		if a.Outbox.HTTPTimeoutMS < 0 {
+			errs = append(errs, "outbox.http_timeout_ms must be >= 0")
+		}
 	}
 	return errs
 }

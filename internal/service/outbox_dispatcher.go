@@ -1,9 +1,15 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -14,6 +20,7 @@ import (
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/tenant"
 	"gin-scaffold/pkg/eventbus"
+	"gin-scaffold/pkg/httpclient"
 	"gin-scaffold/pkg/logger"
 )
 
@@ -82,13 +89,70 @@ func (d *OutboxDispatcher) handleOne(ctx context.Context, row *model.OutboxEvent
 			return
 		}
 	}
-	eventbus.Default().Emit(runCtx, eventbus.Event{
-		Name:    row.Topic,
-		Payload: payload,
-	})
+	pm := strings.ToLower(strings.TrimSpace(d.cfg.PublishMode))
+	if pm == "" {
+		pm = "eventbus"
+	}
+	switch pm {
+	case "http":
+		if err := d.publishHTTP(runCtx, row, payload); err != nil {
+			d.failOne(runCtx, row, err)
+			return
+		}
+	default:
+		eventbus.Default().Emit(runCtx, eventbus.Event{
+			Name:    row.Topic,
+			Payload: payload,
+		})
+	}
 	if err := d.dao.MarkPublished(runCtx, row.ID); err != nil {
 		logger.ErrorX("outbox mark published failed", zap.Int64("id", row.ID), zap.Error(err))
 	}
+}
+
+func (d *OutboxDispatcher) publishHTTP(ctx context.Context, row *model.OutboxEvent, payload map[string]any) error {
+	url := strings.TrimSpace(d.cfg.HTTPURL)
+	if url == "" {
+		return fmt.Errorf("outbox http: empty url")
+	}
+	body := map[string]any{
+		"id":          row.ID,
+		"tenant_id":   row.TenantID,
+		"topic":       row.Topic,
+		"payload":     payload,
+		"raw_payload": row.Payload,
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	timeout := d.cfg.HTTPTimeoutMS
+	if timeout <= 0 {
+		timeout = 5000
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Millisecond)
+	defer cancel()
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, url, bytes.NewReader(raw))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if sec := strings.TrimSpace(d.cfg.HTTPHMACSecret); sec != "" {
+		mac := hmac.New(sha256.New, []byte(sec))
+		_, _ = mac.Write(raw)
+		req.Header.Set("X-Outbox-Signature", "sha256="+hex.EncodeToString(mac.Sum(nil)))
+	}
+	resp, err := httpclient.Default().Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return fmt.Errorf("outbox http: status %d body %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	}
+	_, _ = io.Copy(io.Discard, resp.Body)
+	return nil
 }
 
 func (d *OutboxDispatcher) failOne(ctx context.Context, row *model.OutboxEvent, err error) {

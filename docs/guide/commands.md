@@ -17,7 +17,9 @@ go run ./cmd/server worker --env dev
 
 ```bash
 go run ./cmd/migrate up --env dev
+go run ./cmd/migrate seed up --env dev
 go run ./cmd/migrate down --env dev
+go run ./cmd/migrate seed down --env dev
 go run ./cmd/migrate up --env dev --driver postgres --dsn "<dsn>"
 ```
 

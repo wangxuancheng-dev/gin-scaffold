@@ -12,17 +12,22 @@ import (
 
 // Limiter 基于 IP 与路由的令牌桶限流。
 func Limiter(ipRPS float64, ipBurst int, routeRPS float64, routeBurst int) gin.HandlerFunc {
-	return LimiterWithStore(limiter.NewStore(ipRPS, ipBurst, routeRPS, routeBurst))
+	return LimiterWithBackend(limiter.NewStore(ipRPS, ipBurst, routeRPS, routeBurst))
 }
 
-// LimiterWithStore 使用指定限流实例构建中间件（便于测试与隔离）。
+// LimiterWithStore 使用内存令牌桶限流（等价于 LimiterWithBackend(NewStore(...))）。
 func LimiterWithStore(store *limiter.Store) gin.HandlerFunc {
+	return LimiterWithBackend(store)
+}
+
+// LimiterWithBackend 使用指定限流后端（内存或 Redis 等）。
+func LimiterWithBackend(b limiter.Backend) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if store == nil {
+		if b == nil {
 			c.Next()
 			return
 		}
-		if !store.AllowIP(c.ClientIP()) {
+		if !b.AllowIP(c.ClientIP()) {
 			response.FailHTTP(c, http.StatusTooManyRequests, errcode.TooManyReq, errcode.KeyRateLimited, "too many requests")
 			c.Abort()
 			return
@@ -31,7 +36,7 @@ func LimiterWithStore(store *limiter.Store) gin.HandlerFunc {
 		if key == " " {
 			key = c.Request.Method + " " + c.Request.URL.Path
 		}
-		if !store.AllowRoute(key) {
+		if !b.AllowRoute(key) {
 			response.FailHTTP(c, http.StatusTooManyRequests, errcode.TooManyReq, errcode.KeyRateLimited, "route rate limited")
 			c.Abort()
 			return

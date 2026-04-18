@@ -153,5 +153,6 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		handler.FailInternal(c, err)
 		return
 	}
+	_ = jwtpkg.ClearRefreshJTI(c.Request.Context(), claims.UserID)
 	response.OK(c, gin.H{"revoked_until": claims.ExpiresAt.Time.Format(time.RFC3339)})
 }

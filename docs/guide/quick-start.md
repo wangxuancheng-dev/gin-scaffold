@@ -37,6 +37,7 @@ TENANT_DEFAULT_ID=default
 
 ```bash
 go run ./cmd/migrate up --env dev
+go run ./cmd/migrate seed up --env dev
 ```
 
 ## 5) 启动服务

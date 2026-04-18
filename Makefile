@@ -17,8 +17,8 @@ help:
 	@echo "  make build        - build server binary"
 	@echo "  make run          - run HTTP server (ENV=dev/test/prod PROFILE=order)"
 	@echo "  make run-worker   - run Asynq worker (ENV/PROFILE)"
-	@echo "  make migrate-up   - run DB migration up (set DSN; optional DRIVER, TIME_ZONE for DB session; shell TZ defaults to UTC)"
-	@echo "  make migrate-down - run DB migration down one step (set DSN; optional DRIVER, TIME_ZONE for DB session; shell TZ defaults to UTC)"
+	@echo "  make migrate-up   - run schema then seed up (set DSN; optional DRIVER, TIME_ZONE for DB session; shell TZ defaults to UTC)"
+	@echo "  make migrate-down - run DB schema migration down one step (set DSN; optional DRIVER, TIME_ZONE for DB session; shell TZ defaults to UTC)"
 	@echo "  make test-unit    - run tests under tests/unit"
 	@echo "  make test         - run all tests"
 	@echo "  make swagger      - generate swagger docs"
@@ -38,6 +38,7 @@ run-worker:
 
 migrate-up:
 	go run ./cmd/migrate up --driver "$(DRIVER)" --dsn "$(DSN)" --time-zone "$(TIME_ZONE)"
+	go run ./cmd/migrate seed up --driver "$(DRIVER)" --dsn "$(DSN)" --time-zone "$(TIME_ZONE)"
 
 migrate-down:
 	go run ./cmd/migrate down --driver "$(DRIVER)" --dsn "$(DSN)" --time-zone "$(TIME_ZONE)"

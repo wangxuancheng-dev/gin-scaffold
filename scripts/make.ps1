@@ -19,8 +19,8 @@ switch ($Target) {
         Write-Host "  .\scripts\make.ps1 -Target build"
         Write-Host "  .\scripts\make.ps1 -Target run -Env dev -Profile order"
         Write-Host "  .\scripts\make.ps1 -Target run-worker -Env dev -Profile order"
-        Write-Host "  .\scripts\make.ps1 -Target migrate-up -Dsn <database_dsn> [-Driver mysql] [-TimeZone UTC]"
-        Write-Host "  .\scripts\make.ps1 -Target migrate-down -Dsn <database_dsn> [-Driver mysql] [-TimeZone UTC]"
+        Write-Host "  .\scripts\make.ps1 -Target migrate-up -Dsn <database_dsn>   # schema + seed"
+        Write-Host "  .\scripts\make.ps1 -Target migrate-down -Dsn <database_dsn> # one schema rollback"
         Write-Host "  .\scripts\make.ps1 -Target test-unit"
         Write-Host "  .\scripts\make.ps1 -Target test"
         Write-Host "  .\scripts\make.ps1 -Target swagger"
@@ -38,6 +38,7 @@ switch ($Target) {
     "migrate-up" {
         if ([string]::IsNullOrWhiteSpace($Dsn)) { throw "Dsn is required for migrate-up" }
         go run ./cmd/migrate up --driver $Driver --dsn $Dsn --time-zone $TimeZone
+        go run ./cmd/migrate seed up --driver $Driver --dsn $Dsn --time-zone $TimeZone
     }
     "migrate-down" {
         if ([string]::IsNullOrWhiteSpace($Dsn)) { throw "Dsn is required for migrate-down" }

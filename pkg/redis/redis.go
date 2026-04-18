@@ -73,6 +73,14 @@ func SetNX(ctx context.Context, key string, val interface{}, ttl time.Duration) 
 	return client.SetNX(ctx, key, val, ttl).Result()
 }
 
+// Incr 将键自增 1 并返回新值。
+func Incr(ctx context.Context, key string) (int64, error) {
+	if client == nil {
+		return 0, fmt.Errorf("redis not initialized")
+	}
+	return client.Incr(ctx, key).Result()
+}
+
 // Del 删除键。
 func Del(ctx context.Context, keys ...string) error {
 	if client == nil {

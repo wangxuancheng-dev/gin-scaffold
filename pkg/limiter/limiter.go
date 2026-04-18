@@ -51,3 +51,5 @@ func (s *Store) AllowRoute(routeKey string) bool {
 	}
 	return lim.Allow()
 }
+
+var _ Backend = (*Store)(nil)

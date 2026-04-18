@@ -38,7 +38,7 @@ func main() {
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "up",
-		Short: "apply all pending migrations",
+		Short: "apply all pending schema migrations (DDL under schema/, or legacy flat dir)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			loadDotEnv(env, profile)
 			driverName := normalizeDriver(driver)
@@ -50,17 +50,24 @@ func main() {
 			if err != nil {
 				return err
 			}
-			m := buildMigrator(db, migrationDir)
+			scanDirs, err := scanDirsForSet(migrationDir, migrationSetSchema)
+			if err != nil {
+				return err
+			}
+			m, err := buildMigrator(db, scanDirs)
+			if err != nil {
+				return err
+			}
 			if err = m.Migrate(); err != nil {
 				return err
 			}
-			fmt.Println("migrate up done")
+			fmt.Println("migrate up done (schema)")
 			return nil
 		},
 	})
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "down",
-		Short: "rollback one migration step",
+		Short: "rollback one schema migration step",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			loadDotEnv(env, profile)
 			driverName := normalizeDriver(driver)
@@ -72,14 +79,85 @@ func main() {
 			if err != nil {
 				return err
 			}
-			m := buildMigrator(db, migrationDir)
+			scanDirs, err := scanDirsForSet(migrationDir, migrationSetSchema)
+			if err != nil {
+				return err
+			}
+			m, err := buildMigrator(db, scanDirs)
+			if err != nil {
+				return err
+			}
 			if err = m.RollbackLast(); err != nil {
 				return err
 			}
-			fmt.Println("migrate down one step done")
+			fmt.Println("migrate down one step done (schema)")
 			return nil
 		},
 	})
+
+	seedCmd := &cobra.Command{
+		Use:   "seed",
+		Short: "data migrations (DML under seed/)",
+	}
+	seedCmd.AddCommand(&cobra.Command{
+		Use:   "up",
+		Short: "apply all pending seed migrations",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			loadDotEnv(env, profile)
+			driverName := normalizeDriver(driver)
+			db, err := openDB(driverName, resolveDSN(dsn), resolveTimeZone(timeZone))
+			if err != nil {
+				return err
+			}
+			migrationDir, err := resolveMigrationDir(dir, driverName)
+			if err != nil {
+				return err
+			}
+			scanDirs, err := scanDirsForSet(migrationDir, migrationSetSeed)
+			if err != nil {
+				return err
+			}
+			m, err := buildMigrator(db, scanDirs)
+			if err != nil {
+				return err
+			}
+			if err = m.Migrate(); err != nil {
+				return err
+			}
+			fmt.Println("migrate seed up done")
+			return nil
+		},
+	})
+	seedCmd.AddCommand(&cobra.Command{
+		Use:   "down",
+		Short: "rollback one seed migration step",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			loadDotEnv(env, profile)
+			driverName := normalizeDriver(driver)
+			db, err := openDB(driverName, resolveDSN(dsn), resolveTimeZone(timeZone))
+			if err != nil {
+				return err
+			}
+			migrationDir, err := resolveMigrationDir(dir, driverName)
+			if err != nil {
+				return err
+			}
+			scanDirs, err := scanDirsForSet(migrationDir, migrationSetSeed)
+			if err != nil {
+				return err
+			}
+			m, err := buildMigrator(db, scanDirs)
+			if err != nil {
+				return err
+			}
+			if err = m.RollbackLast(); err != nil {
+				return err
+			}
+			fmt.Println("migrate seed down one step done")
+			return nil
+		},
+	})
+	rootCmd.AddCommand(seedCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -191,50 +269,101 @@ func openDB(driver, dsn, sessionTZ string) (*gorm.DB, error) {
 	return db, nil
 }
 
-func buildMigrator(db *gorm.DB, dir string) *gormigrate.Gormigrate {
-	upFiles := make([]string, 0, 16)
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
+type migrationSet string
+
+const (
+	migrationSetSchema migrationSet = "schema"
+	migrationSetSeed   migrationSet = "seed"
+)
+
+// scanDirsForSet returns directories to scan for .up.sql files.
+// Schema: prefers migrations/<driver>/schema when present; otherwise the whole migration root (legacy).
+// Seed: requires migrations/<driver>/seed.
+func scanDirsForSet(migrationRoot string, set migrationSet) ([]string, error) {
+	switch set {
+	case migrationSetSchema:
+		sub := filepath.Join(migrationRoot, "schema")
+		if st, err := os.Stat(sub); err == nil && st.IsDir() {
+			return []string{sub}, nil
 		}
-		if d.IsDir() {
-			return nil
+		return []string{migrationRoot}, nil
+	case migrationSetSeed:
+		sub := filepath.Join(migrationRoot, "seed")
+		if st, err := os.Stat(sub); err != nil || !st.IsDir() {
+			return nil, fmt.Errorf("seed directory not found: %s", sub)
 		}
-		if !strings.HasSuffix(d.Name(), ".up.sql") {
-			return nil
-		}
-		rel, err := filepath.Rel(dir, path)
-		if err != nil {
-			return err
-		}
-		upFiles = append(upFiles, rel)
-		return nil
-	})
-	if err != nil {
-		panic(fmt.Errorf("scan migration dir: %w", err))
+		return []string{sub}, nil
+	default:
+		return nil, fmt.Errorf("unknown migration set: %s", set)
 	}
-	sort.Strings(upFiles)
+}
+
+type upFileRef struct {
+	dir string
+	rel string
+}
+
+func collectUpSQLFiles(scanDirs []string) ([]upFileRef, error) {
+	refs := make([]upFileRef, 0, 32)
+	for _, root := range scanDirs {
+		err := filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if d.IsDir() {
+				return nil
+			}
+			if !strings.HasSuffix(d.Name(), ".up.sql") {
+				return nil
+			}
+			rel, err := filepath.Rel(root, path)
+			if err != nil {
+				return err
+			}
+			refs = append(refs, upFileRef{dir: root, rel: rel})
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("scan migration dir %s: %w", root, err)
+		}
+	}
+	sort.Slice(refs, func(i, j int) bool {
+		ki := filepath.Join(refs[i].dir, refs[i].rel)
+		kj := filepath.Join(refs[j].dir, refs[j].rel)
+		return ki < kj
+	})
+	return refs, nil
+}
+
+func buildMigrator(db *gorm.DB, scanDirs []string) (*gormigrate.Gormigrate, error) {
+	upFiles, err := collectUpSQLFiles(scanDirs)
+	if err != nil {
+		return nil, err
+	}
+	if len(upFiles) == 0 {
+		return nil, fmt.Errorf("no *.up.sql under %v", scanDirs)
+	}
 
 	migrations := make([]*gormigrate.Migration, 0, len(upFiles))
-	for _, upRel := range upFiles {
-		baseRel := strings.TrimSuffix(upRel, ".up.sql")
-		upPath := filepath.Join(dir, upRel)
-		downPath := filepath.Join(dir, baseRel+".down.sql")
+	for _, ref := range upFiles {
+		baseRel := strings.TrimSuffix(ref.rel, ".up.sql")
+		upPathArg := filepath.Join(ref.dir, ref.rel)
+		downPathArg := filepath.Join(ref.dir, baseRel+".down.sql")
 		mID := filepath.Base(baseRel)
 		migrations = append(migrations, &gormigrate.Migration{
 			ID: mID,
 			Migrate: func(tx *gorm.DB) error {
-				sqlBytes, err := os.ReadFile(upPath)
+				sqlBytes, err := os.ReadFile(upPathArg)
 				if err != nil {
 					return err
 				}
 				return execSQLStatements(tx, string(sqlBytes))
 			},
 			Rollback: func(tx *gorm.DB) error {
-				if _, err := os.Stat(downPath); err != nil {
+				if _, err := os.Stat(downPathArg); err != nil {
 					return nil
 				}
-				sqlBytes, err := os.ReadFile(downPath)
+				sqlBytes, err := os.ReadFile(downPathArg)
 				if err != nil {
 					return err
 				}
@@ -242,7 +371,7 @@ func buildMigrator(db *gorm.DB, dir string) *gormigrate.Gormigrate {
 			},
 		})
 	}
-	return gormigrate.New(db, gormigrate.DefaultOptions, migrations)
+	return gormigrate.New(db, gormigrate.DefaultOptions, migrations), nil
 }
 
 func execSQLStatements(tx *gorm.DB, script string) error {

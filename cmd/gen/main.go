@@ -152,7 +152,7 @@ func runCRUD(opt crudOptions) error {
 	fmt.Println("  1) review request validation tags and generated handler field mapping")
 	if opt.template == "full" {
 		fmt.Println("  2) review generated migration/seed SQL for table:", opt.table)
-		fmt.Println("  3) apply migration: go run ./cmd/migrate up --env dev")
+		fmt.Println("  3) apply migrations: go run ./cmd/migrate up --env dev && go run ./cmd/migrate seed up --env dev")
 	} else {
 		fmt.Println("  2) simple template skips migration/seed and auto-wiring")
 	}

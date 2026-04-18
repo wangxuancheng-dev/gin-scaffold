@@ -100,14 +100,14 @@ func TestValidate_PlatformNotifyDriverInvalid(t *testing.T) {
 		Storage: StorageConfig{Enabled: false},
 		Platform: PlatformConfig{
 			Audit:  AuditConfig{ExportDefaultDays: 7, ExportMaxDays: 31},
-			Notify: NotifyConfig{Driver: "smtp"},
+			Notify: NotifyConfig{Driver: "bad_driver"},
 		},
 	}
 	err := cfg.Validate()
 	if err == nil {
 		t.Fatal("expected error for invalid notify driver")
 	}
-	if !strings.Contains(err.Error(), "platform.notify.driver must be log or noop") {
+	if !strings.Contains(err.Error(), "platform.notify.driver tokens must be one of") {
 		t.Fatalf("unexpected: %v", err)
 	}
 }
