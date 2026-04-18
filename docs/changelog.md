@@ -14,6 +14,9 @@
 
 - `configs/app.prod.yaml`：全局限流默认 `redis` 多实例共享；`metrics` 默认私网/回环 CIDR 白名单。
 - `routes.Build` 返回 `error`（指标网段解析失败不再 `panic`）；集成脚本先 `go build` 再启动以缩短 CI 耗时。
+- 上线清单合并为 **`docs/checklist.md`** 唯一正文；`docs/ops/checklist.md` 仅作入口跳转；文档站导航改为 `/checklist`。
+- 集成脚本对 **`cmd/migrate`** 预编译为 `bin/scaffold-migrate` 再执行；`handler` 门禁脚本递归扫描 `api/handler/`（排除 `error_helper.go`）。
+- `admin/announcement_handler` 改为统一走 `api/handler/error_helper.go`；新增 `FailNotFound`。
 
 ### Fixed
 

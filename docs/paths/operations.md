@@ -7,7 +7,7 @@
 1. [快速开始](/guide/quick-start)（了解本地可运行方式）
 2. [配置说明](/guide/configuration)
 3. [生产运行手册](/ops/production-runbook)
-4. [上线检查清单](/ops/checklist)
+4. [上线检查清单](/checklist)
 
 ## 发布前
 

@@ -14,9 +14,9 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
-matches="$(git -C "${root}" grep -nE 'response\.FailHTTP\(|response\.FailBiz\(' -- 'api/handler/*.go' 'api/handler/**/*.go' ':!api/handler/error_helper.go' || true)"
+matches="$(git -C "${root}" grep -nE 'response\.FailHTTP\(|response\.FailBiz\(' -- 'api/handler' ':!api/handler/error_helper.go' || true)"
 if [[ -n "${matches}" ]]; then
-  echo "Found direct response.FailHTTP/FailBiz in handlers:"
+  echo "Found direct response.FailHTTP/FailBiz outside error_helper:"
   echo "${matches}"
   echo
   echo "Please use api/handler/error_helper.go helpers instead."

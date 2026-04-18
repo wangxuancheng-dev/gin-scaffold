@@ -1,11 +1,12 @@
 # Pre-Launch Checklist
 
-每次上线前按本清单逐项确认，建议在发布单中逐条打勾。
+每次上线前按本清单逐项确认，建议在发布单中逐条打勾。（运维侧文档站入口仍可使用 `/ops/checklist`，该页仅指向本文，避免双份维护。）
 
 ## 1. 构建与测试
 
 - [ ] 拉取目标发布版本代码（tag/commit 已确认）
 - [ ] 执行 `go test ./...` 通过
+- [ ] 执行 `golangci-lint run` 通过（与 CI 门禁一致）
 - [ ] 执行 `go build -o bin/server ./cmd/server` 成功
 - [ ] 执行 `go build -o bin/migrate ./cmd/migrate` 成功
 
@@ -45,15 +46,21 @@
 - [ ] 核心业务接口 smoke 测试通过
 - [ ] 审计查询与导出权限验证通过：`audit:read` / `audit:export`
 - [ ] `GET /metrics` 可按预期访问（白名单内可访问）
+- [ ] 关键失败接口返回结构符合统一规范（`code/msg/request_id/trace_id` 等，见 [错误处理](/guide/error-handling)）
 - [ ] 观察 10~15 分钟日志，无明显 5xx/panic/连接错误
 
-## 6. 回滚准备
+## 6. 代码规范核查（发布前）
+
+- [ ] 新增/修改的 handler 未直接散写 `response.FailHTTP` / `response.FailBiz`（优先使用 `api/handler/error_helper.go`）
+- [ ] 业务错误码映射已评审（`404/401/403/429` 等状态码语义正确）
+
+## 7. 回滚准备
 
 - [ ] 上一个可运行二进制已保留
-- [ ] 回滚命令已预演：替换旧二进制 + `systemctl restart gin-scaffold`
+- [ ] 回滚命令已预演：替换旧二进制 + `systemctl restart gin-scaffold`（及 worker 若涉及队列行为）
 - [ ] 变更记录（版本、时间、执行人）已登记
 
-## 7. 紧急发布（Hotfix）最小清单
+## 8. 紧急发布（Hotfix）最小清单
 
 仅用于紧急修复，目标是最小改动、最短路径、可快速回滚。
 

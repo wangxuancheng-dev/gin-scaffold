@@ -43,6 +43,14 @@ func FailUnauthorized(c *gin.Context, defaultMsg string) {
 	response.FailHTTP(c, http.StatusUnauthorized, errcode.Unauthorized, errcode.KeyUnauthorized, defaultMsg)
 }
 
+// FailNotFound 返回统一 404（资源不存在）。
+func FailNotFound(c *gin.Context, msg string) {
+	if msg == "" {
+		msg = "not found"
+	}
+	response.FailHTTP(c, http.StatusNotFound, errcode.NotFound, errcode.KeyNotFound, msg)
+}
+
 // FailServiceUnavailable 返回统一服务不可用响应。
 func FailServiceUnavailable(c *gin.Context, err error, defaultMsg string) {
 	msg := defaultMsg

@@ -1,14 +1,15 @@
 package adminhandler
 
 import (
-	"net/http"
+	"errors"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
+	"gin-scaffold/api/handler"
 	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/response"
 	"gin-scaffold/internal/model"
-	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/internal/service/port"
 )
 
@@ -26,7 +27,7 @@ func (h *AnnouncementHandler) List(c *gin.Context) {
 	_ = c.ShouldBindQuery(&q)
 	rows, total, err := h.svc.List(c.Request.Context(), q.Page, q.PageSize)
 	if err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, gin.H{"total": total, "list": rows})
@@ -35,12 +36,16 @@ func (h *AnnouncementHandler) List(c *gin.Context) {
 func (h *AnnouncementHandler) Get(c *gin.Context) {
 	var uri adminreq.AnnouncementIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	row, err := h.svc.GetByID(c.Request.Context(), uri.ID)
 	if err != nil {
-		response.FailHTTP(c, http.StatusNotFound, errcode.NotFound, errcode.KeyInvalidParam, err.Error())
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			handler.FailNotFound(c, "")
+			return
+		}
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, row)
@@ -49,16 +54,16 @@ func (h *AnnouncementHandler) Get(c *gin.Context) {
 func (h *AnnouncementHandler) Create(c *gin.Context) {
 	var req adminreq.AnnouncementCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	in := &model.Announcement{
-		Title: req.Title,
+		Title:   req.Title,
 		Content: req.Content,
-		Status: req.Status,
+		Status:  req.Status,
 	}
 	if err := h.svc.Create(c.Request.Context(), in); err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, in)
@@ -67,12 +72,12 @@ func (h *AnnouncementHandler) Create(c *gin.Context) {
 func (h *AnnouncementHandler) Update(c *gin.Context) {
 	var uri adminreq.AnnouncementIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	var req adminreq.AnnouncementUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	in := &model.Announcement{ID: uri.ID}
@@ -86,7 +91,7 @@ func (h *AnnouncementHandler) Update(c *gin.Context) {
 		in.Status = *req.Status
 	}
 	if err := h.svc.Update(c.Request.Context(), in); err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, in)
@@ -95,11 +100,11 @@ func (h *AnnouncementHandler) Update(c *gin.Context) {
 func (h *AnnouncementHandler) Delete(c *gin.Context) {
 	var uri adminreq.AnnouncementIDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := h.svc.Delete(c.Request.Context(), uri.ID); err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, gin.H{"deleted": true})

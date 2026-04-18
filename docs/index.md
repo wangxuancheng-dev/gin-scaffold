@@ -27,5 +27,5 @@
 - [运维同学路径](/paths/operations)
 - [测试同学路径](/paths/testing)
 - [生产运行手册](/ops/production-runbook)
-- [上线检查清单](/ops/checklist)
+- [上线检查清单](/checklist)
 - [文档贡献规范](/meta/docs-maintenance)

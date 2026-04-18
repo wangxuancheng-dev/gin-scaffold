@@ -13,7 +13,7 @@ export default defineConfig({
       { text: "指南", link: "/guide/introduction" },
       { text: "阅读路径", link: "/paths/developer" },
       { text: "部署", link: "/ops/production-runbook" },
-      { text: "检查清单", link: "/ops/checklist" },
+      { text: "检查清单", link: "/checklist" },
       { text: "GitHub", link: "https://github.com/your-org/gin-scaffold" },
     ],
     sidebar: {
@@ -41,7 +41,7 @@ export default defineConfig({
           text: "运维与上线",
           items: [
             { text: "生产运行手册", link: "/ops/production-runbook" },
-            { text: "上线检查清单", link: "/ops/checklist" },
+            { text: "上线检查清单", link: "/checklist" },
           ],
         },
       ],

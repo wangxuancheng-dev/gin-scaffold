@@ -43,7 +43,7 @@ go run ./cmd/server server --env dev
 - 定时任务中心：`/guide/scheduler`
 - 日志与可观测：`/guide/logging-observability`
 - 生产运行手册：`/ops/production-runbook`
-- 上线检查清单：`/ops/checklist`
+- 上线检查清单：`/checklist`
 - 按角色阅读路径：`/paths/developer`、`/paths/operations`、`/paths/testing`
 
 ## 仓库内关键目录
