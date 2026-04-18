@@ -94,6 +94,22 @@ func TestAnnouncementHandler_Create_ok(t *testing.T) {
 	}
 }
 
+func TestAnnouncementHandler_Update_ok(t *testing.T) {
+	svc := &stubAnnouncementService{}
+	h := NewAnnouncementHandler(svc)
+	title := "T2"
+	body, _ := json.Marshal(adminreq.AnnouncementUpdateRequest{Title: &title})
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "5"}}
+	c.Request = httptest.NewRequest(http.MethodPut, "http://localhost/admin/announcements/5", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	h.Update(c)
+	if w.Code != http.StatusOK {
+		t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
 func TestAnnouncementHandler_Delete_ok(t *testing.T) {
 	svc := &stubAnnouncementService{}
 	h := NewAnnouncementHandler(svc)

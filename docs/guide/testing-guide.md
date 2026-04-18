@@ -26,7 +26,7 @@
 
 - Bash：`bash ./scripts/go-cover.sh`
 - PowerShell：`pwsh ./scripts/go-cover.ps1` 或 `powershell -File ./scripts/go-cover.ps1`
-- 默认阈值：`22%`；可通过环境变量 `COVERAGE_THRESHOLD` 覆盖，例如 `COVERAGE_THRESHOLD=28 bash ./scripts/go-cover.sh`。
+- 默认阈值：`25%`；可通过环境变量 `COVERAGE_THRESHOLD` 覆盖，例如 `COVERAGE_THRESHOLD=30 bash ./scripts/go-cover.sh`。
 - 一键本地质量检查：`bash scripts/quality.sh`（`gofmt` + `go test ./...` + 覆盖率门禁）。
 - CI `test-build` 使用同一门禁，低于阈值会失败。
 

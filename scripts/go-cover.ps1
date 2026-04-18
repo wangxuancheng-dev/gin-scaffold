@@ -1,7 +1,7 @@
 ﻿$ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-$thresholdRaw = if ($env:COVERAGE_THRESHOLD) { $env:COVERAGE_THRESHOLD } else { "22" }
+$thresholdRaw = if ($env:COVERAGE_THRESHOLD) { $env:COVERAGE_THRESHOLD } else { "25" }
 $threshold = 0.0
 if (-not [double]::TryParse($thresholdRaw, [ref]$threshold)) {
     throw "COVERAGE_THRESHOLD must be numeric, got: $thresholdRaw"

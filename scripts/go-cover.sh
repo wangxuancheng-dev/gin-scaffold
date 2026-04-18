@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-threshold="${COVERAGE_THRESHOLD:-22}"
+threshold="${COVERAGE_THRESHOLD:-25}"
 if ! [[ "$threshold" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   echo "COVERAGE_THRESHOLD must be numeric, got: $threshold" >&2
   exit 1

@@ -21,7 +21,7 @@
 - Integration scripts prebuild migrate binary and improve handler error-helper gate scanning.
 - Checklist consolidated to `docs/checklist.md` as single source of truth.
 - Local quality scripts added: `scripts/go-lint.sh` / `go-lint.ps1`, `scripts/go-cover.sh` / `go-cover.ps1`.
-- CI `test-build` now enforces coverage gate (`COVERAGE_THRESHOLD`, default `22`) and runs the race detector on `go test -race ./...`.
+- CI `test-build` now enforces coverage gate (`COVERAGE_THRESHOLD`, default `25`) and runs the race detector on `go test -race ./...`.
 
 ### Fixed
 
