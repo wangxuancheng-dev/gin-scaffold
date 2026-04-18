@@ -1,7 +1,7 @@
 ALTER TABLE `system_settings`
 DROP INDEX `uk_system_settings_tenant_key`,
 DROP INDEX `idx_system_settings_tenant`,
-ADD UNIQUE KEY `uk_system_settings_key` (`key`);
+-- ADD UNIQUE KEY `uk_system_settings_key` (`key`);
 
 ALTER TABLE `system_settings`
 DROP COLUMN `publish_note`,

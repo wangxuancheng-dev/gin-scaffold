@@ -13,6 +13,6 @@ SET `draft_value` = `value`,
 WHERE `draft_value` = '';
 
 ALTER TABLE `system_settings`
-DROP INDEX `uk_system_settings_key`,
+-- DROP INDEX `uk_system_settings_key`,
 ADD UNIQUE KEY `uk_system_settings_tenant_key` (`tenant_id`, `key`),
 ADD KEY `idx_system_settings_tenant` (`tenant_id`);
