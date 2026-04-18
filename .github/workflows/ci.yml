@@ -50,7 +50,7 @@ jobs:
 
       - name: Enforce coverage gate
         env:
-          COVERAGE_THRESHOLD: '16'
+          COVERAGE_THRESHOLD: '22'
         run: bash ./scripts/go-cover.sh
 
       - name: Verify swagger is up to date

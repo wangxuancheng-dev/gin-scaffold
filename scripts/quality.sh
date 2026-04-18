@@ -11,7 +11,11 @@ if [ -n "$unformatted" ]; then
 fi
 
 echo "== go test ./... =="
-go test ./...
+gotest_p=()
+if [[ -n "${GOTEST_PARALLEL:-}" ]]; then
+  gotest_p=(-p "${GOTEST_PARALLEL}")
+fi
+go test "${gotest_p[@]}" ./...
 
 echo "== coverage gate =="
 bash ./scripts/go-cover.sh

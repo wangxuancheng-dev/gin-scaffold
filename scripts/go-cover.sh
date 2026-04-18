@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-threshold="${COVERAGE_THRESHOLD:-16}"
+threshold="${COVERAGE_THRESHOLD:-22}"
 if ! [[ "$threshold" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   echo "COVERAGE_THRESHOLD must be numeric, got: $threshold" >&2
   exit 1
@@ -12,7 +12,13 @@ mkdir -p coverage
 profile="coverage/coverage.out"
 summary="coverage/coverage.txt"
 
-go test -covermode=atomic -coverprofile "$profile" ./...
+# Optional: cap parallel packages on low-RAM machines, e.g. GOTEST_PARALLEL=2 bash ./scripts/go-cover.sh
+gotest_p=()
+if [[ -n "${GOTEST_PARALLEL:-}" ]]; then
+  gotest_p=(-p "${GOTEST_PARALLEL}")
+fi
+
+go test "${gotest_p[@]}" -covermode=atomic -coverprofile "$profile" ./...
 go tool cover -func="$profile" | tee "$summary"
 
 total=$(awk '/^total:/{print $3}' "$summary" | sed 's/%//')

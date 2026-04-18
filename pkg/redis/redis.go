@@ -112,3 +112,13 @@ func HGet(ctx context.Context, key, field string) (string, error) {
 	}
 	return client.HGet(ctx, key, field).Result()
 }
+
+// Close 关闭全局 Redis 客户端并清空引用（可重复调用；用于优雅退出与测试清理）。
+func Close() error {
+	if client == nil {
+		return nil
+	}
+	err := client.Close()
+	client = nil
+	return err
+}

@@ -83,3 +83,11 @@ func TestInitAndOps_miniredis(t *testing.T) {
 	_, err = Get(ctx, "k2")
 	require.Error(t, err)
 }
+
+func TestClose_idempotent(t *testing.T) {
+	prev := client
+	t.Cleanup(func() { client = prev })
+	client = nil
+	require.NoError(t, Close())
+	require.NoError(t, Close())
+}

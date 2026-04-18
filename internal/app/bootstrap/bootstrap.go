@@ -93,6 +93,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		runCleanups(context.Background(), cleanups)
 		return nil, fmt.Errorf("redis: %w", err)
 	}
+	cleanups = append(cleanups, func(context.Context) { _ = redis.Close() })
 	if err := snowflake.Init(cfg.Snowflake.Node); err != nil {
 		runCleanups(context.Background(), cleanups)
 		return nil, fmt.Errorf("snowflake: %w", err)
@@ -245,6 +246,7 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 
 	cleanups := []func(context.Context){
 		func(context.Context) { logger.Sync() },
+		func(context.Context) { _ = redis.Close() },
 	}
 
 	srv := asynq.NewServer(

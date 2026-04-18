@@ -47,16 +47,20 @@ switch ($Target) {
         go run ./cmd/migrate down --driver $Driver --dsn $Dsn --time-zone $TimeZone
     }
     "test-unit" { go test ./tests/unit/... }
-    "test" { go test ./... }
+    "test" {
+        $p = if ($env:GOTEST_PARALLEL) { @("-p", $env:GOTEST_PARALLEL.Trim()) } else { @() }
+        & go test @p ./...
+    }
     "cover" { & ".\scripts\go-cover.ps1" }
     "quality" {
         $unformatted = gofmt -l .
         if ($unformatted) {
             throw "gofmt required on:`n$unformatted"
         }
-        go test ./...
+        $p = if ($env:GOTEST_PARALLEL) { @("-p", $env:GOTEST_PARALLEL.Trim()) } else { @() }
+        & go test @p ./...
         if ($env:CGO_ENABLED -eq "1") {
-            go test -race ./...
+            & go test @p -race ./...
         }
         & ".\scripts\go-cover.ps1"
     }
