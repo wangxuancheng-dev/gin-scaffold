@@ -35,6 +35,7 @@ go run ./cmd/server server --env dev
 
 ## 常用入口链接（文档站）
 
+- **开发手册（总览）**：`/guide/handbook`
 - 快速开始：`/guide/quick-start`
 - 配置说明：`/guide/configuration`
 - 多租户基础：`/guide/platform`

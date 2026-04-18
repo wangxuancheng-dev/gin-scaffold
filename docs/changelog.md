@@ -6,6 +6,7 @@
 
 - PostgreSQL migrations aligned with MySQL (`migrations/postgres/schema`, `migrations/postgres/seed`).
 - Integration tests for admin menu catalog and role-filtered menu tree (`data.tree`).
+- **开发手册与附录**：`handbook` 及路由、中间件、缓存、队列、迁移、配置、环境变量、GORM 实践、RBAC、管理端 API 总览、i18n、限流、SSE/WS（含生产化）、安全、测试、常用包、出站 HTTP、日志代码用法等专题；VitePress 侧栏与首页导航已更新。
 - `http.swagger_enabled`：生产默认关闭 Swagger UI；`metrics.allowed_networks`：可选按 TCP 源 IP（CIDR）限制 `/metrics`。
 - `scripts/integration.sh` 与 CI Job `integration`（Docker MySQL/Redis + 集成测试）。
 - `deploy/systemd/gin-scaffold-worker.service.example`：Worker 独立 systemd 单元示例。

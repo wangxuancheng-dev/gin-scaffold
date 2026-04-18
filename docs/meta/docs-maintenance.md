@@ -2,6 +2,8 @@
 
 目标：让文档可持续维护，避免“代码变了、文档没变”。
 
+新增或调整功能时，请同步 **[开发手册](/guide/handbook)** 中对应章节（或增加新页并在 `.vitepress/config.mts` 的 `/guide/` 侧栏注册）。
+
 ## 基本原则
 
 - 配置变更：同步更新 `configs`、`.env.example`、文档

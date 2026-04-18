@@ -16,7 +16,7 @@ go mod tidy
 
 ## 3) 准备 `.env.local`
 
-```env
+```text
 APP_ENV=dev
 DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True
 TIME_ZONE=UTC

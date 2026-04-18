@@ -10,6 +10,7 @@ export default defineConfig({
   },
   themeConfig: {
     nav: [
+      { text: "开发手册", link: "/guide/handbook" },
       { text: "指南", link: "/guide/introduction" },
       { text: "阅读路径", link: "/paths/developer" },
       { text: "部署", link: "/ops/production-runbook" },
@@ -19,20 +20,77 @@ export default defineConfig({
     sidebar: {
       "/guide/": [
         {
-          text: "快速开始",
+          text: "开发手册",
+          items: [{ text: "手册总览与索引", link: "/guide/handbook" }],
+        },
+        {
+          text: "入门",
           items: [
             { text: "项目简介", link: "/guide/introduction" },
             { text: "新人入门（架构 + FAQ）", link: "/guide/onboarding" },
             { text: "快速开始", link: "/guide/quick-start" },
-            { text: "配置说明", link: "/guide/configuration" },
-            { text: "命令系统", link: "/guide/commands" },
           ],
         },
         {
-          text: "功能模块",
+          text: "架构与 HTTP",
           items: [
+            { text: "目录结构与分层", link: "/guide/directory-structure" },
+            { text: "路由与分组", link: "/guide/routing" },
+            { text: "中间件参考", link: "/guide/middleware-reference" },
+            { text: "错误与响应", link: "/guide/error-handling" },
+          ],
+        },
+        {
+          text: "配置",
+          items: [
+            { text: "配置说明（关键组）", link: "/guide/configuration" },
+            { text: "配置详解（全量键）", link: "/guide/configuration-advanced" },
+          ],
+        },
+        {
+          text: "数据、缓存、队列",
+          items: [
+            { text: "数据库迁移与填充", link: "/guide/database-and-migrations" },
+            { text: "缓存使用", link: "/guide/caching" },
+            { text: "异步队列（Asynq）", link: "/guide/queues-asynq" },
             { text: "定时任务中心", link: "/guide/scheduler" },
+          ],
+        },
+        {
+          text: "命令行与代码生成",
+          items: [
+            { text: "命令系统", link: "/guide/commands" },
+            { text: "代码生成（CRUD）", link: "/guide/codegen" },
+            { text: "生成器走读", link: "/guide/codegen-walkthrough" },
+          ],
+        },
+        {
+          text: "文件、实时、国际化、限流",
+          items: [
+            { text: "文件存储", link: "/guide/file-storage" },
+            { text: "SSE 与 WebSocket", link: "/guide/realtime-sse-websocket" },
+            { text: "本地化（i18n）", link: "/guide/i18n" },
+            { text: "全局限流", link: "/guide/rate-limiting" },
+          ],
+        },
+        {
+          text: "横切、可观测、安全、测试",
+          items: [
+            { text: "平台横切能力", link: "/guide/platform" },
+            { text: "出站 HTTP 客户端", link: "/guide/outbound-httpclient" },
             { text: "日志与可观测", link: "/guide/logging-observability" },
+            { text: "安全实践", link: "/guide/security-practices" },
+            { text: "RBAC 与权限", link: "/guide/rbac-and-permissions" },
+            { text: "管理端 API 总览", link: "/guide/admin-api-overview" },
+            { text: "测试指南", link: "/guide/testing-guide" },
+            { text: "常用包与辅助能力", link: "/guide/helpers-packages" },
+          ],
+        },
+        {
+          text: "参考与附录",
+          items: [
+            { text: "环境变量绑定一览", link: "/guide/environment-variables" },
+            { text: "数据库与 GORM 实践", link: "/guide/database-patterns" },
           ],
         },
       ],

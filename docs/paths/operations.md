@@ -2,12 +2,15 @@
 
 目标：可部署、可巡检、可回滚。
 
+索引见 **[开发手册](/guide/handbook)** 中「安全、可观测、测试、部署」一节。
+
 ## 首次接手
 
 1. [快速开始](/guide/quick-start)（了解本地可运行方式）
-2. [配置说明](/guide/configuration)
-3. [生产运行手册](/ops/production-runbook)
-4. [上线检查清单](/checklist)
+2. [配置说明](/guide/configuration) · [配置详解](/guide/configuration-advanced)
+3. [安全实践](/guide/security-practices)
+4. [生产运行手册](/ops/production-runbook)
+5. [上线检查清单](/checklist)
 
 ## 发布前
 

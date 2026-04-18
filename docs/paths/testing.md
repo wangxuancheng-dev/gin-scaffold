@@ -2,13 +2,17 @@
 
 目标：快速建立可回归的测试基线。
 
+完整说明见 **[测试指南](/guide/testing-guide)**。
+
 ## 建议阅读顺序
 
-1. [项目简介](/guide/introduction)
-2. [快速开始](/guide/quick-start)
-3. [命令系统](/guide/commands)
-4. [定时任务中心](/guide/scheduler)
-5. [日志与可观测](/guide/logging-observability)
+1. [开发手册](/guide/handbook)
+2. [项目简介](/guide/introduction)
+3. [快速开始](/guide/quick-start)
+4. [测试指南](/guide/testing-guide)
+5. [命令系统](/guide/commands)
+6. [定时任务中心](/guide/scheduler)
+7. [日志与可观测](/guide/logging-observability)
 
 ## 重点回归清单
 
@@ -23,6 +27,8 @@
 ```bash
 go test ./tests/unit/...
 go test ./...
+go test -tags=integration ./tests/integration -v
+bash ./scripts/integration.sh
 ```
 
 ## 问题定位建议

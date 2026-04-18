@@ -1,5 +1,7 @@
 # 配置说明
 
+更全的配置键说明见 **[配置详解（全量键）](/guide/configuration-advanced)**；**环境变量与 YAML 覆盖关系**见 **[环境变量绑定一览](/guide/environment-variables)**；整体文档索引见 **[开发手册](/guide/handbook)**。
+
 配置来源优先级（高 -> 低）：
 
 1. 运行时环境变量
