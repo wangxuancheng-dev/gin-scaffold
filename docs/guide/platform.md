@@ -36,14 +36,14 @@
 
 - 进程内**同步**派发；耗时逻辑请投递 Asynq。
 - 在 `internal/app/platform.Init` 中重置默认总线；业务可 `eventbus.Default().On("name", handler)` 订阅。
-- 示例：`user.registered` 在用户注册成功后由 handler 发出。
+- 示例：`user.registered` 在用户注册事务内写入 Outbox（见 `UserService.Register`），由 Outbox 分发器发布到本进程总线。
 
 ## 事务 Outbox（`outbox`）
 
 - 目标：保证“数据库写入成功后，事件最终一定可分发”，避免直接异步调用导致的丢消息。
 - 表：`outbox_events`（迁移：`202604172130_create_outbox_events`）。
 - 运行机制：
-  - 业务在事务内写入 outbox 记录（`status=pending`）。
+  - 业务在事务内写入 outbox 记录（`status=pending`）；客户端注册 `POST /api/v1/client/users` 成功时同事务写入 `user.registered`（`outbox.enabled=true` 且已迁移 `outbox_events` 时生效）。
   - 后台分发器按 `poll_interval_sec` 扫描待处理记录，发布到 `eventbus`。
   - 成功后标记 `published`；失败按 `retry_backoff_sec` 退避重试，超过 `max_attempts` 标记 `dead`。
 - 配置项（`outbox`）：

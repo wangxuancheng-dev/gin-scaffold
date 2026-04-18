@@ -23,6 +23,13 @@ func NewUserDAO(db *gorm.DB) *UserDAO {
 	return &UserDAO{db: db}
 }
 
+func (d *UserDAO) conn(tx *gorm.DB) *gorm.DB {
+	if tx != nil {
+		return tx
+	}
+	return d.db
+}
+
 // Create 插入用户。
 func (d *UserDAO) Create(ctx context.Context, u *model.User) error {
 	if u != nil && u.TenantID == "" {
@@ -32,6 +39,17 @@ func (d *UserDAO) Create(ctx context.Context, u *model.User) error {
 		}
 	}
 	return d.db.WithContext(ctx).Create(u).Error
+}
+
+// CreateTx 在指定 DB 会话（通常为事务 tx）内插入用户。
+func (d *UserDAO) CreateTx(ctx context.Context, tx *gorm.DB, u *model.User) error {
+	if u != nil && u.TenantID == "" {
+		u.TenantID = tenant.FromContext(ctx)
+		if u.TenantID == "" {
+			u.TenantID = "default"
+		}
+	}
+	return d.conn(tx).WithContext(ctx).Create(u).Error
 }
 
 // GetByID 主键查询。
@@ -107,8 +125,7 @@ func (d *UserDAO) ListAfterID(ctx context.Context, q model.UserQuery, lastID int
 	return rows, nil
 }
 
-// BindRole 绑定用户角色（若已存在则跳过）。
-func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error {
+func (d *UserDAO) bindRole(ctx context.Context, db *gorm.DB, userID int64, role string) error {
 	tenantID := tenant.FromContext(ctx)
 	if tenantID == "" {
 		tenantID = "default"
@@ -117,7 +134,7 @@ func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error
 		ID        int64
 		DeletedAt *time.Time
 	}
-	err := d.db.WithContext(ctx).
+	err := db.WithContext(ctx).
 		Table("user_roles").
 		Select("id, deleted_at").
 		Where("tenant_id = ? AND user_id = ? AND role = ?", tenantID, userID, role).
@@ -128,7 +145,7 @@ func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error
 		if row.DeletedAt == nil {
 			return nil
 		}
-		return d.db.WithContext(ctx).Table("user_roles").Where("tenant_id = ? AND id = ?", tenantID, row.ID).Updates(map[string]interface{}{
+		return db.WithContext(ctx).Table("user_roles").Where("tenant_id = ? AND id = ?", tenantID, row.ID).Updates(map[string]interface{}{
 			"deleted_at": nil,
 			"updated_at": time.Now(),
 		}).Error
@@ -136,16 +153,25 @@ func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
-	return d.db.WithContext(ctx).Table("user_roles").Create(map[string]interface{}{
+	return db.WithContext(ctx).Table("user_roles").Create(map[string]interface{}{
 		"tenant_id": tenantID,
 		"user_id":   userID,
 		"role":      role,
 	}).Error
 }
 
-// Restore 通过主键恢复软删除用户并更新关键字段。
-func (d *UserDAO) Restore(ctx context.Context, id int64, hashedPassword, nickname string) (*model.User, error) {
-	if err := tenant.ApplyScope(ctx, d.db.WithContext(ctx).Unscoped().Model(&model.User{}), "tenant_id").Where("id = ?", id).Updates(map[string]interface{}{
+// BindRole 绑定用户角色（若已存在则跳过）。
+func (d *UserDAO) BindRole(ctx context.Context, userID int64, role string) error {
+	return d.bindRole(ctx, d.db, userID, role)
+}
+
+// BindRoleTx 在指定 DB 会话内绑定用户角色。
+func (d *UserDAO) BindRoleTx(ctx context.Context, tx *gorm.DB, userID int64, role string) error {
+	return d.bindRole(ctx, d.conn(tx), userID, role)
+}
+
+func (d *UserDAO) restoreUser(ctx context.Context, db *gorm.DB, id int64, hashedPassword, nickname string) (*model.User, error) {
+	if err := tenant.ApplyScope(ctx, db.WithContext(ctx).Unscoped().Model(&model.User{}), "tenant_id").Where("id = ?", id).Updates(map[string]interface{}{
 		"password":   hashedPassword,
 		"nickname":   nickname,
 		"deleted_at": nil,
@@ -154,10 +180,20 @@ func (d *UserDAO) Restore(ctx context.Context, id int64, hashedPassword, nicknam
 		return nil, err
 	}
 	var u model.User
-	if err := tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id").Where("id = ?", id).First(&u).Error; err != nil {
+	if err := tenant.ApplyScope(ctx, db.WithContext(ctx), "tenant_id").Where("id = ?", id).First(&u).Error; err != nil {
 		return nil, err
 	}
 	return &u, nil
+}
+
+// Restore 通过主键恢复软删除用户并更新关键字段。
+func (d *UserDAO) Restore(ctx context.Context, id int64, hashedPassword, nickname string) (*model.User, error) {
+	return d.restoreUser(ctx, d.db, id, hashedPassword, nickname)
+}
+
+// RestoreTx 在指定 DB 会话内恢复软删除用户并更新关键字段。
+func (d *UserDAO) RestoreTx(ctx context.Context, tx *gorm.DB, id int64, hashedPassword, nickname string) (*model.User, error) {
+	return d.restoreUser(ctx, d.conn(tx), id, hashedPassword, nickname)
 }
 
 // Update 更新用户资料（支持昵称/密码）。

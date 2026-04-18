@@ -16,7 +16,6 @@ import (
 	"gin-scaffold/internal/pkg/validator"
 	"gin-scaffold/internal/service/port"
 	"gin-scaffold/middleware"
-	"gin-scaffold/pkg/eventbus"
 	"gin-scaffold/pkg/notify"
 )
 
@@ -58,10 +57,6 @@ func (h *UserHandler) Register(c *gin.Context) {
 		Title:   "User registered",
 		Body:    u.Username,
 		Meta:    map[string]string{"user_id": fmt.Sprintf("%d", u.ID)},
-	})
-	eventbus.Default().Emit(c.Request.Context(), eventbus.Event{
-		Name:    "user.registered",
-		Payload: map[string]any{"user_id": u.ID, "username": u.Username},
 	})
 	response.OK(c, clientresp.FromUser(u))
 }

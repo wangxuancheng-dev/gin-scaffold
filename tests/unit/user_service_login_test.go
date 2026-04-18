@@ -25,13 +25,29 @@ func (m *mockUserRepo) Create(ctx context.Context, u *model.User) error {
 	return args.Error(0)
 }
 
+func (m *mockUserRepo) CreateTx(ctx context.Context, tx *gorm.DB, u *model.User) error {
+	args := m.Called(ctx, tx, u)
+	return args.Error(0)
+}
+
 func (m *mockUserRepo) BindRole(ctx context.Context, userID int64, role string) error {
 	args := m.Called(ctx, userID, role)
 	return args.Error(0)
 }
 
+func (m *mockUserRepo) BindRoleTx(ctx context.Context, tx *gorm.DB, userID int64, role string) error {
+	args := m.Called(ctx, tx, userID, role)
+	return args.Error(0)
+}
+
 func (m *mockUserRepo) Restore(ctx context.Context, id int64, hashedPassword, nickname string) (*model.User, error) {
 	args := m.Called(ctx, id, hashedPassword, nickname)
+	u, _ := args.Get(0).(*model.User)
+	return u, args.Error(1)
+}
+
+func (m *mockUserRepo) RestoreTx(ctx context.Context, tx *gorm.DB, id int64, hashedPassword, nickname string) (*model.User, error) {
+	args := m.Called(ctx, tx, id, hashedPassword, nickname)
 	u, _ := args.Get(0).(*model.User)
 	return u, args.Error(1)
 }
@@ -103,7 +119,7 @@ func TestUserServiceLogin_Success(t *testing.T) {
 		RefreshExpireMin: 60,
 		Issuer:           "unit-test",
 	})
-	svc := service.NewUserService(repo, nil, jm, 0)
+	svc := service.NewUserService(repo, nil, jm, 0, nil, nil, config.OutboxConfig{})
 
 	hash, err := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
 	require.NoError(t, err)
@@ -131,7 +147,7 @@ func TestUserServiceLogin_UserNotFound(t *testing.T) {
 		RefreshExpireMin: 60,
 		Issuer:           "unit-test",
 	})
-	svc := service.NewUserService(repo, nil, jm, 0)
+	svc := service.NewUserService(repo, nil, jm, 0, nil, nil, config.OutboxConfig{})
 
 	repo.On("GetByUsername", mock.Anything, "nobody").Return((*model.User)(nil), gorm.ErrRecordNotFound).Once()
 
@@ -151,7 +167,7 @@ func TestUserServiceRegister_RestoreSoftDeleted(t *testing.T) {
 		RefreshExpireMin: 60,
 		Issuer:           "unit-test",
 	})
-	svc := service.NewUserService(repo, nil, jm, 0)
+	svc := service.NewUserService(repo, nil, jm, 0, nil, nil, config.OutboxConfig{})
 
 	repo.On("GetByUsername", mock.Anything, "alice").Return((*model.User)(nil), gorm.ErrRecordNotFound).Once()
 	repo.On("GetByUsernameWithDeleted", mock.Anything, "alice").Return(&model.User{

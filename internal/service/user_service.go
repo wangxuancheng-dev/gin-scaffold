@@ -3,6 +3,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"gin-scaffold/config"
+	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
@@ -23,8 +26,11 @@ import (
 // UserRepo 定义 UserService 依赖的数据访问接口，便于单元测试注入 mock。
 type UserRepo interface {
 	Create(ctx context.Context, u *model.User) error
+	CreateTx(ctx context.Context, tx *gorm.DB, u *model.User) error
 	BindRole(ctx context.Context, userID int64, role string) error
+	BindRoleTx(ctx context.Context, tx *gorm.DB, userID int64, role string) error
 	Restore(ctx context.Context, id int64, hashedPassword, nickname string) (*model.User, error)
+	RestoreTx(ctx context.Context, tx *gorm.DB, id int64, hashedPassword, nickname string) (*model.User, error)
 	GetByID(ctx context.Context, id int64) (*model.User, error)
 	GetByUsername(ctx context.Context, name string) (*model.User, error)
 	GetByUsernameWithDeleted(ctx context.Context, name string) (*model.User, error)
@@ -43,11 +49,30 @@ type UserService struct {
 	queue            *job.Client
 	jwt              *jwtpkg.Manager
 	superAdminUserID int64
+	db               *gorm.DB
+	outbox           *dao.OutboxDAO
+	outboxCfg        config.OutboxConfig
 }
 
 // NewUserService 构造。
-func NewUserService(d UserRepo, q *job.Client, j *jwtpkg.Manager, superAdminUserID int64) *UserService {
-	return &UserService{dao: d, queue: q, jwt: j, superAdminUserID: superAdminUserID}
+func NewUserService(
+	d UserRepo,
+	q *job.Client,
+	j *jwtpkg.Manager,
+	superAdminUserID int64,
+	db *gorm.DB,
+	outbox *dao.OutboxDAO,
+	outboxCfg config.OutboxConfig,
+) *UserService {
+	return &UserService{
+		dao:              d,
+		queue:            q,
+		jwt:              j,
+		superAdminUserID: superAdminUserID,
+		db:               db,
+		outbox:           outbox,
+		outboxCfg:        outboxCfg,
+	}
 }
 
 // AdminCreate 后台创建用户并绑定角色。
@@ -134,33 +159,97 @@ func (s *UserService) Register(ctx context.Context, username, password, nickname
 	if err != nil {
 		return nil, err
 	}
-	if existed, err := s.dao.GetByUsernameWithDeleted(ctx, username); err == nil {
-		// Same username exists as soft-deleted record: restore it.
-		if existed.DeletedAt.Valid {
-			restored, err := s.dao.Restore(ctx, existed.ID, string(hash), nickname)
+	useOutbox := s.outboxCfg.Enabled && s.db != nil && s.outbox != nil
+
+	existed, err := s.dao.GetByUsernameWithDeleted(ctx, username)
+	if err == nil {
+		if !existed.DeletedAt.Valid {
+			return nil, errcode.New(errcode.UserExists, errcode.KeyUserExists)
+		}
+		var u *model.User
+		if useOutbox {
+			err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+				row, e := s.dao.RestoreTx(ctx, tx, existed.ID, string(hash), nickname)
+				if e != nil {
+					return e
+				}
+				if e := s.dao.BindRoleTx(ctx, tx, row.ID, "user"); e != nil {
+					return e
+				}
+				payload, e := json.Marshal(map[string]any{"user_id": row.ID, "username": row.Username})
+				if e != nil {
+					return e
+				}
+				maxAttempts := s.outboxCfg.MaxAttempts
+				if maxAttempts <= 0 {
+					maxAttempts = 10
+				}
+				if _, e := s.outbox.EnqueueTx(ctx, tx, "user.registered", string(payload), maxAttempts); e != nil {
+					return e
+				}
+				u = row
+				return nil
+			})
 			if err != nil {
 				return nil, err
 			}
-			if err := s.dao.BindRole(ctx, restored.ID, "user"); err != nil {
+		} else {
+			u, err = s.dao.Restore(ctx, existed.ID, string(hash), nickname)
+			if err != nil {
 				return nil, err
 			}
-			restored.Password = ""
-			return restored, nil
+			if err := s.dao.BindRole(ctx, u.ID, "user"); err != nil {
+				return nil, err
+			}
 		}
-		return nil, errcode.New(errcode.UserExists, errcode.KeyUserExists)
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if s.queue != nil {
+			if err := s.queue.EnqueueWelcome(ctx, u.ID, u.Username); err != nil {
+				logger.WarnX("enqueue welcome failed", zap.Int64("uid", u.ID), zap.Error(err))
+			}
+		}
+		u.Password = ""
+		return u, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
+
 	u := &model.User{
 		Username: username,
 		Password: string(hash),
 		Nickname: nickname,
 	}
-	if err := s.dao.Create(ctx, u); err != nil {
-		return nil, err
-	}
-	if err := s.dao.BindRole(ctx, u.ID, "user"); err != nil {
-		return nil, err
+	if useOutbox {
+		err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			if e := s.dao.CreateTx(ctx, tx, u); e != nil {
+				return e
+			}
+			if e := s.dao.BindRoleTx(ctx, tx, u.ID, "user"); e != nil {
+				return e
+			}
+			payload, e := json.Marshal(map[string]any{"user_id": u.ID, "username": u.Username})
+			if e != nil {
+				return e
+			}
+			maxAttempts := s.outboxCfg.MaxAttempts
+			if maxAttempts <= 0 {
+				maxAttempts = 10
+			}
+			if _, e := s.outbox.EnqueueTx(ctx, tx, "user.registered", string(payload), maxAttempts); e != nil {
+				return e
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.dao.Create(ctx, u); err != nil {
+			return nil, err
+		}
+		if err := s.dao.BindRole(ctx, u.ID, "user"); err != nil {
+			return nil, err
+		}
 	}
 	if s.queue != nil {
 		if err := s.queue.EnqueueWelcome(ctx, u.ID, u.Username); err != nil {

@@ -130,7 +130,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	authzDAO := dao.NewAuthzDAO(gdb)
 	middleware.SetPermissionChecker(authz.NewDBPermissionChecker(authzDAO, cfg.RBAC.SuperAdminUserID))
 	middleware.SetSuperAdminUserID(cfg.RBAC.SuperAdminUserID)
-	userSvc := service.NewUserService(userDAO, q, jm, cfg.RBAC.SuperAdminUserID)
+	userSvc := service.NewUserService(userDAO, q, jm, cfg.RBAC.SuperAdminUserID, gdb, outboxDAO, cfg.Outbox)
 	menuSvc := service.NewMenuService(menuDAO)
 	taskSvc := service.NewScheduledTaskService(taskDAO, cfg.Scheduler)
 	sysSettingSvc := service.NewSystemSettingService(sysSettingDAO)
