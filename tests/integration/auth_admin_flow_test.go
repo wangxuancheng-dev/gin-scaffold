@@ -105,6 +105,54 @@ func TestIntegration_AuditExportAsyncFlow(t *testing.T) {
 	}
 }
 
+func TestIntegration_MenuCatalogTree(t *testing.T) {
+	env, ok := loadIntegrationEnv(t)
+	if !ok {
+		return
+	}
+	client := &http.Client{Timeout: 20 * time.Second}
+	token := loginAndGetAccessToken(t, client, env.BaseURL, env.Username, env.Password, env.TenantID)
+
+	resp := doAuthedRequest(t, client, http.MethodGet, env.BaseURL+"/api/v1/admin/menus/catalog", token, nil, env.TenantID)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("menus catalog expected 200, got %d", resp.StatusCode)
+	}
+	envBody := decodeEnvelope(t, resp)
+	var data struct {
+		Tree json.RawMessage `json:"tree"`
+	}
+	if err := json.Unmarshal(envBody.Data, &data); err != nil {
+		t.Fatalf("decode catalog data: %v", err)
+	}
+	if len(data.Tree) == 0 || string(data.Tree) == "null" {
+		t.Fatalf("expected non-empty data.tree, got %q", string(data.Tree))
+	}
+}
+
+func TestIntegration_MenuMineTree(t *testing.T) {
+	env, ok := loadIntegrationEnv(t)
+	if !ok {
+		return
+	}
+	client := &http.Client{Timeout: 20 * time.Second}
+	token := loginAndGetAccessToken(t, client, env.BaseURL, env.Username, env.Password, env.TenantID)
+
+	resp := doAuthedRequest(t, client, http.MethodGet, env.BaseURL+"/api/v1/admin/menus", token, nil, env.TenantID)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("menus list expected 200, got %d", resp.StatusCode)
+	}
+	envBody := decodeEnvelope(t, resp)
+	var data struct {
+		Tree json.RawMessage `json:"tree"`
+	}
+	if err := json.Unmarshal(envBody.Data, &data); err != nil {
+		t.Fatalf("decode menus data: %v", err)
+	}
+	if len(data.Tree) == 0 || string(data.Tree) == "null" {
+		t.Fatalf("expected non-empty data.tree, got %q", string(data.Tree))
+	}
+}
+
 func TestIntegration_TenantIsolation_LoginAndAdminAccess(t *testing.T) {
 	env, ok := loadIntegrationEnv(t)
 	if !ok {

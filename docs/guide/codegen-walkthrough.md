@@ -16,20 +16,24 @@ go run ./cmd/gen crud \
 执行后会生成：
 
 - model / dao / service / request / handler / route
-- migration（建表）
-- seed（权限）
+- migration（建表，**仅** `migrations/mysql/schema/`）
+- seed（权限，**仅** `migrations/mysql/seed/`）
 - 自动 wiring（routes + bootstrap）
+
+若使用 PostgreSQL，请在 `migrations/postgres/schema/`、`migrations/postgres/seed/` 中按同名时间戳补充等价 SQL（本仓库已提供与 MySQL 对齐的基线，可参考方言差异）。
 
 ## 2) 执行迁移
 
 ```bash
 go run ./cmd/migrate up --env dev
+go run ./cmd/migrate seed up --env dev
 ```
 
 如果是测试环境：
 
 ```bash
 go run ./cmd/migrate up --env test
+go run ./cmd/migrate seed up --env test
 ```
 
 ## 3) 启动服务并验证路由

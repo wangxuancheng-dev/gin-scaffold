@@ -1,15 +1,17 @@
 # PostgreSQL Migrations Guide
 
-本目录用于 PostgreSQL 专用迁移 SQL。
+本目录为 **PostgreSQL** 专用迁移 SQL，与 `migrations/mysql/` **同名时间戳** 对齐，便于双驱动对照维护。
+
+## 环境要求
+
+- 建议 **PostgreSQL 11+**（脚本使用 `ADD COLUMN IF NOT EXISTS` 等语法）。
 
 ## 目录约定
 
-建议与 MySQL 保持一致的职责拆分：
+与 MySQL 保持一致的职责拆分：
 
 - `schema/`：结构变更（DDL），如 `CREATE TABLE`、`ALTER TABLE`、索引与约束。
 - `seed/`：初始化与演示数据（DML），如默认角色、菜单、管理员账号。
-
-> 目前即使目录下暂时没有 SQL，也建议提前按该规范组织，便于后续多驱动统一维护。
 
 ## 执行规则
 

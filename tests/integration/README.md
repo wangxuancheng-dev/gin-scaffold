@@ -16,6 +16,9 @@ This directory contains opt-in integration tests for key online flows.
   - create task `POST /api/v1/admin/audit-logs/export/tasks`
   - poll status `GET /api/v1/admin/audit-logs/export/tasks/{task_id}`
   - download CSV `GET /api/v1/admin/audit-logs/export/tasks/{task_id}/download`
+- Menu RBAC (tenant header + JWT):
+  - `GET /api/v1/admin/menus/catalog` returns `data.tree`
+  - `GET /api/v1/admin/menus` (role-filtered) returns `data.tree`
 
 ## Prerequisites
 

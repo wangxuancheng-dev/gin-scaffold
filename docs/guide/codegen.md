@@ -33,20 +33,24 @@ go run ./cmd/gen crud --module order --field title:string:required,max=64 --fiel
 - `api/request/admin/<module>_request.go`
 - `api/handler/admin/<module>_handler.go`
 - `routes/adminroutes/<module>_router.go`
-- `migrations/mysql/schema/*_create_<table>.up.sql`
-- `migrations/mysql/schema/*_create_<table>.down.sql`
-- `migrations/mysql/seed/*_seed_<module>_permission.up.sql`
-- `migrations/mysql/seed/*_seed_<module>_permission.down.sql`
+- **仅 MySQL**：`migrations/mysql/schema/*_create_<table>.{up,down}.sql`
+- **仅 MySQL**：`migrations/mysql/seed/*_seed_<module>_permission.{up,down}.sql`
 
 `simple` 模板只生成代码骨架（不生成 migration/seed，也不自动 wiring）。
 使用 `simple` 时会自动启用 `--no-wire`。
+
+### PostgreSQL
+
+`cmd/gen` **不会**自动生成 `migrations/postgres/` 下的 SQL。若项目需要双驱动，请在合并 MySQL 迁移后，**手工在 `migrations/postgres/schema` / `seed` 中追加与 MySQL 同名时间戳的 PG 脚本**（本仓库已维护一套与当前 MySQL 对齐的 PG 迁移，可作方言改写参考）。
 
 ## 建议流程
 
 1. 执行 `--dry-run` 先确认生成路径
 2. 需要评审时可加 `--preview-file ./tmp/<module>-preview.md`
 3. 运行生成命令并补全业务细节
-4. 执行迁移：`go run ./cmd/migrate up --env dev`
-5. 视需要补充菜单 seed 与权限分配
+4. 执行迁移（结构 + 种子分开）：
+   - MySQL：`go run ./cmd/migrate up --env dev` 然后 `go run ./cmd/migrate seed up --env dev`
+   - PostgreSQL：`go run ./cmd/migrate up --env dev --driver postgres --dsn "<dsn>"` 然后 `go run ./cmd/migrate seed up ...`
+5. 视需要补充菜单 seed 与权限分配（PG 侧同步维护时同样放在 `migrations/postgres/seed/`）
 
 更多实战示例见：`docs/guide/codegen-walkthrough.md`

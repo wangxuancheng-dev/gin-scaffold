@@ -153,11 +153,16 @@ func runCRUD(opt crudOptions) error {
 	if opt.template == "full" {
 		fmt.Println("  2) review generated migration/seed SQL for table:", opt.table)
 		fmt.Println("  3) apply migrations: go run ./cmd/migrate up --env dev && go run ./cmd/migrate seed up --env dev")
+		fmt.Println("  4) if using PostgreSQL, add matching files under migrations/postgres/schema and migrations/postgres/seed")
 	} else {
 		fmt.Println("  2) simple template skips migration/seed and auto-wiring")
 	}
 	if opt.noWire || opt.template == "simple" {
-		fmt.Println("  3) wire route/bootstrap manually")
+		if opt.template == "full" {
+			fmt.Println("  5) wire route/bootstrap manually (--no-wire)")
+		} else {
+			fmt.Println("  3) wire route/bootstrap manually")
+		}
 	}
 
 	return nil

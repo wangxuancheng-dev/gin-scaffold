@@ -4,7 +4,8 @@
 
 ### Added
 
-- (placeholder) Add upcoming changes here.
+- PostgreSQL migrations aligned with MySQL (`migrations/postgres/schema`, `migrations/postgres/seed`).
+- Integration tests for admin menu catalog and role-filtered menu tree (`data.tree`).
 
 ### Changed
 
