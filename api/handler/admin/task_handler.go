@@ -22,7 +22,10 @@ func NewTaskHandler(s port.ScheduledTaskService) *TaskHandler {
 
 func (h *TaskHandler) List(c *gin.Context) {
 	var q adminreq.TaskListQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	rows, total, err := h.svc.List(c.Request.Context(), q.Page, q.PageSize)
 	if err != nil {
 		handler.FailInternal(c, err)
@@ -135,7 +138,10 @@ func (h *TaskHandler) Logs(c *gin.Context) {
 		return
 	}
 	var q adminreq.TaskListQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	rows, total, err := h.svc.ListLogs(c.Request.Context(), uri.ID, q.Page, q.PageSize)
 	if err != nil {
 		h.failWithErr(c, err)

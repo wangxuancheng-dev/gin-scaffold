@@ -49,7 +49,10 @@ func NewUserHandler(s port.UserService, q ...*job.Client) *UserHandler {
 // @Router /api/v1/admin/users [get]
 func (h *UserHandler) List(c *gin.Context) {
 	var q adminreq.UserListQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	rows, total, err := h.svc.List(c.Request.Context(), h.buildQuery(q), q.Page, q.PageSize)
 	if err != nil {
 		handler.FailInternal(c, err)
@@ -190,7 +193,10 @@ func (h *UserHandler) ExportTaskCreate(c *gin.Context) {
 		return
 	}
 	var q adminreq.UserListQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	fields := parseExportFields(q.Fields)
 	taskID := uuid.NewString()
 	operator := int64(0)

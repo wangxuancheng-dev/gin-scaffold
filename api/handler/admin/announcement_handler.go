@@ -24,7 +24,10 @@ func NewAnnouncementHandler(s port.AnnouncementService) *AnnouncementHandler {
 
 func (h *AnnouncementHandler) List(c *gin.Context) {
 	var q adminreq.PageQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	rows, total, err := h.svc.List(c.Request.Context(), q.Page, q.PageSize)
 	if err != nil {
 		handler.FailInternal(c, err)

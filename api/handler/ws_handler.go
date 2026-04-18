@@ -2,13 +2,13 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
 	"gin-scaffold/internal/service"
+	"gin-scaffold/middleware"
 )
 
 // WSHandler WebSocket 入口。
@@ -23,16 +23,17 @@ func NewWSHandler(s *service.WSService, checkOrigin func(*http.Request) bool) *W
 }
 
 // Handle 使用 gorilla/websocket 升级并处理心跳和回显。
-// @Summary WebSocket 演示
+// @Summary WebSocket 演示（需 Authorization Bearer，连接身份为 JWT 中的用户）
 // @Tags realtime
-// @Param uid query int true "用户ID"
-// @Router /api/v1/ws [get]
+// @Security BearerAuth
+// @Router /api/v1/client/ws [get]
 func (h *WSHandler) Handle(c *gin.Context) {
-	uid, err := strconv.ParseInt(c.Query("uid"), 10, 64)
-	if err != nil || uid <= 0 {
-		c.Status(http.StatusBadRequest)
+	cl, ok := middleware.Claims(c)
+	if !ok || cl == nil || cl.UserID <= 0 {
+		c.Status(http.StatusUnauthorized)
 		return
 	}
+	uid := cl.UserID
 	co := h.checkOrigin
 	if co == nil {
 		co = func(*http.Request) bool { return true }

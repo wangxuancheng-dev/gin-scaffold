@@ -20,7 +20,6 @@ func registerClientRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, base *handler.B
 		client.POST("/auth/login", user.Login)
 		client.POST("/auth/refresh", user.Refresh)
 		client.GET("/files/download", file.Download)
-		client.GET("/ws", ws.Handle)
 		client.GET("/sse/stream", sse.Stream)
 	}
 	if jwtMgr == nil {
@@ -34,4 +33,5 @@ func registerClientRoutes(r *gin.Engine, jwtMgr *jwtpkg.Manager, base *handler.B
 	clientAuth.POST("/files/presign", file.PresignPut)
 	clientAuth.POST("/files/complete", file.Complete)
 	clientAuth.GET("/files/url", file.SignURL)
+	clientAuth.GET("/ws", ws.Handle)
 }

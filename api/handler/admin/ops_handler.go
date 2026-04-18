@@ -257,7 +257,10 @@ func buildExportFilterSummary(q dao.AuditLogListQuery) string {
 
 func parseAuditQuery(c *gin.Context, exportMode bool) (dao.AuditLogListQuery, bool) {
 	var req adminreq.AuditLogListQuery
-	_ = c.ShouldBindQuery(&req)
+	if err := c.ShouldBindQuery(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return dao.AuditLogListQuery{}, false
+	}
 	daoQuery := dao.AuditLogListQuery{
 		Page:      req.Page,
 		PageSize:  req.PageSize,

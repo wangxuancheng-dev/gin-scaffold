@@ -1,5 +1,43 @@
 basePath: /
 definitions:
+  adminreq.MenuCreateRequest:
+    properties:
+      name:
+        maxLength: 128
+        type: string
+      parent_id:
+        description: 不传或 0 表示顶级菜单
+        type: integer
+      path:
+        maxLength: 255
+        type: string
+      perm_code:
+        maxLength: 128
+        type: string
+      sort:
+        type: integer
+    required:
+    - name
+    - path
+    - perm_code
+    type: object
+  adminreq.MenuUpdateRequest:
+    properties:
+      name:
+        maxLength: 128
+        type: string
+      parent_id:
+        description: 传 0 表示改为顶级；不传表示不修改父级
+        type: integer
+      path:
+        maxLength: 255
+        type: string
+      perm_code:
+        maxLength: 128
+        type: string
+      sort:
+        type: integer
+    type: object
   adminreq.SystemSettingCreateRequest:
     properties:
       group_name:
@@ -329,7 +367,99 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/response.Body'
-      summary: 菜单列表（后台）
+      summary: 当前角色菜单
+      tags:
+      - admin-menu
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/adminreq.MenuCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 创建菜单
+      tags:
+      - admin-menu
+  /api/v1/admin/menus/{id}:
+    delete:
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 删除菜单
+      tags:
+      - admin-menu
+    get:
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 菜单详情
+      tags:
+      - admin-menu
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/adminreq.MenuUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 更新菜单
+      tags:
+      - admin-menu
+  /api/v1/admin/menus/catalog:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 租户菜单全量
       tags:
       - admin-menu
   /api/v1/admin/system-settings:
@@ -986,22 +1116,18 @@ paths:
       summary: 用户详情
       tags:
       - client-user
+  /api/v1/client/ws:
+    get:
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: WebSocket 演示（需 Authorization Bearer，连接身份为 JWT 中的用户）
+      tags:
+      - realtime
   /api/v1/sse/stream:
     get:
       responses: {}
       summary: SSE 演示
-      tags:
-      - realtime
-  /api/v1/ws:
-    get:
-      parameters:
-      - description: 用户ID
-        in: query
-        name: uid
-        required: true
-        type: integer
-      responses: {}
-      summary: WebSocket 演示
       tags:
       - realtime
   /health:

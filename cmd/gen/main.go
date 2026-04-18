@@ -749,6 +749,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	adminreq "gin-scaffold/api/request/admin"
+	"gin-scaffold/api/handler"
 	"gin-scaffold/api/response"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
@@ -766,7 +767,10 @@ func New{{Model}}Handler(s port.{{Service}}) *{{Model}}Handler {
 
 func (h *{{Model}}Handler) List(c *gin.Context) {
 	var q adminreq.PageQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	rows, total, err := h.svc.List(c.Request.Context(), q.Page, q.PageSize)
 	if err != nil {
 		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())

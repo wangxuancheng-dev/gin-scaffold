@@ -15,7 +15,7 @@
 
 - 依赖 **`github.com/gorilla/websocket`**。
 - 演示 Handler：`api/handler/ws_handler.go`；`CheckOrigin` 与 **`cors.allow_origins`** 对齐（`middleware.WebSocketCheckOrigin`）。`allow_origins` 为 `*` 或未配置时仍较宽松，生产请列出明确前端源或交给网关校验。
-- 查询参数 **`uid`** 必填且为正整数（演示用用户标识）。
+- **鉴权**：与受保护 client 路由一致，需 **`Authorization: Bearer <access>`**；连接用户 ID 来自 JWT，**不再**使用 `uid` 查询参数（避免任意冒充）。
 
 ## SSE
 

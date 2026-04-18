@@ -82,7 +82,10 @@ func (h *TaskQueueHandler) FailedList(c *gin.Context) {
 		return
 	}
 	var q adminreq.QueueTaskListQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	queue := strings.TrimSpace(q.Queue)
 	if queue == "" {
 		queue = "default"

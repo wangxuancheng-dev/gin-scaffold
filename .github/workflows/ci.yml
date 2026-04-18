@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 on:
   push:
@@ -44,6 +44,11 @@ jobs:
 
       - name: Run all tests
         run: go test ./...
+
+      - name: Enforce coverage gate
+        env:
+          COVERAGE_THRESHOLD: '14'
+        run: bash ./scripts/go-cover.sh
 
       - name: Verify swagger is up to date
         run: |
@@ -101,3 +106,5 @@ jobs:
 
       - name: Integration tests (MySQL + Redis + API + worker)
         run: bash ./scripts/integration.sh
+
+

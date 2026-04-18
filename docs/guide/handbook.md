@@ -56,7 +56,7 @@
 | [RBAC 与权限](/guide/rbac-and-permissions) | `RequirePermission`、超管、seed、检查器注入 |
 | [管理端 API 总览](/guide/admin-api-overview) | 模块与路由文件索引；字段细节以 Swagger 为准 |
 | [日志与可观测](/guide/logging-observability) | **Zap 在代码中的用法**、访问日志、轮转、自定义通道、Prometheus、OTel |
-| [测试指南](/guide/testing-guide) | 单元测试、集成测试、build tag、CI |
+| [测试指南](/guide/testing-guide) | 单元测试、集成测试、build tag、CI、本地 `golangci-lint` 脚本 |
 | [常用包与辅助能力](/guide/helpers-packages) | `pkg/*`、`internal/pkg/*` 速查 |
 | [生产运行手册](/ops/production-runbook) | systemd、Nginx、迁移、回滚 |
 | [上线检查清单](/checklist) | 发布前打勾项（含 Worker、网关） |

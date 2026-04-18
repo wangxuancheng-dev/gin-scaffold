@@ -26,7 +26,7 @@
 ## 定时任务与 WebSocket
 
 - **定时任务命令**：`artisan …` 走应用内注册表；其它命令历史上通过 `sh -c` / `cmd /C` 执行，等价于**可远程触发的 RCE**（能改 DB 任务的人即可执行）。生产配置 **`scheduler.shell_commands_enabled: false`**（默认），仅允许 `artisan`；确需 shell 时再显式打开并收紧谁能改任务。见 [定时任务中心](/guide/scheduler)。
-- **WebSocket**：`CheckOrigin` 与 **`cors.allow_origins`** 对齐；`allow_origins` 含 `*` 或未配置时仍偏宽松，生产请列出明确前端源。见 [SSE/WebSocket](/guide/realtime-sse-websocket)。
+- **WebSocket**：`/api/v1/client/ws` 在 **JWT 保护组** 内，身份以 token 为准；`CheckOrigin` 与 **`cors.allow_origins`** 对齐；`allow_origins` 含 `*` 或未配置时仍偏宽松，生产请列出明确前端源。见 [SSE/WebSocket](/guide/realtime-sse-websocket)。
 
 ## 业务安全横切
 

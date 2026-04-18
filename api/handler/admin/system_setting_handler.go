@@ -36,7 +36,10 @@ func NewSystemSettingHandler(s port.SystemSettingService) *SystemSettingHandler 
 // @Router /api/v1/admin/system-settings [get]
 func (h *SystemSettingHandler) List(c *gin.Context) {
 	var q adminreq.SystemSettingListQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	rows, total, err := h.svc.List(c.Request.Context(), model.SystemSettingQuery{
 		KeyLike:   strings.TrimSpace(q.Key),
 		GroupName: strings.TrimSpace(q.GroupName),
@@ -169,7 +172,10 @@ func (h *SystemSettingHandler) History(c *gin.Context) {
 		return
 	}
 	var q adminreq.SystemSettingHistoryQuery
-	_ = c.ShouldBindQuery(&q)
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
 	rows, total, err := h.svc.ListHistory(c.Request.Context(), uri.ID, q.Page, q.PageSize)
 	if err != nil {
 		handler.FailInternal(c, err)

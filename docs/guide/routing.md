@@ -16,7 +16,7 @@
 | POST | `/api/v1/client/auth/login` | 登录 |
 | POST | `/api/v1/client/auth/refresh` | 刷新令牌 |
 | GET | `/api/v1/client/files/download` | 签名下载（查询参数验签） |
-| GET | `/api/v1/client/ws` | WebSocket 演示（`uid` 查询参数） |
+| GET | `/api/v1/client/ws` | WebSocket 演示（**需 JWT**，身份为 token 内用户） |
 | GET | `/api/v1/client/sse/stream` | SSE 演示 |
 
 以下路由挂在 **`JWTAuth` 之后** 的同一前缀组（`/api/v1/client`）：

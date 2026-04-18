@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 ## [Unreleased]
 
@@ -6,25 +6,28 @@
 
 - PostgreSQL migrations aligned with MySQL (`migrations/postgres/schema`, `migrations/postgres/seed`).
 - Integration tests for admin menu catalog and role-filtered menu tree (`data.tree`).
-- **开发手册与附录**：`handbook` 及路由、中间件、缓存、队列、迁移、配置、环境变量、GORM 实践、RBAC、管理端 API 总览、i18n、限流、SSE/WS（含生产化）、安全、测试、常用包、出站 HTTP、日志代码用法等专题；VitePress 侧栏与首页导航已更新。
-- `http.swagger_enabled`：生产默认关闭 Swagger UI；`metrics.allowed_networks`：可选按 TCP 源 IP（CIDR）限制 `/metrics`。
-- `scripts/integration.sh` 与 CI Job `integration`（Docker MySQL/Redis + 集成测试）。
-- `deploy/systemd/gin-scaffold-worker.service.example`：Worker 独立 systemd 单元示例。
+- Developer handbook and guide index expanded (routing, middleware, cache, queue, migration, config, env, RBAC, admin API overview, realtime, security, testing, helpers, outbound HTTP, logging).
+- `http.swagger_enabled`: Swagger UI disabled by default in production.
+- `metrics.allowed_networks`: optional CIDR allowlist for `/metrics` by TCP source IP.
+- `scripts/integration.sh` and CI job `integration` (Docker MySQL/Redis + integration tests).
+- `deploy/systemd/gin-scaffold-worker.service.example`: standalone worker unit.
+- Test coverage additions for `internal/pkg/*`, `pkg/db` / `pkg/cache` / `pkg/policy` / `pkg/httpclient` / `pkg/limiter`, `routes`, `api/handler`, `internal/model`, `internal/console/commands`, `internal/dao` (sqlmock), `pkg/redis` (miniredis), `pkg/loginthrottle`.
 
 ### Changed
 
-- `configs/app.prod.yaml`：全局限流默认 `redis` 多实例共享；`metrics` 默认私网/回环 CIDR 白名单。
-- `routes.Build` 返回 `error`（指标网段解析失败不再 `panic`）；集成脚本先 `go build` 再启动以缩短 CI 耗时。
-- 上线清单合并为 **`docs/checklist.md`** 唯一正文；`docs/ops/checklist.md` 仅作入口跳转；文档站导航改为 `/checklist`。
-- 集成脚本对 **`cmd/migrate`** 预编译为 `bin/scaffold-migrate` 再执行；`handler` 门禁脚本递归扫描 `api/handler/`（排除 `error_helper.go`）。
-- `admin/announcement_handler` 改为统一走 `api/handler/error_helper.go`；新增 `FailNotFound`。
+- `configs/app.prod.yaml`: limiter defaults to Redis mode; `metrics` defaults to private/loopback CIDR allowlist.
+- `routes.Build` returns `error` when metrics allowlist parse fails (no panic).
+- Integration scripts prebuild migrate binary and improve handler error-helper gate scanning.
+- Checklist consolidated to `docs/checklist.md` as single source of truth.
+- Local quality scripts added: `scripts/go-lint.sh` / `go-lint.ps1`, `scripts/go-cover.sh` / `go-cover.ps1`.
+- CI `test-build` now enforces coverage gate (`COVERAGE_THRESHOLD`, default `14`).
 
 ### Fixed
 
-- **安全**：定时任务在 `scheduler.shell_commands_enabled=false`（生产默认）时禁止 `sh -c` / `cmd /C` 任意命令，仅允许 `artisan …`，避免具备任务编辑权限即等价 RCE；WebSocket `CheckOrigin` 与 CORS 白名单对齐；下载 `Content-Disposition` 文件名经 `strutil.AttachmentFilename` 净化。
+- Security hardening: scheduler shell command execution disabled by default in production (`scheduler.shell_commands_enabled=false`), WebSocket `CheckOrigin` aligned with CORS allowlist, `Content-Disposition` filename sanitized by `strutil.AttachmentFilename`.
+- Robustness: admin query binding failures now return `FailInvalidParam`; WebSocket route moved under JWT auth and user identity comes from token claims (no spoofable `uid` query param).
 
 ---
-
 ## [v0.2.0] - 2026-04-17
 
 ### Added
@@ -94,3 +97,5 @@ go run ./cmd/migrate up --env dev
 ```powershell
 .\scripts\integration.ps1 -Action all
 ```
+
+
