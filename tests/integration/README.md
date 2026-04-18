@@ -43,6 +43,12 @@ go test -tags=integration ./tests/integration -v
 
 If required env vars are missing, tests are skipped by design.
 
+## One-Click Local Run (Linux / macOS / CI)
+
+```bash
+bash ./scripts/integration.sh
+```
+
 ## One-Click Local Run (Windows / PowerShell)
 
 ```powershell

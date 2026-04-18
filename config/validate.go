@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"strings"
 )
 
@@ -27,6 +28,7 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateCORS()...)
 	errs = append(errs, a.validateOutbound()...)
 	errs = append(errs, a.validateStorage()...)
+	errs = append(errs, a.validateMetrics()...)
 	errs = append(errs, a.validateLimiter()...)
 	errs = append(errs, a.validatePlatform()...)
 	errs = append(errs, a.validateOutbox()...)
@@ -320,6 +322,30 @@ func validateNotifyTargets(n NotifyConfig) []string {
 	if needWH {
 		if strings.TrimSpace(n.Webhook.URL) == "" {
 			errs = append(errs, "platform.notify.webhook.url is required when notify driver includes webhook")
+		}
+	}
+	return errs
+}
+
+func (a *App) validateMetrics() []string {
+	var errs []string
+	if !a.Metrics.Enabled {
+		return errs
+	}
+	path := strings.TrimSpace(a.Metrics.Path)
+	if path == "" {
+		errs = append(errs, "metrics.path is required when metrics.enabled=true")
+	} else if !strings.HasPrefix(path, "/") {
+		errs = append(errs, "metrics.path must start with /")
+	}
+	for _, cidr := range a.Metrics.AllowedNetworks {
+		cidr = strings.TrimSpace(cidr)
+		if cidr == "" {
+			errs = append(errs, "metrics.allowed_networks must not contain empty entries")
+			continue
+		}
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			errs = append(errs, fmt.Sprintf("metrics.allowed_networks: invalid CIDR %q: %v", cidr, err))
 		}
 	}
 	return errs

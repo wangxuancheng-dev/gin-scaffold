@@ -63,11 +63,11 @@ type AuditConfig struct {
 
 // IdempotencyConfig POST 幂等（Redis，需 X-Idempotency-Key）。
 type IdempotencyConfig struct {
-	Enabled                 bool  `mapstructure:"enabled"`
-	TTLSeconds              int   `mapstructure:"ttl_seconds"`
-	LockSeconds             int   `mapstructure:"lock_seconds"`
-	MaxBodyBytes            int64 `mapstructure:"max_body_bytes"`
-	MaxCachedResponseBytes  int64 `mapstructure:"max_cached_response_bytes"`
+	Enabled                bool  `mapstructure:"enabled"`
+	TTLSeconds             int   `mapstructure:"ttl_seconds"`
+	LockSeconds            int   `mapstructure:"lock_seconds"`
+	MaxBodyBytes           int64 `mapstructure:"max_body_bytes"`
+	MaxCachedResponseBytes int64 `mapstructure:"max_cached_response_bytes"`
 }
 
 // CacheConfig 业务缓存键前缀（pkg/cache）。
@@ -85,14 +85,14 @@ type NotifyConfig struct {
 
 // SMTPNotifyConfig SMTP 通知（driver 含 smtp 时必填 host/port/from）。
 type SMTPNotifyConfig struct {
-	Host         string `mapstructure:"host"`
-	Port         int    `mapstructure:"port"`
-	Username     string `mapstructure:"username"`
-	Password     string `mapstructure:"password"`
-	From         string `mapstructure:"from"`
-	ToDefault    string `mapstructure:"to_default"`
-	ImplicitTLS  bool   `mapstructure:"implicit_tls"` // 465 等隐式 TLS
-	SkipVerify   bool   `mapstructure:"skip_verify"`
+	Host        string `mapstructure:"host"`
+	Port        int    `mapstructure:"port"`
+	Username    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	From        string `mapstructure:"from"`
+	ToDefault   string `mapstructure:"to_default"`
+	ImplicitTLS bool   `mapstructure:"implicit_tls"` // 465 等隐式 TLS
+	SkipVerify  bool   `mapstructure:"skip_verify"`
 }
 
 // WebhookNotifyConfig Webhook 通知（driver 含 webhook 时必填 url）。
@@ -121,6 +121,8 @@ type HTTPConfig struct {
 	IdleTimeout       int    `mapstructure:"idle_timeout_sec"`
 	ShutdownTimeout   int    `mapstructure:"shutdown_timeout_sec"`
 	MaxBodyBytes      int64  `mapstructure:"max_body_bytes"`
+	// SwaggerEnabled 为 true 时注册 /swagger/*（纯 API 生产环境建议 false，由网关或内网文档站暴露契约）。
+	SwaggerEnabled bool `mapstructure:"swagger_enabled"`
 }
 
 // LogConfig Zap + Lumberjack 日志配置。
@@ -205,6 +207,8 @@ type JWTConfig struct {
 type MetricsConfig struct {
 	Enabled bool   `mapstructure:"enabled"`
 	Path    string `mapstructure:"path"`
+	// AllowedNetworks 为 CIDR 列表（如 10.0.0.0/8）；非空时仅当 TCP 对端 IP（RemoteAddr，不看 X-Forwarded-For）命中任一网段才返回指标，否则 404。空表示不校验（依赖网关/网络策略）。
+	AllowedNetworks []string `mapstructure:"allowed_networks"`
 }
 
 // TraceConfig OpenTelemetry 链路追踪配置（OTLP HTTP，可对接 Jaeger）。
@@ -226,7 +230,7 @@ type LimiterConfig struct {
 	Mode           string  `mapstructure:"mode"` // memory | redis
 	RedisKeyPrefix string  `mapstructure:"redis_key_prefix"`
 	WindowSec      int     `mapstructure:"window_sec"` // Redis 模式下计数窗口（秒）
-	IPRPS          float64 `mapstructure:"ip_rps"`       // 每 IP 每秒令牌补充速率
+	IPRPS          float64 `mapstructure:"ip_rps"`     // 每 IP 每秒令牌补充速率
 	IPBurst        int     `mapstructure:"ip_burst"`
 	RouteRPS       float64 `mapstructure:"route_rps"` // 每路由每秒
 	RouteBurst     int     `mapstructure:"route_burst"`
@@ -280,7 +284,7 @@ type StorageConfig struct {
 	AllowedExt   string `mapstructure:"allowed_ext"`  // 逗号分隔，如 .jpg,.png,.pdf
 	AllowedMIME  string `mapstructure:"allowed_mime"` // 逗号分隔，如 image/jpeg,application/pdf
 	URLExpireSec int    `mapstructure:"url_expire_sec"`
-	S3Endpoint   string `mapstructure:"s3_endpoint"`   // 如 https://minio.example.com
+	S3Endpoint   string `mapstructure:"s3_endpoint"` // 如 https://minio.example.com
 	S3Region     string `mapstructure:"s3_region"`   // 可为空，MinIO 常用 us-east-1
 	S3Bucket     string `mapstructure:"s3_bucket"`
 	S3AccessKey  string `mapstructure:"s3_access_key"`

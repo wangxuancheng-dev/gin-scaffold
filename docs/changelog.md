@@ -6,10 +6,13 @@
 
 - PostgreSQL migrations aligned with MySQL (`migrations/postgres/schema`, `migrations/postgres/seed`).
 - Integration tests for admin menu catalog and role-filtered menu tree (`data.tree`).
+- `http.swagger_enabled`：生产默认关闭 Swagger UI；`metrics.allowed_networks`：可选按 TCP 源 IP（CIDR）限制 `/metrics`。
+- `scripts/integration.sh` 与 CI Job `integration`（Docker MySQL/Redis + 集成测试）。
+- `deploy/systemd/gin-scaffold-worker.service.example`：Worker 独立 systemd 单元示例。
 
 ### Changed
 
-- (placeholder) Add upcoming changes here.
+- `configs/app.prod.yaml`：全局限流默认 `redis` 多实例共享；`metrics` 默认私网/回环 CIDR 白名单。
 
 ### Fixed
 

@@ -88,7 +88,7 @@ flowchart LR
 
 ### 7. Swagger 在哪里、如何更新
 
-本地启动服务后访问项目配置的 Swagger 路径（常见为 `/swagger/index.html`，以路由注册为准）。注释变更后执行文档站或 README 中给出的 **`swag init`** 命令重新生成文档包。
+本地启动服务后，若 `http.swagger_enabled` 为 `true`，可访问 Swagger（常见为 `/swagger/index.html`）。生产模板默认关闭该开关，契约以 CI 生成的 `docs/swagger.json` 或内网文档站为准。注释变更后执行文档站或 README 中给出的 **`swag init`** 命令重新生成文档包。
 
 ### 8. `cmd/gen` 只生成了 MySQL 迁移，项目是 PostgreSQL
 
@@ -96,7 +96,7 @@ flowchart LR
 
 ### 9. 集成测试一直 Skip
 
-集成测试使用 build tag **`integration`**，且需设置环境变量（如 **`INTEGRATION_BASE_URL`**、管理员账号密码等）。见 `tests/integration/README.md`。
+集成测试使用 build tag **`integration`**，且需设置环境变量（如 **`INTEGRATION_BASE_URL`**、管理员账号密码等）。见 `tests/integration/README.md`；Linux/macOS 一键跑法为 **`bash ./scripts/integration.sh`**。
 
 ### 10. 只执行了 `migrate up`，没有菜单 / 权限数据
 

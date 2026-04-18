@@ -149,7 +149,7 @@ func bindEnvKeys(v *viper.Viper) {
 	keys := []string{
 		"env", "name", "debug",
 		"http.host", "http.port", "http.read_timeout_sec", "http.read_header_timeout_sec", "http.write_timeout_sec", "http.idle_timeout_sec", "http.shutdown_timeout_sec",
-		"http.max_body_bytes",
+		"http.max_body_bytes", "http.swagger_enabled",
 		"log.level", "log.dir", "log.app_file", "log.access_file", "log.error_file",
 		"log.rotation_mode", "log.app_rotation_mode", "log.access_rotation_mode", "log.error_rotation_mode",
 		"log.max_size_mb", "log.max_backups", "log.max_age_days", "log.compress", "log.console",

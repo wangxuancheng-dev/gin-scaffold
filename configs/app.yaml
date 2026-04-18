@@ -11,6 +11,7 @@ http:
   idle_timeout_sec: 120
   shutdown_timeout_sec: 10
   max_body_bytes: 1048576
+  swagger_enabled: true
 
 log:
   level: debug
@@ -78,6 +79,7 @@ jwt:
 metrics:
   enabled: true
   path: /metrics
+  allowed_networks: []
 
 trace:
   enabled: false

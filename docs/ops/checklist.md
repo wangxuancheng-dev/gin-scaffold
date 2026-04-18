@@ -24,17 +24,18 @@
 - [ ] 线上 migration 已执行并记录版本：`./bin/migrate --env prod --driver mysql --dsn "$DB_DSN" up`
 - [ ] 审计权限 seed 已执行（旧版本升级时）：`202504171420_seed_audit_permission`、`202504171430_seed_audit_export_permission`
 - [ ] Redis 可连接且密码正确
-- [ ] `systemd` 服务文件已更新：`/etc/systemd/system/gin-scaffold.service`
+- [ ] `systemd`：API 单元 `gin-scaffold.service`；Asynq **Worker** 单元 `gin-scaffold-worker.service`（示例见 `deploy/systemd/*.example`）
 - [ ] 执行 `sudo systemctl daemon-reload`
-- [ ] 执行 `sudo systemctl restart gin-scaffold`
-- [ ] 执行 `sudo systemctl status gin-scaffold` 状态正常
+- [ ] 执行 `sudo systemctl enable --now gin-scaffold gin-scaffold-worker`（或等价方式）
+- [ ] `systemctl status gin-scaffold` 与 `gin-scaffold-worker` 均为 active
 
 ## 4. 网关与安全
 
 - [ ] Nginx 配置已更新：`/etc/nginx/conf.d/gin-scaffold.conf`
 - [ ] 执行 `nginx -t` 通过并 `systemctl reload nginx`
 - [ ] HTTPS 证书路径与域名匹配
-- [ ] `/metrics` 与 `/swagger` 白名单策略已确认
+- [ ] `/metrics`：`metrics.allowed_networks` 与抓取来源一致；公网抓取时置空并依赖网关
+- [ ] `/swagger`：生产默认 `http.swagger_enabled=false`；临时开启须内网或网关鉴权
 - [ ] 数据库与 Redis 未暴露公网
 
 ## 5. 上线后即时巡检

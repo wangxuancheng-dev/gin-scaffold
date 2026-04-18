@@ -9,13 +9,14 @@
 - 运行方式：单机 Linux + `systemd`
 - 配置来源：`configs/app.prod.yaml` + 系统环境变量（推荐 `EnvironmentFile`）
 - 进程管理：`systemd` 自启动 + 自动重启
-- 可观测性：应用日志 + `/livez` + `/readyz` + `/metrics`
+- 可观测性：应用日志 + `/livez` + `/readyz` + `/metrics`（指标路径见配置；多副本时全局限流应使用 Redis，见 `configs/app.prod.yaml`）
+- 异步任务：除 HTTP 进程外，必须常驻 **`bin/server worker --env prod`**（与 API 同一二进制），否则导出、Outbox 等队列任务不会消费
 
 ## 2. 目录建议
 
 ```text
 /opt/gin-scaffold/
-  bin/server
+  bin/server          # 子命令：server（HTTP）与 worker（Asynq）
   bin/migrate
   configs/app.yaml
   configs/app.prod.yaml
@@ -49,16 +50,16 @@ sh scripts/deploy/check-prod-env.sh /opt/gin-scaffold/.env.prod
 
 3) 安装 `systemd` 服务文件
 
-- 参考 `deploy/systemd/gin-scaffold.service.example`
-- 放置到 `/etc/systemd/system/gin-scaffold.service`
+- API：参考 `deploy/systemd/gin-scaffold.service.example` → `/etc/systemd/system/gin-scaffold.service`
+- Worker：参考 `deploy/systemd/gin-scaffold-worker.service.example` → `/etc/systemd/system/gin-scaffold-worker.service`
 
 4) 启动并设置开机自启
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable gin-scaffold
-sudo systemctl start gin-scaffold
-sudo systemctl status gin-scaffold
+sudo systemctl enable gin-scaffold gin-scaffold-worker
+sudo systemctl start gin-scaffold gin-scaffold-worker
+sudo systemctl status gin-scaffold gin-scaffold-worker
 ```
 
 5) 安装 Nginx 反向代理（推荐）

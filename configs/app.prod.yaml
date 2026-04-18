@@ -11,6 +11,7 @@ http:
   idle_timeout_sec: 120
   shutdown_timeout_sec: 20
   max_body_bytes: 1048576
+  swagger_enabled: false
 
 log:
   level: info
@@ -71,9 +72,16 @@ jwt:
   refresh_expire_min: 4320
   issuer: "gin-scaffold"
 
+# 指标抓取 TCP 源 IP 须落在下列网段（不经 X-Forwarded-For）；公网抓取或经七层代理时请改为 [] 并仅依赖网关/网络策略。
 metrics:
   enabled: true
   path: /metrics
+  allowed_networks:
+    - "127.0.0.0/8"
+    - "::1/128"
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
 
 trace:
   enabled: true
@@ -88,8 +96,8 @@ i18n:
     - ./i18n/en.json
 
 limiter:
-  mode: memory
-  redis_key_prefix: ""
+  mode: redis
+  redis_key_prefix: "gin-scaffold:limiter:"
   window_sec: 1
   ip_rps: 30
   ip_burst: 60

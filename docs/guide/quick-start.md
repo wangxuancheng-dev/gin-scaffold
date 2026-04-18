@@ -62,7 +62,7 @@ $env:LOAD_DOTENV_NON_DEV = "true"
 
 - `http://localhost:8080/livez`
 - `http://localhost:8080/readyz`
-- `http://localhost:8080/swagger/index.html`
+- `http://localhost:8080/swagger/index.html`（需在 `configs` 中 `http.swagger_enabled: true`，开发模板默认开启）
 
 ## 7) 变更记录
 

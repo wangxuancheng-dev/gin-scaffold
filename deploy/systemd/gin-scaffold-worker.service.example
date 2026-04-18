@@ -1,0 +1,17 @@
+[Unit]
+Description=gin-scaffold asynq worker
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/gin-scaffold
+EnvironmentFile=/opt/gin-scaffold/.env.prod
+ExecStart=/opt/gin-scaffold/bin/server worker --env prod
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

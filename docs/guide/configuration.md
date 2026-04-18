@@ -25,6 +25,12 @@
 - `idle_timeout_sec`
 - `shutdown_timeout_sec`
 - `max_body_bytes`: 请求体大小上限（字节），默认建议 `1048576`（1MB）
+- `swagger_enabled`: 是否注册 `/swagger/*`；生产建议 `false`，契约文档可由内网或 CI 产物提供
+
+## `metrics`
+
+- `enabled` / `path`
+- `allowed_networks`: CIDR 列表；非空时仅当请求的 **TCP 对端地址**（`RemoteAddr` 解析出的 IP，**不使用** `X-Forwarded-For`）落入任一网段时才返回 Prometheus 指标，否则返回 404。空列表表示不校验（依赖 Nginx / 网络策略）。生产模板默认填入私网与回环，便于同 VPC 抓取；公网 Prometheus 请置 `[]` 并仅用网关控制访问。
 
 ## `db`
 

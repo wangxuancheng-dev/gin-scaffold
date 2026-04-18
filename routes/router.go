@@ -23,22 +23,22 @@ import (
 
 // Options 路由依赖。
 type Options struct {
-	Cfg        *config.App
-	JWT        *jwtpkg.Manager
-	Base       *handler.BaseHandler
-	ClientUser *clienthandler.UserHandler
-	ClientFile *clienthandler.FileHandler
-	AdminUser  *adminhandler.UserHandler
-	AdminMenu  *adminhandler.MenuHandler
-	AdminOps   *adminhandler.OpsHandler
-	AdminTask  *adminhandler.TaskHandler
-	AdminSys   *adminhandler.SystemSettingHandler
-	AdminQueue *adminhandler.TaskQueueHandler
-	AdminAnnouncement  *adminhandler.AnnouncementHandler
-	WS         *handler.WSHandler
-	SSE        *handler.SSEHandler
-	TraceOn    bool
-	Limiter    limiter.Backend
+	Cfg               *config.App
+	JWT               *jwtpkg.Manager
+	Base              *handler.BaseHandler
+	ClientUser        *clienthandler.UserHandler
+	ClientFile        *clienthandler.FileHandler
+	AdminUser         *adminhandler.UserHandler
+	AdminMenu         *adminhandler.MenuHandler
+	AdminOps          *adminhandler.OpsHandler
+	AdminTask         *adminhandler.TaskHandler
+	AdminSys          *adminhandler.SystemSettingHandler
+	AdminQueue        *adminhandler.TaskQueueHandler
+	AdminAnnouncement *adminhandler.AnnouncementHandler
+	WS                *handler.WSHandler
+	SSE               *handler.SSEHandler
+	TraceOn           bool
+	Limiter           limiter.Backend
 }
 
 // Build 构建 *gin.Engine。
@@ -90,6 +90,11 @@ func Build(opts Options) *gin.Engine {
 		r.Use(otelgin.Middleware(opts.Cfg.Name))
 	}
 	if opts.Cfg != nil && opts.Cfg.Metrics.Enabled {
+		nets, err := middleware.ParseMetricsAllowlistNets(opts.Cfg.Metrics.AllowedNetworks)
+		if err != nil {
+			panic("metrics allowlist: " + err.Error())
+		}
+		r.Use(middleware.MetricsAllowlist(opts.Cfg.Metrics.Path, nets))
 		middleware.Metrics(r, "gin", opts.Cfg.Metrics.Path)
 	}
 
@@ -106,7 +111,9 @@ func Build(opts Options) *gin.Engine {
 			panic("debug panic endpoint")
 		})
 	}
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	if opts.Cfg != nil && opts.Cfg.HTTP.SwaggerEnabled {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	registerAPIV1(r, opts.JWT, opts.Base, opts.ClientUser, opts.ClientFile, opts.AdminUser, opts.AdminMenu, opts.AdminOps, opts.AdminTask, opts.AdminSys, opts.AdminQueue, opts.AdminAnnouncement, opts.WS, opts.SSE)
 

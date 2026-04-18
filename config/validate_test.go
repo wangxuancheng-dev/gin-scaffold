@@ -97,7 +97,7 @@ func TestValidate_PlatformNotifyDriverInvalid(t *testing.T) {
 			BundlePaths: []string{"./i18n/zh.json"},
 		},
 		Scheduler: SchedulerConfig{LogRetentionDays: 30, LockTTLSeconds: 120},
-		Storage: StorageConfig{Enabled: false},
+		Storage:   StorageConfig{Enabled: false},
 		Platform: PlatformConfig{
 			Audit:  AuditConfig{ExportDefaultDays: 7, ExportMaxDays: 31},
 			Notify: NotifyConfig{Driver: "bad_driver"},
@@ -267,5 +267,104 @@ func TestValidate_AggregatesErrors(t *testing.T) {
 		if !strings.Contains(msg, part) {
 			t.Fatalf("validate error should contain %q, got: %s", part, msg)
 		}
+	}
+}
+
+func TestValidate_MetricsEnabledMissingPath(t *testing.T) {
+	cfg := minimalValidApp()
+	cfg.Metrics = MetricsConfig{Enabled: true, Path: ""}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "metrics.path") {
+		t.Fatalf("unexpected: %v", err)
+	}
+}
+
+func TestValidate_MetricsPathMustStartWithSlash(t *testing.T) {
+	cfg := minimalValidApp()
+	cfg.Metrics = MetricsConfig{Enabled: true, Path: "metrics"}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "metrics.path must start with") {
+		t.Fatalf("unexpected: %v", err)
+	}
+}
+
+func TestValidate_MetricsInvalidCIDR(t *testing.T) {
+	cfg := minimalValidApp()
+	cfg.Metrics = MetricsConfig{
+		Enabled:         true,
+		Path:            "/metrics",
+		AllowedNetworks: []string{"not-a-cidr"},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "invalid CIDR") {
+		t.Fatalf("unexpected: %v", err)
+	}
+}
+
+func minimalValidApp() *App {
+	return &App{
+		Env:  "dev",
+		Name: "gin-scaffold",
+		HTTP: HTTPConfig{
+			Host:              "0.0.0.0",
+			Port:              8080,
+			ReadTimeout:       30,
+			ReadHeaderTimeout: 10,
+			WriteTimeout:      30,
+			IdleTimeout:       120,
+			ShutdownTimeout:   10,
+		},
+		DB: DBConfig{
+			Driver: "mysql",
+			DSN:    "root:root@tcp(127.0.0.1:3306)/scaffold?charset=utf8mb4&parseTime=True",
+		},
+		Redis: RedisConfig{Addr: "127.0.0.1:6379"},
+		Asynq: AsynqConfig{
+			RedisAddr:      "127.0.0.1:6379",
+			RedisDB:        1,
+			Concurrency:    10,
+			Queue:          "default",
+			Queues:         map[string]int{"critical": 6, "default": 3, "low": 1},
+			MaxRetry:       5,
+			TimeoutSec:     30,
+			DedupWindowSec: 30,
+		},
+		JWT: JWTConfig{
+			Secret:           "test-secret",
+			AccessExpireMin:  60,
+			RefreshExpireMin: 1440,
+		},
+		I18n: I18nConfig{
+			DefaultLang: "zh",
+			BundlePaths: []string{"./i18n/zh.json"},
+		},
+		Scheduler: SchedulerConfig{
+			LogRetentionDays: 30,
+			LockTTLSeconds:   120,
+		},
+		Storage: StorageConfig{
+			Enabled:      true,
+			Driver:       "local",
+			LocalDir:     "./storage-test",
+			SignSecret:   "unit-test-secret",
+			MaxUploadMB:  5,
+			AllowedMIME:  "text/plain",
+			URLExpireSec: 60,
+		},
+		Platform: PlatformConfig{
+			Audit: AuditConfig{
+				ExportDefaultDays: 7,
+				ExportMaxDays:     31,
+			},
+		},
 	}
 }
