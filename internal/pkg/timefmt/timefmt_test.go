@@ -27,6 +27,10 @@ func TestFormatPtr(t *testing.T) {
 	if FormatPtr(nil) != "" {
 		t.Fatal()
 	}
+	var zero time.Time
+	if FormatPtr(&zero) != "" {
+		t.Fatalf("zero time: got %q", FormatPtr(&zero))
+	}
 	tt := time.Date(2026, 4, 18, 0, 0, 0, 0, time.UTC)
 	if FormatPtr(&tt) != "2026-04-18T00:00:00Z" {
 		t.Fatalf("got %q", FormatPtr(&tt))

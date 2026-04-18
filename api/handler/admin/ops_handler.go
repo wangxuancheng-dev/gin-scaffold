@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"gin-scaffold/api/handler"
 	adminreq "gin-scaffold/api/request/admin"
@@ -23,6 +22,7 @@ import (
 	"gin-scaffold/middleware"
 	"gin-scaffold/pkg/db"
 	"gin-scaffold/pkg/storage"
+	"gin-scaffold/pkg/strutil"
 )
 
 const (
@@ -101,7 +101,6 @@ func (h *OpsHandler) AuditLogs(c *gin.Context) {
 	}
 	response.OK(c, gin.H{"list": list, "total": total})
 }
-
 
 // AuditLogsExportTaskCreate 创建异步导出任务（低优先级队列）。
 // @Summary 创建审计日志异步导出任务（后台）
@@ -221,7 +220,7 @@ func (h *OpsHandler) AuditLogsExportTaskDownload(c *gin.Context) {
 	}
 	defer rc.Close()
 	c.Header("Content-Type", "text/csv; charset=utf-8")
-	c.Header("Content-Disposition", "attachment; filename=\""+path.Base(st.FileKey)+"\"")
+	c.Header("Content-Disposition", "attachment; filename=\""+strutil.AttachmentFilename(st.FileKey)+"\"")
 	c.Status(200)
 	_, _ = io.Copy(c.Writer, rc)
 }

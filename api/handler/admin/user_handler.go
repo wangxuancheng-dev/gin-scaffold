@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path"
 	"slices"
 	"strings"
 
@@ -22,6 +21,7 @@ import (
 	"gin-scaffold/internal/service/port"
 	"gin-scaffold/middleware"
 	"gin-scaffold/pkg/storage"
+	"gin-scaffold/pkg/strutil"
 )
 
 // UserHandler 后台用户接口。
@@ -175,7 +175,6 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	response.OK(c, gin.H{"deleted": true})
 }
 
-
 // ExportTaskCreate 创建用户异步导出任务（low 队列，CSV 全量）。
 // @Summary 用户异步导出任务创建（后台）
 // @Tags admin-user
@@ -298,11 +297,10 @@ func (h *UserHandler) ExportTaskDownload(c *gin.Context) {
 	}
 	defer rc.Close()
 	c.Header("Content-Type", "text/csv; charset=utf-8")
-	c.Header("Content-Disposition", "attachment; filename=\""+path.Base(st.FileKey)+"\"")
+	c.Header("Content-Disposition", "attachment; filename=\""+strutil.AttachmentFilename(st.FileKey)+"\"")
 	c.Status(http.StatusOK)
 	_, _ = io.Copy(c.Writer, rc)
 }
-
 
 func (h *UserHandler) buildQuery(q adminreq.UserListQuery) model.UserQuery {
 	return model.UserQuery{

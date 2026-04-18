@@ -151,7 +151,7 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	adminSysH := adminhandler.NewSystemSettingHandler(sysSettingSvc)
 	adminQueueH := adminhandler.NewTaskQueueHandler(inspector)
 	adminAnnouncementH := adminhandler.NewAnnouncementHandler(announcementSvc)
-	wsH := handler.NewWSHandler(wsSvc)
+	wsH := handler.NewWSHandler(wsSvc, middleware.WebSocketCheckOrigin(cfg.CORS.AllowOrigins))
 	sseH := handler.NewSSEHandler(sseSvc)
 
 	stopTaskScheduler, notifyTaskScheduler, err := scheduler.StartTaskScheduler(taskSvc, cfg.Scheduler)

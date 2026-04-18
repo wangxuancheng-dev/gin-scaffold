@@ -5,7 +5,7 @@
 ## 能力清单
 
 - 任务定义入库：`name/spec/command/enabled`
-- 支持执行 shell 命令与 `artisan` 命令
+- 支持执行 **`artisan` 命令**；可选在 **`scheduler.shell_commands_enabled=true`** 时执行任意 shell（**生产默认关闭**，见 [安全实践](/guide/security-practices)）
 - 支持 `timeout_sec`（`0` 表示不超时）
 - 支持并发策略：`forbid | allow`
 - 支持手动触发 `run now`
@@ -62,6 +62,7 @@ go run ./cmd/artisan queue:failed retry-all 50 --env prod
 
 ## 配置建议
 
+- **`shell_commands_enabled`**：生产 **`false`**，任务 `command` 仅写 `artisan <name> [args]`；本地/特殊运维需要跑脚本时再打开。
 - `lock_enabled=true`（生产建议开启）
 - `lock_ttl_seconds` 根据任务最长耗时设置（并预留续期窗口）
 - `log_retention_days` 根据审计周期设置

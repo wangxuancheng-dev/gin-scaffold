@@ -21,7 +21,7 @@
 
 ### Fixed
 
-- (placeholder) Add upcoming fixes here.
+- **安全**：定时任务在 `scheduler.shell_commands_enabled=false`（生产默认）时禁止 `sh -c` / `cmd /C` 任意命令，仅允许 `artisan …`，避免具备任务编辑权限即等价 RCE；WebSocket `CheckOrigin` 与 CORS 白名单对齐；下载 `Content-Disposition` 文件名经 `strutil.AttachmentFilename` 净化。
 
 ---
 

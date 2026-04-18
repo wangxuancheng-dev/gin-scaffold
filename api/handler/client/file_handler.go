@@ -22,6 +22,7 @@ import (
 	"gin-scaffold/config"
 	"gin-scaffold/internal/pkg/snowflake"
 	"gin-scaffold/pkg/storage"
+	"gin-scaffold/pkg/strutil"
 )
 
 // FileHandler 文件上传与签名下载。
@@ -345,7 +346,7 @@ func (h *FileHandler) Download(c *gin.Context) {
 		return
 	}
 	defer rc.Close()
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", path.Base(key)))
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", strutil.AttachmentFilename(key)))
 	c.Status(http.StatusOK)
 	_, _ = io.Copy(c.Writer, rc)
 }

@@ -1,7 +1,10 @@
 // Package strutil holds small string helpers common in HTTP handlers and serializers.
 package strutil
 
-import "strings"
+import (
+	"path"
+	"strings"
+)
 
 // SplitClean splits s by sep, trims spaces on each part, and drops empty segments.
 // If sep is empty, returns a single segment of strings.TrimSpace(s) (or nil if empty).
@@ -48,4 +51,23 @@ func StringValue(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// AttachmentFilename returns a safe single-token name for Content-Disposition from a storage key.
+// It strips path segments, CR/LF, and double-quotes to reduce response-header injection risk.
+func AttachmentFilename(key string) string {
+	k := strings.TrimSpace(key)
+	k = strings.ReplaceAll(k, "\\", "/")
+	s := path.Base(k)
+	if s == "." || s == "/" || s == "" {
+		return "download"
+	}
+	s = strings.ReplaceAll(s, "\"", "'")
+	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, "\n", "")
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "download"
+	}
+	return s
 }

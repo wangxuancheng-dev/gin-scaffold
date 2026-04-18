@@ -1,6 +1,9 @@
 package strutil
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSplitClean(t *testing.T) {
 	got := SplitClean(" a , b ,  , c ", ",")
@@ -32,6 +35,15 @@ func TestJoinClean(t *testing.T) {
 func TestStringValue(t *testing.T) {
 	s := "x"
 	if StringValue(nil) != "" || StringValue(&s) != "x" {
+		t.Fatal()
+	}
+}
+
+func TestAttachmentFilename(t *testing.T) {
+	if got := AttachmentFilename(`evil/"x\r\n.bin`); strings.ContainsAny(got, "\r\n\"") {
+		t.Fatalf("got %q", got)
+	}
+	if AttachmentFilename("a/b/c.txt") != "c.txt" {
 		t.Fatal()
 	}
 }

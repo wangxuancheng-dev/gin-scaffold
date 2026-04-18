@@ -257,12 +257,13 @@ type RBACConfig struct {
 
 // SchedulerConfig cron 定时任务配置（robfig/cron）。
 type SchedulerConfig struct {
-	Enabled          bool   `mapstructure:"enabled"`            // 是否启用数据库任务调度器
-	WithSeconds      bool   `mapstructure:"with_seconds"`       // 是否启用秒级字段（6 段）
-	LogRetentionDays int    `mapstructure:"log_retention_days"` // 任务执行日志保留天数，<=0 表示不清理
-	LockEnabled      bool   `mapstructure:"lock_enabled"`       // 多实例防重：是否启用 Redis 分布式锁
-	LockTTLSeconds   int    `mapstructure:"lock_ttl_seconds"`   // 分布式锁 TTL（秒）
-	LockPrefix       string `mapstructure:"lock_prefix"`        // 分布式锁 key 前缀
+	Enabled              bool   `mapstructure:"enabled"`                // 是否启用数据库任务调度器
+	WithSeconds          bool   `mapstructure:"with_seconds"`           // 是否启用秒级字段（6 段）
+	LogRetentionDays     int    `mapstructure:"log_retention_days"`     // 任务执行日志保留天数，<=0 表示不清理
+	LockEnabled          bool   `mapstructure:"lock_enabled"`           // 多实例防重：是否启用 Redis 分布式锁
+	LockTTLSeconds       int    `mapstructure:"lock_ttl_seconds"`       // 分布式锁 TTL（秒）
+	LockPrefix           string `mapstructure:"lock_prefix"`            // 分布式锁 key 前缀
+	ShellCommandsEnabled bool   `mapstructure:"shell_commands_enabled"` // 是否允许非 artisan 的 sh/cmd 命令（生产强烈建议 false）
 }
 
 // OutboundConfig 下游 HTTP 客户端治理参数。

@@ -35,7 +35,7 @@ GORM 事务、租户 scope、只读副本等见 **[数据库与 GORM 实践](/gu
 | `internal/pkg/tenant` | DAO 层租户 scope |
 | `internal/pkg/snowflake` | ID 生成（**多实例 `snowflake.node` 必须唯一**） |
 | `internal/pkg/clientip` | IP 解析辅助 |
-| `internal/pkg/timefmt` | `ParseRFC3339`、`FormatPtr`（`*time.Time` → RFC3339 或空串） |
+| `internal/pkg/timefmt` | `ParseRFC3339`、`FormatPtr`（`nil` 或零值 → `""`，否则 RFC3339） |
 | `internal/pkg/websocket` | WebSocket Hub（见 [SSE/WebSocket](/guide/realtime-sse-websocket)） |
 
 ## 助手封装：要不要加、加在哪
@@ -55,7 +55,7 @@ GORM 事务、租户 scope、只读副本等见 **[数据库与 GORM 实践](/gu
 
 - **切片**：排序、包含、去重等用标准库 [`slices`](https://pkg.go.dev/slices)（以及 Go 1.23+ 的 [`maps`](https://pkg.go.dev/maps)）；把 `[]A` 转成 `[]B` 时用 **`make([]B, len(a))` + `for` 预分配**。列表去重保序、过滤、多候选默认值见 **`pkg/sliceutil`**（`UniqueStable` / `Filter` / `Coalesce`）。
 - **字符串**：标准库 `strings` / `strconv`；复杂格式化用 `fmt`。标签类「按分隔符切、去空、再拼回」见 **`pkg/strutil`**（`SplitClean` / `JoinClean` / `StringValue`）。
-- **时间**：展示与序列化继续用 **`time.RFC3339`** 与 `time.Time.Format`；**解析** HTTP/任务载荷里的 RFC3339 用 **`timefmt.ParseRFC3339`**；可空时间写 JSON 可用 **`timefmt.FormatPtr`**。限流等仍用 `golang.org/x/time/rate`（`pkg/limiter`）。
+- **时间**：展示与序列化继续用 **`time.RFC3339`** 与 `time.Time.Format`；**解析** HTTP/任务载荷里的 RFC3339 用 **`timefmt.ParseRFC3339`**；可空或未设置时间（`nil` / 零值）写 JSON 可用 **`timefmt.FormatPtr`**。限流等仍用 `golang.org/x/time/rate`（`pkg/limiter`）。
 - **数字（query / 表单字符串）**：需要「解析失败就用默认」时用 **`pkg/numconv`**（`ParseInt` / `ParseInt64` / `ParseUint64` / `ParseFloat64`），避免手写重复 `strconv` + `if err`。
 - **结构体拷贝**：DTO 层可用 `github.com/jinzhu/copier`（与现有 `api/response` 一致）。
 

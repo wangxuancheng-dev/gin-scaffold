@@ -132,6 +132,7 @@ scheduler:
   lock_enabled: true
   lock_ttl_seconds: 120
   lock_prefix: "scheduler:task:lock:"
+  shell_commands_enabled: true
 
 outbound:
   timeout_ms: 3000

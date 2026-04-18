@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"net/http"
@@ -11,20 +11,15 @@ import (
 	"gin-scaffold/internal/service"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
-}
-
 // WSHandler WebSocket 入口。
 type WSHandler struct {
-	svc *service.WSService
+	svc         *service.WSService
+	checkOrigin func(*http.Request) bool
 }
 
-// NewWSHandler 构造。
-func NewWSHandler(s *service.WSService) *WSHandler {
-	return &WSHandler{svc: s}
+// NewWSHandler 构造。checkOrigin 为 nil 时等价于允许任意 Origin（不推荐生产环境）。
+func NewWSHandler(s *service.WSService, checkOrigin func(*http.Request) bool) *WSHandler {
+	return &WSHandler{svc: s, checkOrigin: checkOrigin}
 }
 
 // Handle 使用 gorilla/websocket 升级并处理心跳和回显。
@@ -37,6 +32,15 @@ func (h *WSHandler) Handle(c *gin.Context) {
 	if err != nil || uid <= 0 {
 		c.Status(http.StatusBadRequest)
 		return
+	}
+	co := h.checkOrigin
+	if co == nil {
+		co = func(*http.Request) bool { return true }
+	}
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin:     co,
 	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

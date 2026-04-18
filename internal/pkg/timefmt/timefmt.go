@@ -12,10 +12,10 @@ func ParseRFC3339(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, strings.TrimSpace(s))
 }
 
-// FormatPtr returns RFC3339 for non-nil t, or "" when t is nil.
+// FormatPtr returns RFC3339 for a non-zero instant, or "" when t is nil or *t is the zero time.
 // The formatted instant uses t's location (no forced UTC); use t.UTC() before calling if needed.
 func FormatPtr(t *time.Time) string {
-	if t == nil {
+	if t == nil || t.IsZero() {
 		return ""
 	}
 	return t.Format(time.RFC3339)

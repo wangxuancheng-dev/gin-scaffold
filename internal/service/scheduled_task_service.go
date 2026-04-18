@@ -38,14 +38,15 @@ type ScheduledTaskRepo interface {
 }
 
 type ScheduledTaskService struct {
-	dao         ScheduledTaskRepo
-	onChanged   func()
-	lockEnabled bool
-	lockTTL     time.Duration
-	lockPrefix  string
-	withSeconds bool
-	mu          sync.Mutex
-	running     map[int64]struct{}
+	dao                  ScheduledTaskRepo
+	onChanged            func()
+	lockEnabled          bool
+	lockTTL              time.Duration
+	lockPrefix           string
+	withSeconds          bool
+	shellCommandsEnabled bool
+	mu                   sync.Mutex
+	running              map[int64]struct{}
 }
 
 func NewScheduledTaskService(dao ScheduledTaskRepo, cfg config.SchedulerConfig) *ScheduledTaskService {
@@ -58,13 +59,14 @@ func NewScheduledTaskService(dao ScheduledTaskRepo, cfg config.SchedulerConfig) 
 		lockPrefix = "scheduler:task:lock:"
 	}
 	return &ScheduledTaskService{
-		dao:         dao,
-		onChanged:   func() {},
-		lockEnabled: cfg.LockEnabled,
-		lockTTL:     lockTTL,
-		lockPrefix:  lockPrefix,
-		withSeconds: cfg.WithSeconds,
-		running:     map[int64]struct{}{},
+		dao:                  dao,
+		onChanged:            func() {},
+		lockEnabled:          cfg.LockEnabled,
+		lockTTL:              lockTTL,
+		lockPrefix:           lockPrefix,
+		withSeconds:          cfg.WithSeconds,
+		shellCommandsEnabled: cfg.ShellCommandsEnabled,
+		running:              map[int64]struct{}{},
 	}
 }
 
@@ -261,7 +263,7 @@ func (s *ScheduledTaskService) executeTask(ctx context.Context, task *model.Sche
 	defer cancel()
 	status := "success"
 	msg := "ok"
-	out, execErr := runCommand(runCtx, task.Command)
+	out, execErr := s.runCommand(runCtx, task.Command)
 	if execErr != nil {
 		status = "failed"
 		msg = execErr.Error()
@@ -291,9 +293,12 @@ func (s *ScheduledTaskService) PurgeLogs(ctx context.Context, retentionDays int)
 	return s.dao.PurgeLogsBefore(ctx, before)
 }
 
-func runCommand(ctx context.Context, command string) (string, error) {
+func (s *ScheduledTaskService) runCommand(ctx context.Context, command string) (string, error) {
 	if out, ok, err := runArtisanCommand(ctx, command); ok {
 		return out, err
+	}
+	if s != nil && !s.shellCommandsEnabled {
+		return "", fmt.Errorf("shell commands disabled (scheduler.shell_commands_enabled=false); use artisan <name> [args]")
 	}
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
