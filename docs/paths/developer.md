@@ -4,10 +4,11 @@
 
 ## Day 0（30-60 分钟）
 
-1. [项目简介](/guide/introduction)
-2. [快速开始](/guide/quick-start)
-3. [配置说明](/guide/configuration)
-4. [命令系统](/guide/commands)
+1. [新人入门：架构与常见问题](/guide/onboarding)（建议先看）
+2. [项目简介](/guide/introduction)
+3. [快速开始](/guide/quick-start)
+4. [配置说明](/guide/configuration)
+5. [命令系统](/guide/commands)
 
 ## Day 1（开始编码前）
 

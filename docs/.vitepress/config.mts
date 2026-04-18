@@ -22,6 +22,7 @@ export default defineConfig({
           text: "快速开始",
           items: [
             { text: "项目简介", link: "/guide/introduction" },
+            { text: "新人入门（架构 + FAQ）", link: "/guide/onboarding" },
             { text: "快速开始", link: "/guide/quick-start" },
             { text: "配置说明", link: "/guide/configuration" },
             { text: "命令系统", link: "/guide/commands" },
