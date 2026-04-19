@@ -28,6 +28,11 @@ log:
   max_age_days: 30
   compress: true
   console: false
+  # 与 app.yaml 一致：供 logger.Channel("daily", "<file>.log")（如定时任务）使用；缺省则回退主 app 日志。
+  channels:
+    daily:
+      level: info
+      rotation_mode: daily
 
 db:
   driver: mysql

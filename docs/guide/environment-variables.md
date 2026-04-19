@@ -124,6 +124,8 @@ go run ./cmd/server server --env dev
 
 生产推荐：**敏感 + 易变**用环境变量（DSN、JWT、Redis 密码），**结构型**保留 YAML。
 
+**个人/本机差异**（端口、是否打 SQL、日志级别等）：优先在 **`.env`**（不提交）里写 `DEBUG`、`LOG_LEVEL`、`DB_LOG_LEVEL` 等已绑定键，避免为每人改一份 `configs/app.yaml` 产生 git 冲突；嵌套 map（如 `log.channels`）仍以 yaml 维护，或用 `app.{env}.{profile}.yaml` 做可选覆盖层。
+
 ## 另见
 
 - [配置说明](/guide/configuration) · [配置详解](/guide/configuration-advanced)

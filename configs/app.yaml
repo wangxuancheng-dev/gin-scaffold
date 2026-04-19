@@ -43,7 +43,7 @@ db:
   conn_max_lifetime_sec: 600
   conn_max_idle_time_sec: 60
   slow_threshold_ms: 200
-  log_level: info
+  log_level: warn
 
 redis:
   addr: "redis:6379"

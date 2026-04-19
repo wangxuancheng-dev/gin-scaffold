@@ -18,6 +18,7 @@
 
 ### Changed
 
+- `configs/app.prod.yaml` / `configs/app.test.yaml`: `log.channels.daily` 与 dev 对齐，供 `logger.Channel("daily", …)` 使用。
 - `configs/app.prod.yaml`: limiter defaults to Redis mode; `metrics` defaults to private/loopback CIDR allowlist.
 - `routes.Build` returns `error` when metrics allowlist parse fails (no panic).
 - Integration scripts prebuild migrate binary and improve handler error-helper gate scanning.
