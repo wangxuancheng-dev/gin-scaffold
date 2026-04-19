@@ -83,6 +83,7 @@ func Load(env, profile string) (*App, error) {
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
+	applyAsynqRedisFallback(&cfg)
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("validate config: %w", err)
 	}
@@ -99,6 +100,7 @@ func Load(env, profile string) (*App, error) {
 		if err := v.Unmarshal(&next); err != nil {
 			return
 		}
+		applyAsynqRedisFallback(&next)
 		if err := next.Validate(); err != nil {
 			return
 		}
@@ -143,6 +145,21 @@ func loadDotEnvNonDevEnabled() bool {
 	}
 	ok, err := strconv.ParseBool(raw)
 	return err == nil && ok
+}
+
+// applyAsynqRedisFallback 在未显式设置 ASYNQ_REDIS_ADDR 时，让 Asynq 与主库 redis.addr 使用同一地址（及密码），
+// 这样开发环境 .env 只需写 REDIS_ADDR，避免出现「应用连上 Redis、队列仍连 yaml 里 redis 主机名」的情况。
+func applyAsynqRedisFallback(cfg *App) {
+	if cfg == nil {
+		return
+	}
+	if strings.TrimSpace(os.Getenv("ASYNQ_REDIS_ADDR")) != "" {
+		return
+	}
+	cfg.Asynq.RedisAddr = cfg.Redis.Addr
+	if strings.TrimSpace(os.Getenv("ASYNQ_REDIS_PASSWORD")) == "" {
+		cfg.Asynq.RedisPassword = cfg.Redis.Password
+	}
 }
 
 func bindEnvKeys(v *viper.Viper) {
