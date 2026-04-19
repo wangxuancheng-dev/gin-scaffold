@@ -103,7 +103,7 @@ func runCRUD(opt crudOptions) error {
 	permPrefix := moduleSnake
 	now := time.Now().Format("200601021504")
 	migrationBase := fmt.Sprintf("%s_create_%s", now, opt.table)
-	seedBase := fmt.Sprintf("%s_seed_%s_permission", now, moduleSnake)
+	seedBase := fmt.Sprintf("%s_seed_role_permissions_%s", now, moduleSnake)
 
 	files := map[string]string{
 		filepath.Join("internal", "model", moduleSnake+".go"):                   modelTemplate(modelName, opt.table, parsedFields),

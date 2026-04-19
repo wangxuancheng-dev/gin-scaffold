@@ -34,7 +34,7 @@ go run ./cmd/gen crud --module order --field title:string:required,max=64 --fiel
 - `api/handler/admin/<module>_handler.go`
 - `routes/adminroutes/<module>_router.go`
 - **仅 MySQL**：`migrations/mysql/schema/*_create_<table>.{up,down}.sql`
-- **仅 MySQL**：`migrations/mysql/seed/*_seed_<module>_permission.{up,down}.sql`
+- **仅 MySQL**：`migrations/mysql/seed/*_seed_role_permissions_<module>.{up,down}.sql`（向表 `role_permissions` 写入该模块的 `*:read` / `*:write`；与本仓库「每表一对」基线种子并存时，可按需手工合并进 `*_seed_role_permissions.*`）
 
 `simple` 模板只生成代码骨架（不生成 migration/seed，也不自动 wiring）。
 使用 `simple` 时会自动启用 `--no-wire`。

@@ -2,8 +2,8 @@
 
 本目录按职责拆分为两个子目录：
 
-- `schema/`：结构变更（DDL），如 `CREATE TABLE`、`ALTER TABLE`、索引与约束。
-- `seed/`：初始化与演示数据（DML），如默认角色、菜单、管理员账号。
+- `schema/`：仅 `*_create_<表名>.{up,down}.sql`，每张表一对，整表 DDL 写进 `up`。
+- `seed/`：仅 `*_seed_<表名>.{up,down}.sql`，每张表一对，只对本表 DML（如 `roles`、`role_permissions`、`menus`、`users`）。
 
 ## 执行规则
 
@@ -18,13 +18,8 @@
 
 统一使用：
 
-- `<timestamp>_<action>.up.sql`
-- `<timestamp>_<action>.down.sql`
-
-示例：
-
-- `202501011210_create_rbac.up.sql`
-- `202501011210_create_rbac.down.sql`
+- schema：`<timestamp>_create_<表名>.up.sql` / `.down.sql`
+- seed：`<timestamp>_seed_<表名>.up.sql` / `.down.sql`
 
 建议：
 
@@ -34,7 +29,7 @@
 ## 编写约束
 
 - `schema/*.up.sql` 只做 DDL，不写 seed 数据 `INSERT`。
-- `seed/*.up.sql` 只做 DML，不做破坏式结构操作。
+- `seed/*.up.sql` 只做 DML，且**只操作文件名中的那张表**；`down` 只删除本文件 `up` 写入的数据。
 - `down.sql` 应与对应 `up.sql` 语义对称，且尽量幂等。
 - 推荐使用 `IF EXISTS` / `IF NOT EXISTS` / `INSERT IGNORE` 等降低重复执行风险。
 

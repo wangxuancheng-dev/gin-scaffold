@@ -10,7 +10,7 @@ import (
 type Announcement struct {
 	ID        int64          `gorm:"primaryKey;autoIncrement" json:"id"`
 	Title string `gorm:"not null" json:"title"`
-	Content string `gorm:"not null" json:"content"`
+	Content string `gorm:"type:text;not null" json:"content"`
 	Status string `gorm:"not null" json:"status"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`

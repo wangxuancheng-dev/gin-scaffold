@@ -12,7 +12,7 @@
 - 记录：`request_id`、用户（JWT 或 anonymous）、路径、查询串、状态码、耗时、客户端 IP；**不落库请求体**。
 - `/livez`、`/readyz`、`/health`、`/swagger`、`/metrics`、`/debug` 等路径自动跳过。
 - 导出接口（`/api/v1/admin/audit-logs/export`）默认导出最近 `export_default_days` 天，且时间窗不得超过 `export_max_days` 天。
-- 查询/导出权限：`audit:read`、`audit:export`（升级项目时执行 seed：`202504171420_seed_audit_permission`、`202504171430_seed_audit_export_permission`）。
+- 查询/导出权限：`audit:read`、`audit:export`（与审计菜单一并写入种子：`202501011226_seed_role_permissions`、`202501011227_seed_menus`、`202501011228_seed_role_menus`；执行 `go run ./cmd/migrate seed up`）。
 - 导出响应头：`X-Export-Count`（本次导出行数）、`X-Export-Window`（实际导出时间窗，RFC3339/RFC3339）。
 - 大数据量建议使用异步导出任务：
   - 创建：`POST /api/v1/admin/audit-logs/export/tasks`
@@ -89,9 +89,9 @@
   - `DELETE /api/v1/admin/system-settings/{id}`（`sys:config:write`）
   - `POST /api/v1/admin/system-settings/{id}/publish`（`sys:config:publish`）
   - `POST /api/v1/admin/system-settings/{id}/rollback`（`sys:config:rollback`）
-- 数据表：`system_settings`（包含草稿/发布字段与租户字段，迁移：`202504171500_create_system_settings`、`202604171900_alter_system_settings_publish_tenant`）。
+- 数据表：`system_settings`（包含草稿/发布字段与租户字段，迁移：`202504171500_create_system_settings`）。
 - 变更历史表：`system_setting_histories`（迁移：`202604171030_create_system_setting_histories`）。
-- 升级后执行 seed：`202504171510_seed_system_setting_permissions`、`202604171040_seed_system_setting_rollback_permission`、`202604171910_seed_system_setting_publish_permission`。
+- 相关权限与菜单种子已合并进：`202501011226_seed_role_permissions`、`202501011227_seed_menus`、`202501011228_seed_role_menus`（执行 `go run ./cmd/migrate seed up`）。
 - 业务读取建议使用 `pkg/settings`：
   - `settings.GetString(ctx, "your.key")`
   - `settings.GetInt64(ctx, "your.key")`

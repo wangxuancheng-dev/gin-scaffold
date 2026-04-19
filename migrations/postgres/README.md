@@ -10,8 +10,8 @@
 
 与 MySQL 保持一致的职责拆分：
 
-- `schema/`：结构变更（DDL），如 `CREATE TABLE`、`ALTER TABLE`、索引与约束。
-- `seed/`：初始化与演示数据（DML），如默认角色、菜单、管理员账号。
+- `schema/`：仅 `*_create_<表名>.{up,down}.sql`（与 MySQL 同名时间戳对齐时便于对照）。
+- `seed/`：仅 `*_seed_<表名>.{up,down}.sql`，每张表一对。
 
 ## 执行规则
 
@@ -39,7 +39,7 @@
 ## 编写约束
 
 - `schema/*.up.sql` 只做 DDL，不写 seed 数据 `INSERT`。
-- `seed/*.up.sql` 只做 DML，不做破坏式结构操作。
+- `seed/*.up.sql` 只做 DML，且**只操作文件名中的那张表**；`down` 只删除本文件 `up` 写入的数据。
 - `down.sql` 应与对应 `up.sql` 语义对称，且尽量幂等。
 - 建议使用 PostgreSQL 的幂等语法（如 `IF EXISTS`、`IF NOT EXISTS`、`ON CONFLICT DO NOTHING`）。
 

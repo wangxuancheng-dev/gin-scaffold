@@ -120,9 +120,7 @@ sudo systemctl status gin-scaffold gin-scaffold-worker
 
 RBAC/菜单补充（审计功能）：
 
-- 若你从旧版本升级，需要执行 seed 迁移以补齐权限与菜单：
-  - `202504171420_seed_audit_permission`（`audit:read` + 审计菜单）
-  - `202504171430_seed_audit_export_permission`（`audit:export`）
+- 若你从旧版本升级，执行一次 `go run ./cmd/migrate seed up` 即可：审计与系统参数等权限、菜单已合并进 `202501011226_seed_role_permissions`、`202501011227_seed_menus`、`202501011228_seed_role_menus`。
 - 后台接口权限对应：
   - `/api/v1/admin/audit-logs` -> `audit:read`
   - `/api/v1/admin/audit-logs/export` -> `audit:export`
