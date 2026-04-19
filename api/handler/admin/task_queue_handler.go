@@ -2,6 +2,7 @@ package adminhandler
 
 import (
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -46,6 +47,10 @@ func (h *TaskQueueHandler) Summary(c *gin.Context) {
 	for _, q := range queues {
 		info, err := h.inspector.GetQueueInfo(q)
 		if err != nil {
+			if isAsynqQueueNotFound(err) {
+				rows = append(rows, emptyQueueSummaryRow(q))
+				continue
+			}
 			rows = append(rows, gin.H{
 				"queue": q,
 				"error": err.Error(),
@@ -203,14 +208,36 @@ func formatQueueTaskTime(t time.Time) string {
 	return t.Format(time.RFC3339)
 }
 
+func emptyQueueSummaryRow(queue string) gin.H {
+	return gin.H{
+		"queue":       queue,
+		"pending":     0,
+		"active":      0,
+		"scheduled":   0,
+		"retry":       0,
+		"archived":    0,
+		"completed":   0,
+		"aggregating": 0,
+	}
+}
+
+// Asynq 在 Redis 里尚未创建该队列键时，Inspector 会返回 NOT_FOUND；与「队列存在但全为 0」语义一致。
+func isAsynqQueueNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "NOT_FOUND") && strings.Contains(strings.ToLower(s), "queue")
+}
+
 func defaultQueueNames() []string {
-	out := []string{"default", "critical", "low"}
+	defaults := []string{"default", "critical", "low"}
 	cfg := config.Get()
 	if cfg == nil || len(cfg.Asynq.Queues) == 0 {
-		return out
+		return defaults
 	}
 	seen := map[string]struct{}{}
-	out = out[:0]
+	out := make([]string, 0, len(cfg.Asynq.Queues))
 	for name := range cfg.Asynq.Queues {
 		name = strings.TrimSpace(name)
 		if name == "" {
@@ -225,5 +252,6 @@ func defaultQueueNames() []string {
 	if len(out) == 0 {
 		return []string{"default"}
 	}
+	sort.Strings(out)
 	return out
 }
