@@ -4,6 +4,7 @@
 
 ### Added
 
+- Rate limit: `middleware.LimiterKeys` with `LimiterWithBackendKeys` / `LimiterWithStoreKeys` for custom IP and route bucket keys; docs in [rate-limiting](/guide/rate-limiting).
 - PostgreSQL migrations aligned with MySQL (`migrations/postgres/schema`, `migrations/postgres/seed`).
 - Integration tests for admin menu catalog and role-filtered menu tree (`data.tree`).
 - Developer handbook and guide index expanded (routing, middleware, cache, queue, migration, config, env, RBAC, admin API overview, realtime, security, testing, helpers, outbound HTTP, logging).

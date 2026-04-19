@@ -8,7 +8,7 @@
 | `pkg/db` | GORM 初始化、读写分离、`session_tz` |
 | `pkg/redis` | Redis 客户端、`singleflight` 缓存封装、分布式锁 |
 | `pkg/logger` | Zap + 切割策略、访问/错误日志 |
-| `pkg/limiter` | 全局限流（`golang.org/x/time/rate`、Redis 后端） |
+| `pkg/limiter` | 全局限流（`golang.org/x/time/rate`、Redis 后端）；自定义桶键用 `middleware.LimiterWithBackendKeys` |
 | `pkg/storage` | 本地 / S3 存储抽象、预签名 |
 | `pkg/notify` | 通知通道（log / smtp / webhook，由 `platform.notify` 驱动） |
 | `pkg/eventbus` | 进程内事件总线（Outbox 分发等，见 [platform](/guide/platform)） |

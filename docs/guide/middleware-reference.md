@@ -17,7 +17,7 @@
 | `Audit` | `middleware/audit.go` | 可选写操作审计 |
 | `I18n` | `middleware/i18n.go` | 多语言 Bundle |
 | `CORS` | `middleware/cors.go` | 跨域 |
-| `Limiter` / `LimiterWithBackend` | `middleware/limiter.go` | 全局限流（memory 或 redis） |
+| `Limiter` / `LimiterWithBackend` / `LimiterWithBackendKeys` | `middleware/limiter.go` | 全局限流（memory 或 redis）；`LimiterKeys` 可自定义 IP/路由维度的字符串键 |
 | `otelgin` | 可选 | `trace.enabled` 时启用 |
 | `Metrics` + 白名单 | `middleware/metrics*.go` | Prometheus 指标路径 |
 
