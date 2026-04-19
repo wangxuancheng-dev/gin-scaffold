@@ -1,5 +1,5 @@
 INSERT INTO role_permissions (tenant_id, role, permission, created_at, updated_at) VALUES
-  ('default', 'admin', 'db:ping', NOW(), NOW()),
+  -- ('default', 'admin', 'db:ping', NOW(), NOW()),
   ('default', 'admin', 'user:read', NOW(), NOW()),
   ('default', 'admin', 'user:create', NOW(), NOW()),
   ('default', 'admin', 'user:update', NOW(), NOW()),
