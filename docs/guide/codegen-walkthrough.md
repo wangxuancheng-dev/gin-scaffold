@@ -40,6 +40,7 @@ go run ./cmd/migrate seed up --env test
 
 ```bash
 go run ./cmd/server server --env dev
+go run ./cmd/server worker --env dev
 ```
 
 建议用 Swagger 检查 `admin-announcement` 分组接口是否可见。

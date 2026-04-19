@@ -44,6 +44,7 @@ go run ./cmd/migrate seed up --env dev
 
 ```bash
 go run ./cmd/server server --env dev
+go run ./cmd/server worker --env dev
 ```
 
 若你需要在 `test/prod` 环境临时使用 `.env.test` / `.env.prod` 做联调，可先设置：

@@ -47,6 +47,7 @@ go run ./cmd/migrate seed up --env dev
 
 # 2) 启动服务
 go run ./cmd/server server --env dev
+go run ./cmd/server worker --env dev
 ```
 
 ## 常用入口链接（文档站）
