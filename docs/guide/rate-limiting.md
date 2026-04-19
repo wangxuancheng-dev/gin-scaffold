@@ -4,8 +4,25 @@
 
 - 中间件在 `routes/router.go` 注册；若 bootstrap 注入了自定义 `limiter.Backend`（如 Redis），则使用 **`LimiterWithBackend`**。
 - 默认算法：**每 IP + 每路由** 两层检查（见 `middleware/limiter.go` 与 `pkg/limiter`）。一次请求需 **先后通过** IP 维度与路由维度，任一不通过即返回 **429**。
-- **内存模式（`mode: memory`）**：`golang.org/x/time/rate` 令牌桶，单机进程内生效。
-- **Redis 模式（`mode: redis`）**：固定窗口计数近似全局限流，多副本共享同一计数（见 `pkg/limiter/redis_store.go`）。
+- **内存模式（`mode: memory`）**：默认 **`ip_rps` / `ip_burst`（及路由同理）** 为 `golang.org/x/time/rate` 令牌桶；若配置了 **`ip_max_per_window` / `route_max_per_window`**（>0），对应维度改为 **固定窗口计数**（与 Redis 语义对齐，见下节）。
+- **Redis 模式（`mode: redis`）**：固定窗口计数，多副本共享（见 `pkg/limiter/redis_store.go`）；亦可对某一维使用 `*_max_per_window` 直接指定每窗口上限。
+
+## 每窗口最大次数（`ip_max_per_window` / `route_max_per_window`）
+
+用于表达「**每 `window_sec` 秒内，该维度最多 N 次**」的**固定窗口**近似（memory / redis 同一套配置键）：
+
+| 配置 | 含义 |
+|------|------|
+| `window_sec` | 窗口长度（秒）。**redis 必填**；**memory** 在任一大于 0 的 `*_max_per_window` 时也**必填**。 |
+| `ip_max_per_window` | >0：每 IP 每窗口最多次数；**0**：IP 维仍用 `ip_rps` / `ip_burst` 令牌桶。 |
+| `route_max_per_window` | >0：每路由键每窗口最多次数；**0**：路由维仍用 `route_rps` / `route_burst`。 |
+
+两维可**混合**（例如仅 IP 用窗口、路由用令牌桶）。固定窗口在窗口交界处可能出现「双倍突发」，属算法特性；要更平滑可只用令牌桶或前置网关滑动窗口。
+
+- **memory**：进程内按 key 记录当前窗口 slot 与计数，**重启清零**。
+- **redis**：`*_max_per_window` > 0 时该维使用配置值作为硬上限；为 0 时该维仍用 `ceil(rps * window_sec) + burst` 公式。
+
+代码入口：`limiter.NewStoreWithOptions`（`pkg/limiter/store_options.go`）、`bootstrap` 对 `NewRedisStore` 的装配。
 
 ## 两层限流分别约束什么
 

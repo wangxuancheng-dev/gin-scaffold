@@ -92,6 +92,8 @@ limiter:
   mode: memory
   redis_key_prefix: ""
   window_sec: 1
+  ip_max_per_window: 0
+  route_max_per_window: 0
   ip_rps: 100
   ip_burst: 200
   route_rps: 500

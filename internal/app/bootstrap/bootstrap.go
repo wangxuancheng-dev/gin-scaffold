@@ -166,7 +166,15 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	stopOutboxDispatcher := service.NewOutboxDispatcher(outboxDAO, cfg.Outbox).Start()
 	cleanups = append(cleanups, func(context.Context) { stopOutboxDispatcher() })
 
-	var lim limiter.Backend = limiter.NewStore(cfg.Limiter.IPRPS, cfg.Limiter.IPBurst, cfg.Limiter.RouteRPS, cfg.Limiter.RouteBurst)
+	var lim limiter.Backend = limiter.NewStoreWithOptions(limiter.StoreOptions{
+		WindowSec:            cfg.Limiter.WindowSec,
+		IPMaxPerWindow:       cfg.Limiter.IPMaxPerWindow,
+		RouteMaxPerWindow:    cfg.Limiter.RouteMaxPerWindow,
+		IPRPS:                cfg.Limiter.IPRPS,
+		IPBurst:              cfg.Limiter.IPBurst,
+		RouteRPS:             cfg.Limiter.RouteRPS,
+		RouteBurst:           cfg.Limiter.RouteBurst,
+	})
 	if strings.ToLower(strings.TrimSpace(cfg.Limiter.Mode)) == "redis" {
 		ws := cfg.Limiter.WindowSec
 		if ws <= 0 {
@@ -182,7 +190,8 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		if prefix == "" {
 			prefix = "app:"
 		}
-		lim = limiter.NewRedisStore(prefix, ws, cfg.Limiter.IPRPS, cfg.Limiter.IPBurst, cfg.Limiter.RouteRPS, cfg.Limiter.RouteBurst)
+		lim = limiter.NewRedisStore(prefix, ws, cfg.Limiter.IPRPS, cfg.Limiter.IPBurst, cfg.Limiter.RouteRPS, cfg.Limiter.RouteBurst,
+			cfg.Limiter.IPMaxPerWindow, cfg.Limiter.RouteMaxPerWindow)
 	}
 
 	engine, err := routes.Build(routes.Options{

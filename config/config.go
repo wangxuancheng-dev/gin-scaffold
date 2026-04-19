@@ -229,11 +229,14 @@ type I18nConfig struct {
 type LimiterConfig struct {
 	Mode           string  `mapstructure:"mode"` // memory | redis
 	RedisKeyPrefix string  `mapstructure:"redis_key_prefix"`
-	WindowSec      int     `mapstructure:"window_sec"` // Redis 模式下计数窗口（秒）
-	IPRPS          float64 `mapstructure:"ip_rps"`     // 每 IP 每秒令牌补充速率
+	WindowSec      int     `mapstructure:"window_sec"` // Redis 必填；memory 在启用 *_max_per_window 时必填
+	IPRPS          float64 `mapstructure:"ip_rps"`     // 令牌桶：每 IP 每秒补充速率
 	IPBurst        int     `mapstructure:"ip_burst"`
 	RouteRPS       float64 `mapstructure:"route_rps"` // 每路由每秒
 	RouteBurst     int     `mapstructure:"route_burst"`
+	// IPMaxPerWindow / RouteMaxPerWindow：>0 时该维度为「每 WindowSec 秒内最多 N 次」固定窗口（memory/redis 一致）；0 表示该维用令牌桶参数。
+	IPMaxPerWindow    int `mapstructure:"ip_max_per_window"`
+	RouteMaxPerWindow int `mapstructure:"route_max_per_window"`
 }
 
 // SnowflakeConfig 雪花算法节点号（0-1023）。

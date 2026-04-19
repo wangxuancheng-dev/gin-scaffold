@@ -105,8 +105,8 @@ func publishDemo(ctx context.Context, payload any) {
 
 ## 全局限流（`limiter`）
 
-- `mode: memory`（默认）：进程内令牌桶。
-- `mode: redis`：多实例共享的固定窗口计数（需 `window_sec`；可选 `redis_key_prefix`，否则回退 `platform.cache.key_prefix`）。
+- `mode: memory`（默认）：进程内 **令牌桶**；若设置 `ip_max_per_window` / `route_max_per_window`（>0）则对应维为 **固定窗口**（需 `window_sec`），详见 [rate-limiting](/guide/rate-limiting)。
+- `mode: redis`：多实例共享固定窗口（需 `window_sec`；可选 `redis_key_prefix`，否则回退 `platform.cache.key_prefix`）；同样支持 `*_max_per_window` 覆盖该维上限。
 
 ## 登录防爆破（`platform.login_security`）
 

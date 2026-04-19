@@ -51,9 +51,10 @@ go run ./cmd/server server --env dev
 | 键 | 说明 |
 |----|------|
 | `mode` | `memory`（单进程）或 `redis`（多副本共享窗口） |
-| `window_sec` | **redis 模式必填**，固定窗口长度 |
+| `window_sec` | **redis 必填**；**memory** 在 `ip_max_per_window` / `route_max_per_window` 任一大于 0 时也必填（固定窗口秒长） |
 | `redis_key_prefix` | 限流键前缀；可空则回退缓存前缀 |
-| `ip_rps` / `ip_burst` / `route_rps` / `route_burst` | 令牌桶参数 |
+| `ip_max_per_window` / `route_max_per_window` | 大于 0 时该维度为「每 `window_sec` 秒内最多 N 次」**固定窗口**（memory / redis 语义一致）；`0` 表示该维仍用下方令牌桶参数 |
+| `ip_rps` / `ip_burst` / `route_rps` / `route_burst` | 令牌桶参数（对应维度未启用 `*_max_per_window` 时生效） |
 
 ## `tenant`
 

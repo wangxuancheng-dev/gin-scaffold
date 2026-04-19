@@ -96,7 +96,11 @@ i18n:
 limiter:
   mode: memory
   redis_key_prefix: ""
+  # window_sec：redis 必填；memory 在 ip_max_per_window / route_max_per_window > 0 时必填（固定窗口秒长）。
   window_sec: 1
+  # 每窗口最大次数；0 表示该维仍用 ip_rps/ip_burst（或 route_*）令牌桶。
+  ip_max_per_window: 0
+  route_max_per_window: 0
   ip_rps: 50
   ip_burst: 100
   route_rps: 200

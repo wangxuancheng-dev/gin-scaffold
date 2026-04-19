@@ -87,6 +87,9 @@ go run ./cmd/server server --env dev
 | `limiter.ip_burst` | `LIMITER_IP_BURST` |
 | `limiter.route_rps` | `LIMITER_ROUTE_RPS` |
 | `limiter.route_burst` | `LIMITER_ROUTE_BURST` |
+| `limiter.window_sec` | `LIMITER_WINDOW_SEC` |
+| `limiter.ip_max_per_window` | `LIMITER_IP_MAX_PER_WINDOW` |
+| `limiter.route_max_per_window` | `LIMITER_ROUTE_MAX_PER_WINDOW` |
 | `snowflake.node` | `SNOWFLAKE_NODE` |
 | `rbac.super_admin_user_id` | `RBAC_SUPER_ADMIN_USER_ID` |
 | `scheduler.enabled` | `SCHEDULER_ENABLED` |
@@ -114,7 +117,7 @@ go run ./cmd/server server --env dev
 
 下列项通常只在 **YAML** 中维护，或通过 **Viper 的 `AutomaticEnv` 仍可按键名尝试匹配**（若需强制环境变量覆盖，可在 `bindEnvKeys` 中补注册，属代码改动）：
 
-- `limiter.mode`、`limiter.window_sec`、`limiter.redis_key_prefix`
+- `limiter.mode`、`limiter.redis_key_prefix`
 - `metrics.allowed_networks`（列表型，更适合文件）
 - `cors.*`、`i18n.bundle_paths`（数组）
 - `db.replicas`（副本 DSN 列表）

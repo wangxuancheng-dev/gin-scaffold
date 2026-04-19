@@ -360,6 +360,14 @@ func (a *App) validateLimiter() []string {
 	if mode != "memory" && mode != "redis" {
 		errs = append(errs, "limiter.mode must be memory or redis")
 	}
+	if a.Limiter.IPMaxPerWindow < 0 || a.Limiter.RouteMaxPerWindow < 0 {
+		errs = append(errs, "limiter ip_max_per_window/route_max_per_window must be >= 0")
+	}
+	if mode == "memory" && (a.Limiter.IPMaxPerWindow > 0 || a.Limiter.RouteMaxPerWindow > 0) {
+		if a.Limiter.WindowSec <= 0 {
+			errs = append(errs, "limiter.window_sec must be > 0 when limiter.mode is memory and ip_max_per_window or route_max_per_window is set")
+		}
+	}
 	if mode == "redis" {
 		if a.Limiter.WindowSec <= 0 {
 			errs = append(errs, "limiter.window_sec must be > 0 when limiter.mode is redis")

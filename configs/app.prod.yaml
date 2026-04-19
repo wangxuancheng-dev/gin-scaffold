@@ -99,6 +99,8 @@ limiter:
   mode: redis
   redis_key_prefix: "gin-scaffold:limiter:"
   window_sec: 1
+  ip_max_per_window: 0
+  route_max_per_window: 0
   ip_rps: 30
   ip_burst: 60
   route_rps: 100

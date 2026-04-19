@@ -178,6 +178,7 @@ func bindEnvKeys(v *viper.Viper) {
 		"trace.enabled", "trace.endpoint", "trace.service_name", "trace.insecure",
 		"i18n.default_lang",
 		"limiter.ip_rps", "limiter.ip_burst", "limiter.route_rps", "limiter.route_burst",
+		"limiter.ip_max_per_window", "limiter.route_max_per_window", "limiter.window_sec",
 		"snowflake.node",
 		"rbac.super_admin_user_id",
 		"scheduler.enabled", "scheduler.with_seconds", "scheduler.log_retention_days",

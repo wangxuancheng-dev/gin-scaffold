@@ -17,10 +17,14 @@ type RedisStore struct {
 	ipBurst    int
 	routeRPS   float64
 	routeBurst int
+	// IPMaxPerWindow / RouteMaxPerWindow > 0 时，对应维度每窗口硬上限（忽略 rps+burst 公式）。
+	ipMaxPerWindow    int
+	routeMaxPerWindow int
 }
 
 // NewRedisStore 创建 Redis 限流器；windowSec 为计数窗口秒数（建议 1~5）。
-func NewRedisStore(prefix string, windowSec int, ipRPS float64, ipBurst int, routeRPS float64, routeBurst int) *RedisStore {
+// ipMaxPerWindow / routeMaxPerWindow 为 0 时使用 ip_rps*window+ip_burst（路由同理）。
+func NewRedisStore(prefix string, windowSec int, ipRPS float64, ipBurst int, routeRPS float64, routeBurst int, ipMaxPerWindow, routeMaxPerWindow int) *RedisStore {
 	if windowSec <= 0 {
 		windowSec = 1
 	}
@@ -28,16 +32,25 @@ func NewRedisStore(prefix string, windowSec int, ipRPS float64, ipBurst int, rou
 		prefix = "app:rl:"
 	}
 	return &RedisStore{
-		prefix:     prefix,
-		windowSec:  windowSec,
-		ipRPS:      ipRPS,
-		ipBurst:    ipBurst,
-		routeRPS:   routeRPS,
-		routeBurst: routeBurst,
+		prefix:              prefix,
+		windowSec:           windowSec,
+		ipRPS:               ipRPS,
+		ipBurst:             ipBurst,
+		routeRPS:            routeRPS,
+		routeBurst:          routeBurst,
+		ipMaxPerWindow:      ipMaxPerWindow,
+		routeMaxPerWindow:   routeMaxPerWindow,
 	}
 }
 
 func (s *RedisStore) ipLimit() int {
+	if s.ipMaxPerWindow > 0 {
+		v := s.ipMaxPerWindow
+		if v < 1 {
+			v = 1
+		}
+		return v
+	}
 	v := int(math.Ceil(s.ipRPS*float64(s.windowSec))) + s.ipBurst
 	if v < 1 {
 		v = 1
@@ -46,6 +59,13 @@ func (s *RedisStore) ipLimit() int {
 }
 
 func (s *RedisStore) routeLimit() int {
+	if s.routeMaxPerWindow > 0 {
+		v := s.routeMaxPerWindow
+		if v < 1 {
+			v = 1
+		}
+		return v
+	}
 	v := int(math.Ceil(s.routeRPS*float64(s.windowSec))) + s.routeBurst
 	if v < 1 {
 		v = 1

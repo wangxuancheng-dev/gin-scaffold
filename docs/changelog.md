@@ -5,6 +5,7 @@
 ### Added
 
 - Rate limit: `middleware.LimiterKeys` with `LimiterWithBackendKeys` / `LimiterWithStoreKeys` for custom IP and route bucket keys; docs in [rate-limiting](/guide/rate-limiting).
+- Rate limit: `limiter.ip_max_per_window` / `limiter.route_max_per_window` + `window_sec` for fixed-window caps in **both** `memory` (`NewStoreWithOptions`) and `redis` (`NewRedisStore`).
 - PostgreSQL migrations aligned with MySQL (`migrations/postgres/schema`, `migrations/postgres/seed`).
 - Integration tests for admin menu catalog and role-filtered menu tree (`data.tree`).
 - Developer handbook and guide index expanded (routing, middleware, cache, queue, migration, config, env, RBAC, admin API overview, realtime, security, testing, helpers, outbound HTTP, logging).
