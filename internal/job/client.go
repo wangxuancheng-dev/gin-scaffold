@@ -72,6 +72,57 @@ func (c *Client) EnqueueTask(ctx context.Context, taskType string, payload any, 
 
 // EnqueueTaskInQueue 投递普通任务（可指定队列，可选去重窗口）。
 func (c *Client) EnqueueTaskInQueue(ctx context.Context, queueName string, taskType string, payload any, uniqueWindowSec int) error {
+	return c.enqueue(ctx, queueName, taskType, payload, uniqueWindowSec)
+}
+
+// EnqueueTaskAfter 在默认队列投递任务，延迟 delay 后再由 worker 消费（delay<=0 时等价于立即入队）。
+// 适用于订单超时关单、延迟重试通知等「相对当前时间」的一次性调度。
+func (c *Client) EnqueueTaskAfter(ctx context.Context, taskType string, payload any, uniqueWindowSec int, delay time.Duration) error {
+	return c.EnqueueTaskInQueueAfter(ctx, c.queue, taskType, payload, uniqueWindowSec, delay)
+}
+
+// EnqueueTaskInQueueAfter 在指定队列投递任务，延迟 delay 后再消费。
+func (c *Client) EnqueueTaskInQueueAfter(ctx context.Context, queueName string, taskType string, payload any, uniqueWindowSec int, delay time.Duration) error {
+	if delay <= 0 {
+		return c.enqueue(ctx, queueName, taskType, payload, uniqueWindowSec)
+	}
+	return c.enqueue(ctx, queueName, taskType, payload, uniqueWindowSec, asynq.ProcessIn(delay))
+}
+
+// EnqueueTaskAt 在默认队列投递任务，在 at 时刻（及之后首次轮询）由 worker 消费；at 为零值时等价于立即入队。
+func (c *Client) EnqueueTaskAt(ctx context.Context, taskType string, payload any, uniqueWindowSec int, at time.Time) error {
+	return c.EnqueueTaskInQueueAt(ctx, c.queue, taskType, payload, uniqueWindowSec, at)
+}
+
+// EnqueueTaskInQueueAt 在指定队列投递任务，在绝对时间 at 执行。
+func (c *Client) EnqueueTaskInQueueAt(ctx context.Context, queueName string, taskType string, payload any, uniqueWindowSec int, at time.Time) error {
+	if at.IsZero() {
+		return c.enqueue(ctx, queueName, taskType, payload, uniqueWindowSec)
+	}
+	return c.enqueue(ctx, queueName, taskType, payload, uniqueWindowSec, asynq.ProcessAt(at))
+}
+
+// EnqueueUniqueAfter 使用配置的去重窗口投递任务，并延迟 delay 后执行。
+func (c *Client) EnqueueUniqueAfter(ctx context.Context, taskType string, payload any, delay time.Duration) error {
+	return c.EnqueueUniqueInQueueAfter(ctx, c.queue, taskType, payload, delay)
+}
+
+// EnqueueUniqueInQueueAfter 在指定队列使用去重窗口投递，并延迟 delay 后执行。
+func (c *Client) EnqueueUniqueInQueueAfter(ctx context.Context, queueName string, taskType string, payload any, delay time.Duration) error {
+	return c.EnqueueTaskInQueueAfter(ctx, queueName, taskType, payload, c.dedupWindowSec, delay)
+}
+
+// EnqueueUniqueAt 使用配置的去重窗口投递任务，在 at 时刻执行。
+func (c *Client) EnqueueUniqueAt(ctx context.Context, taskType string, payload any, at time.Time) error {
+	return c.EnqueueUniqueInQueueAt(ctx, c.queue, taskType, payload, at)
+}
+
+// EnqueueUniqueInQueueAt 在指定队列使用去重窗口投递，在 at 时刻执行。
+func (c *Client) EnqueueUniqueInQueueAt(ctx context.Context, queueName string, taskType string, payload any, at time.Time) error {
+	return c.EnqueueTaskInQueueAt(ctx, queueName, taskType, payload, c.dedupWindowSec, at)
+}
+
+func (c *Client) enqueue(ctx context.Context, queueName string, taskType string, payload any, uniqueWindowSec int, extra ...asynq.Option) error {
 	if c == nil || c.c == nil {
 		return nil
 	}
@@ -96,6 +147,7 @@ func (c *Client) EnqueueTaskInQueue(ctx context.Context, queueName string, taskT
 		}
 		opts = append(opts, asynq.Unique(time.Duration(ttl)*time.Second))
 	}
+	opts = append(opts, extra...)
 	_, err = c.c.EnqueueContext(ctx, task, opts...)
 	return err
 }

@@ -28,7 +28,7 @@
 | [数据库迁移与填充](/guide/database-and-migrations) | `cmd/migrate`、schema/seed、MySQL / PostgreSQL |
 | [数据库与 GORM 实践](/guide/database-patterns) | 事务、租户 scope、副本、慢 SQL |
 | [缓存使用](/guide/caching) | `pkg/cache`、键前缀、JSON 存取 |
-| [异步队列（Asynq）](/guide/queues-asynq) | Worker、Client、多队列、超时与去重 |
+| [异步队列（Asynq）](/guide/queues-asynq) | Worker、Client、多队列、延时/定时入队、超时与去重 |
 | [定时任务中心](/guide/scheduler) | DB 驱动 Cron、手动执行、`timeout_sec`、锁 |
 
 ## 命令行与生成

@@ -131,6 +131,7 @@ go run ./cmd/artisan queue:failed retry-all 50 --env prod
 - 入队方式：
   - `EnqueueTaskInQueue(ctx, "critical", taskType, payload, uniqueWindowSec)`
   - `EnqueueUniqueInQueue(ctx, "critical", taskType, payload)`
+  - **相对/绝对延时入队**（如 10 分钟后关单）：见 [异步队列（Asynq）](/guide/queues-asynq) 中「延时 / 定时入队」；与 DB Cron 定时任务互补。
 
 ## 配置建议
 

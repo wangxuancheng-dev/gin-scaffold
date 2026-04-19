@@ -18,8 +18,14 @@
 
 ## 客户端 API（`internal/job`）
 
-- `EnqueueTask` / `EnqueueTaskInQueue`：普通入队；`uniqueWindowSec > 0` 时启用去重。
+- `EnqueueTask` / `EnqueueTaskInQueue`：普通入队；`uniqueWindowSec > 0` 时启用 Asynq `Unique` 去重（短窗口防重复点击）。
 - `EnqueueWelcome`：示例任务。
+- **延时 / 定时入队**（底层为 Asynq `ProcessIn` / `ProcessAt`，任务先进入 **scheduled** 状态，到点再变为 pending 被 worker 消费）：
+  - `EnqueueTaskAfter` / `EnqueueTaskInQueueAfter`：相对当前时间延迟 `delay`（`delay <= 0` 时与立即入队相同）。
+  - `EnqueueTaskAt` / `EnqueueTaskInQueueAt`：在绝对时间 `at` 执行（`at` 为零值时与立即入队相同）。
+  - `EnqueueUniqueAfter` / `EnqueueUniqueInQueueAfter`、`EnqueueUniqueAt` / `EnqueueUniqueInQueueAt`：在配置的 `asynq.dedup_window_sec` 去重窗口上叠加延迟或绝对时间，适合「同一订单多次触发关单检查」等场景。
+- 典型用途：**订单支付超时**（下单后 `EnqueueTaskInQueueAfter(..., 10*time.Minute)`，handler 内幂等判断订单状态再关单）、延迟通知、定时生效活动。
+- 注意：`timeout_sec` 仍是**任务开始执行后**的单次执行超时，与「何时开始执行」无关；长延迟任务请确认 Redis 持久化与运维策略。
 - 新增任务类型：在 `internal/job` 定义 `TypeXxx` 常量、payload 结构，在 worker `Mux` 注册 handler（见 `internal/app/bootstrap` worker 初始化段）。
 
 ## 失败与运维
@@ -31,5 +37,5 @@
 
 | | Asynq | DB 定时任务（scheduler） |
 |--|--------|---------------------------|
-| 触发 | 入队后立即由 worker 消费 | Cron 表达式到点执行 shell/artisan |
-| 典型用途 | 异步导出、邮件、慢 IO | 周期清理、报表、调用 `migrate` 等 |
+| 触发 | 入队后由 worker 消费；支持 **立即**、**延迟**（`ProcessIn`）、**定时**（`ProcessAt`） | Cron 表达式到点执行 shell/artisan |
+| 典型用途 | 异步导出、邮件、慢 IO、**每单一次的延迟关单** | 周期清理、报表、调用 `migrate` 等 |
