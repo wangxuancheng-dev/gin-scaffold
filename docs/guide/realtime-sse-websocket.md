@@ -17,10 +17,23 @@
 - 演示 Handler：`api/handler/ws_handler.go`；`CheckOrigin` 与 **`cors.allow_origins`** 对齐（`middleware.WebSocketCheckOrigin`）。`allow_origins` 为 `*` 或未配置时仍较宽松，生产请列出明确前端源或交给网关校验。
 - **鉴权**：与受保护 client 路由一致，需 **`Authorization: Bearer <access>`**；连接用户 ID 来自 JWT，**不再**使用 `uid` 查询参数（避免任意冒充）。
 
+可使用支持自定义 Header 的 WebSocket 客户端；调试时注意 `ws://` / `wss://` 与端口、路径一致：
+
+`ws://127.0.0.1:8080/api/v1/client/ws` + Header `Authorization: Bearer <token>`。
+
 ## SSE
 
 - `Content-Type: text/event-stream`，定时 `tick` 推送示例字符串。
 - Handler：`api/handler/sse_handler.go`；业务侧可替换为订阅 `internal/service` 中 channel。
+
+### 命令行快速验证
+
+```bash
+# 无鉴权演示流（默认路由在公开组）
+curl -N -sS "http://127.0.0.1:8080/api/v1/client/sse/stream"
+```
+
+`-N` 禁用缓冲，便于观察 `event:` 流式输出。若将 SSE 移入 JWT 组，需增加 **`Authorization: Bearer`**。
 
 ## 扩展建议
 

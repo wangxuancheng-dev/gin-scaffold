@@ -22,12 +22,29 @@
 
 入口聚合：`routes/adminroutes/register.go`。
 
-## 调用示例（curl 思路）
+## 调用示例（curl）
 
-1. 先 `POST /api/v1/client/auth/login` 取 `access_token`（见 Swagger）。
-2. 管理请求带：`Authorization: Bearer ...`，多租户时加 **`X-Tenant-ID`**（与 [platform](/guide/platform) 一致）。
+1. 登录（种子用户与口令见迁移 `seed_users` 注释）：
 
-具体路径与 query/body 请用 Swagger 复制，避免文档与代码漂移。
+```bash
+curl -sS -X POST "http://127.0.0.1:8080/api/v1/client/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"Admin@123456"}'
+```
+
+从响应 `data.access_token` 取出令牌。
+
+2. 调用管理端（示例：队列摘要，需账号具备 `task:read` 等权限）：
+
+```bash
+TOKEN="<粘贴 access_token>"
+
+curl -sS "http://127.0.0.1:8080/api/v1/admin/task-queues/summary" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "X-Tenant-ID: default"
+```
+
+多租户关闭时可省略 `X-Tenant-ID`。其余路径、query、body 以 **Swagger**（`/swagger/index.html`）为准，避免文档与代码漂移。
 
 ## 与代码生成器的关系
 

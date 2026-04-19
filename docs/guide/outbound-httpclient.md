@@ -28,6 +28,37 @@ if c == nil {
 resp, err := c.Do(req.WithContext(ctx))
 ```
 
+完整最小请求（GET 下游 JSON）：
+
+```go
+import (
+    "context"
+    "io"
+    "net/http"
+
+    "gin-scaffold/pkg/httpclient"
+)
+
+func fetchDownstreamJSON(ctx context.Context) ([]byte, error) {
+    c := httpclient.Default()
+    if c == nil {
+        return nil, io.EOF
+    }
+    req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://httpbin.org/get", nil)
+    if err != nil {
+        return nil, err
+    }
+    resp, err := c.Do(req)
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+    return io.ReadAll(resp.Body)
+}
+```
+
+示例 URL 可替换为内网健康检查地址；**务必**使用 `NewRequestWithContext` 与上游 `ctx` 联动超时。
+
 - **`Do`** 内部按配置重试；对可重试状态码会退避重试（实现见 `pkg/httpclient`）。
 - 业务层应始终传入 **带取消的 `context.Context`**，与请求超时或上游取消联动。
 

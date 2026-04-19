@@ -33,6 +33,22 @@
 
 权限检查器在 bootstrap 中注入：`middleware.SetPermissionChecker(...)`。
 
+### 路由组挂载示例（源码摘录）
+
+客户端「公开」与「需 JWT」分组（`routes/client_router.go`）：
+
+```go
+client := r.Group("/api/v1/client")
+{
+    client.POST("/auth/login", user.Login)
+}
+clientAuth := r.Group("/api/v1/client")
+clientAuth.Use(middleware.JWTAuth(jwtMgr))
+clientAuth.GET("/users/:id", user.Get)
+```
+
+管理端在 `routes/adminroutes/register.go` 内对 `admin` 组依次 `Use(middleware.JWTAuth(...))`、`Use(middleware.RequireRoles("admin"))`，再在子路由文件里挂 `RequirePermission`。
+
 ## 新增中间件的建议
 
 1. 纯技术横切 → 放 `middleware/`，在 `routes.Build` 里 `r.Use` 插入到合适位置（注意：越靠前越早执行）。

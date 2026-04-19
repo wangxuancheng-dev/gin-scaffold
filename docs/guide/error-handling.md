@@ -55,6 +55,28 @@ handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
 })
 ```
 
+### Handler 骨架（绑定 → 业务 → 成功响应）
+
+```go
+func (h *UserHandler) Get(c *gin.Context) {
+    var uri struct {
+        ID int64 `uri:"id" binding:"required,min=1"`
+    }
+    if err := c.ShouldBindUri(&uri); err != nil {
+        handler.FailInvalidParam(c, err)
+        return
+    }
+    row, err := h.svc.GetByID(c.Request.Context(), uri.ID)
+    if err != nil {
+        handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+            errcode.UserNotFound: {Status: http.StatusNotFound},
+        })
+        return
+    }
+    response.OK(c, row)
+}
+```
+
 需要覆盖消息文案时，可在 `BizMapping` 中设置：
 
 - `MsgKey`：覆盖 i18n key

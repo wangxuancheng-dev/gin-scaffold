@@ -21,3 +21,31 @@
 
 - `ip_burst` / `route_burst` 过小会导致正常突发请求 429；过大则防护减弱。
 - 若前置 **API 网关** 已做限流，应用层可酌情放宽或仅保留登录等敏感路径的专项限流（需自行拆分路由组）。
+
+## 配置示例（`configs/*.yaml`）
+
+**单机开发（内存窗口）**
+
+```yaml
+limiter:
+  mode: memory
+  ip_rps: 20
+  ip_burst: 40
+  route_rps: 50
+  route_burst: 80
+```
+
+**多副本（Redis 共享计数）**
+
+```yaml
+limiter:
+  mode: redis
+  window_sec: 1
+  redis_key_prefix: "app:ratelimit:"
+  ip_rps: 50
+  ip_burst: 100
+  route_rps: 80
+  route_burst: 160
+```
+
+`window_sec` 在 `redis` 模式下必填；前缀空时会回退 `platform.cache.key_prefix`（见配置校验逻辑）。

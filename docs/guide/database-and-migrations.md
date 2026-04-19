@@ -31,6 +31,47 @@ go run ./cmd/migrate seed up --env dev
 
 - 运行时使用 **GORM** 访问数据库；迁移文件为 **SQL**（也可用同一仓库内其他工具链，但本脚手架以 SQL 为准）。
 
+## 新增表结构（示例）
+
+在 `migrations/mysql/schema/`（或 `migrations/postgres/schema/`）新增一对文件，时间戳全局递增，例如：
+
+- `202604191200_create_widgets.up.sql`
+- `202604191200_create_widgets.down.sql`
+
+MySQL 示例：
+
+```sql
+-- up
+CREATE TABLE IF NOT EXISTS `widgets` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `tenant_id` VARCHAR(64) NOT NULL DEFAULT 'default',
+  `name` VARCHAR(128) NOT NULL,
+  `created_at` DATETIME(3) NULL,
+  `updated_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_widgets_tenant` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+`down` 文件对称删除，例如：
+
+```sql
+DROP TABLE IF EXISTS `widgets`;
+```
+
+## 新增种子数据（示例）
+
+在 `migrations/mysql/seed/` 增加 `*_seed_<表名>.up.sql`，只做 **DML**，常用 **`INSERT IGNORE`** 或 **`INSERT ... ON DUPLICATE`** 保持可重复执行（详见各驱动目录下 `README.md`）。
+
+```sql
+INSERT IGNORE INTO `role_permissions` (`tenant_id`, `role_id`, `permission_code`, `created_at`, `updated_at`)
+SELECT 'default', r.id, 'widget:read', NOW(), NOW()
+FROM `roles` r WHERE r.tenant_id = 'default' AND r.code = 'admin'
+AND NOT EXISTS (
+  SELECT 1 FROM `role_permissions` rp WHERE rp.tenant_id = 'default' AND rp.role_id = r.id AND rp.permission_code = 'widget:read'
+);
+```
+
 ## 测试库
 
 - 集成测试脚本会创建 `scaffold_test` 并执行 migrate + seed + fixture，见 `tests/integration/README.md` 与 `scripts/integration.sh`。

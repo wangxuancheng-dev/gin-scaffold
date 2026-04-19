@@ -32,6 +32,28 @@ admin.GET("/task-queues/summary", middleware.RequirePermission("task:read"), h.S
 
 - 客户端路由使用 **`JWTAuth`**，不按 `RequirePermission` 细分（业务接口自行在 handler 内判断资源归属，可结合 `pkg/policy`）。
 
+### 调用管理端接口（示例）
+
+先登录获取 `access_token`（见 [快速开始](/guide/quick-start)），再请求需权限的接口：
+
+```bash
+curl -sS "http://127.0.0.1:8080/api/v1/admin/task-queues/summary" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+无对应权限时返回 **403**；超管用户 ID 由 `rbac.super_admin_user_id`（或 `RBAC_SUPER_ADMIN_USER_ID`）配置。
+
+### Service 返回业务错误（与 `FailByError` 配合）
+
+```go
+import "gin-scaffold/internal/pkg/errcode"
+
+// 资源不存在
+return nil, errcode.New(errcode.NotFound, errcode.KeyNotFound)
+```
+
+Handler 侧用 `handler.FailByError` 将 `*errcode.BizError` 映射为 HTTP 状态与统一 JSON 信封，见 [错误与响应](/guide/error-handling)。
+
 ## 相关文档
 
 - [路由与分组](/guide/routing)

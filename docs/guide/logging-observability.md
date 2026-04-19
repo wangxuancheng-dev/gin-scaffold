@@ -60,6 +60,24 @@ logger.Channel("daily").Info("sync scheduled tasks ok")
 
 任务调度器已使用 `logger.Channel("daily", "task_scheduler.log")` 写调度类日志，见 `internal/job/scheduler`。
 
+### 与 `request_id` 联动（Handler 内）
+
+```go
+import (
+    "github.com/gin-gonic/gin"
+    "go.uber.org/zap"
+
+    "gin-scaffold/pkg/logger"
+)
+
+func logWithRequest(c *gin.Context, msg string) {
+    rid := c.GetString("request_id")
+    logger.InfoX(msg, zap.String("request_id", rid))
+}
+```
+
+便于与 **Access 日志**、**审计**、网关访问日志同一关键字关联排查。
+
 ## 轮转策略
 
 - `size`: 按大小切割

@@ -2,6 +2,24 @@
 
 与 [配置说明（关键组）](/guide/configuration) 互补：下列条目对应 `config/config.go` 中结构体，YAML 路径与 `config/loader.go` 中 `BindEnv` 一致处可用环境变量覆盖。
 
+## 覆盖优先级（示例）
+
+同一键以 **环境变量** 为最高优先级。例如开发机临时改端口：
+
+```bash
+# Linux / macOS
+export HTTP_PORT=18080
+go run ./cmd/server server --env dev
+```
+
+```powershell
+# Windows PowerShell
+$env:HTTP_PORT = "18080"
+go run ./cmd/server server --env dev
+```
+
+等价 YAML 为 `http.port: 18080`；二者同时存在时以环境变量为准。完整键名对照见 [环境变量绑定一览](/guide/environment-variables)。
+
 ## `env` / `name` / `debug`
 
 - `env`：逻辑环境，影响加载 `app.{env}.yaml`。

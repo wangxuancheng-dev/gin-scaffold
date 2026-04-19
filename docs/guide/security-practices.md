@@ -37,3 +37,26 @@
 ## 合规清单
 
 完整打勾项见 **[上线检查清单](/checklist)**。
+
+## 生产配置片段（示例）
+
+以下仅为常见收紧项，实际以你们 `configs/app.prod.yaml` 与网关策略为准。
+
+```yaml
+http:
+  swagger_enabled: false
+
+scheduler:
+  shell_commands_enabled: false
+```
+
+```yaml
+metrics:
+  enabled: true
+  path: /metrics
+  allowed_networks:
+    - 10.0.0.0/8
+    - 127.0.0.1/32
+```
+
+`metrics.allowed_networks` 非空时按 **TCP 对端 IP** 校验（见 [配置说明](/guide/configuration)）；公网抓取请改为网关控制并酌情置空列表。

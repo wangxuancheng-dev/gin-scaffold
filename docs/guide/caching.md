@@ -12,6 +12,37 @@
 - **系统参数**（`system_settings`）请用 **`pkg/settings`**（带短 TTL、读已发布版本），见 [平台能力](/guide/platform) 文档「系统参数」一节。
 - **`pkg/cache`** 更适合：会话外缓存、排行榜、短期计算结果等通用键值。
 
+## 代码示例（`pkg/cache`）
+
+在 **`bootstrap.InitServer`** 已初始化全局 Redis 的前提下，业务代码中典型用法如下（键名务必经 `Key` 拼接，避免与其它子系统冲突）：
+
+```go
+import (
+    "context"
+    "time"
+
+    "gin-scaffold/pkg/cache"
+)
+
+func example(ctx context.Context) error {
+    c := cache.NewFromConfig()
+    key := c.Key("user", "profile", "123") // => "<prefix>user:profile:123"
+
+    type profileVO struct {
+        Name string `json:"name"`
+    }
+
+    if err := c.SetJSON(ctx, key, profileVO{Name: "Ada"}, 5*time.Minute); err != nil {
+        return err
+    }
+    var out profileVO
+    if err := c.GetJSON(ctx, key, &out); err != nil {
+        return err
+    }
+    return c.Del(ctx, key)
+}
+```
+
 ## 注意
 
 - 多实例下缓存一致性问题与业务 TTL 设计需自行评估；本包不负责缓存击穿/穿透策略。

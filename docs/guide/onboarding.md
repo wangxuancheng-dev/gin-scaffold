@@ -58,6 +58,21 @@ flowchart LR
 
 加业务模块时配合：[代码生成](/guide/codegen) 与 [Codegen 实战](/guide/codegen-walkthrough)。
 
+## 本机最小自检（复制执行）
+
+```bash
+go run ./cmd/migrate up --env dev
+go run ./cmd/migrate seed up --env dev
+
+# 终端 1
+go run ./cmd/server server --env dev
+
+# 终端 2（使用 Asynq 导出、欢迎任务等时必需）
+go run ./cmd/server worker --env dev
+
+curl -sS "http://127.0.0.1:8080/livez"
+```
+
 ---
 
 ## 常见问题（FAQ）

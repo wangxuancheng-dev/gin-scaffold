@@ -29,6 +29,21 @@
 - `max_body_bytes`: 请求体大小上限（字节），默认建议 `1048576`（1MB）
 - `swagger_enabled`: 是否注册 `/swagger/*`；生产建议 `false`，契约文档可由内网或 CI 产物提供
 
+`configs/app.yaml` 中典型片段（可按环境覆盖）：
+
+```yaml
+http:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout_sec: 30
+  read_header_timeout_sec: 10
+  write_timeout_sec: 30
+  idle_timeout_sec: 120
+  shutdown_timeout_sec: 10
+  max_body_bytes: 1048576
+  swagger_enabled: true
+```
+
 ## `metrics`
 
 - `enabled` / `path`

@@ -38,6 +38,29 @@ err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 - **DAO 查询列表、详情、更新、删除**均应走 `ApplyScope`，避免串租户。
 - 需要跨租户运维的极少数场景（如超管数据修复）需单独评审，慎用 `Unscoped()`（示例见 `user_dao` 中与删除/用户名相关的路径）。
 
+DAO 内典型写法（省略结构体定义，与 `internal/dao/*_dao.go` 一致）：
+
+```go
+import (
+    "context"
+
+    "gin-scaffold/internal/model"
+    "gin-scaffold/internal/pkg/tenant"
+    "gorm.io/gorm"
+)
+
+func (d *WidgetDAO) Get(ctx context.Context, id int64) (*model.Widget, error) {
+    q := tenant.ApplyScope(ctx, d.db.WithContext(ctx), "tenant_id")
+    var row model.Widget
+    if err := q.Where("id = ?", id).First(&row).Error; err != nil {
+        return nil, err
+    }
+    return &row, nil
+}
+```
+
+中间件或上游 handler 已把租户写入 `context`（见 `middleware/tenant.go`）；测试里可用 **`tenant.WithContext(ctx, "default")`** 模拟。
+
 ## 慢 SQL 与日志
 
 - `db.slow_threshold_ms`：超过阈值的 SQL 由 GORM logger 输出。

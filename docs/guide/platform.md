@@ -28,6 +28,26 @@
 - `multipart`、过大请求体、未知 `Content-Length` 会跳过幂等逻辑。
 - 指纹包含：用户维度（JWT `uid` 或 `anon`）、幂等键、路径、**原始请求体**。
 
+配置片段（`configs/*.yaml`）：
+
+```yaml
+platform:
+  idempotency:
+    enabled: true
+```
+
+调用示例（需已登录且为 JSON POST）：
+
+```bash
+curl -sS -X POST "http://127.0.0.1:8080/api/v1/client/some-endpoint" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: order-create-20260419-001" \
+  -d '{"foo":"bar"}'
+```
+
+第二次使用相同 Key 与相同 body 时，在 TTL 内返回缓存的响应体。
+
 ## 缓存前缀（`platform.cache`）
 
 - `pkg/cache` 的 `NewFromConfig()` 使用 `key_prefix` 拼接业务 Redis 键（默认 `app:`）。
@@ -37,6 +57,25 @@
 - 进程内**同步**派发；耗时逻辑请投递 Asynq。
 - 在 `internal/app/platform.Init` 中重置默认总线；业务可 `eventbus.Default().On("name", handler)` 订阅。
 - 示例：`user.registered` 在用户注册事务内写入 Outbox（见 `UserService.Register`），由 Outbox 分发器发布到本进程总线。
+
+```go
+import (
+    "context"
+
+    "gin-scaffold/pkg/eventbus"
+)
+
+func registerDemo() {
+    eventbus.Default().On("user.registered", func(ctx context.Context, e eventbus.Event) {
+        // 同步执行；禁止长阻塞与外部 IO 直连，必要时入 Asynq
+        _ = e.Payload
+    })
+}
+
+func publishDemo(ctx context.Context, payload any) {
+    eventbus.Default().Emit(ctx, eventbus.Event{Name: "user.registered", Payload: payload})
+}
+```
 
 ## 事务 Outbox（`outbox`）
 

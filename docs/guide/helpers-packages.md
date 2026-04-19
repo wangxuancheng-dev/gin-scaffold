@@ -24,6 +24,18 @@
 
 GORM 事务、租户 scope、只读副本等见 **[数据库与 GORM 实践](/guide/database-patterns)**。
 
+## 小示例（`pkg/sliceutil` / `pkg/numconv`）
+
+```go
+import (
+    "gin-scaffold/pkg/numconv"
+    "gin-scaffold/pkg/sliceutil"
+)
+
+tags := sliceutil.UniqueStable([]string{"a", "b", "a"})
+_ = numconv.ParseInt64("not-a-number", -1) // => -1
+```
+
 ## `internal/pkg/`（与本项目域强相关）
 
 | 包 | 用途 |

@@ -65,6 +65,16 @@ $env:LOAD_DOTENV_NON_DEV = "true"
 - `http://localhost:8080/readyz`
 - `http://localhost:8080/swagger/index.html`（需在 `configs` 中 `http.swagger_enabled: true`，开发模板默认开启）
 
+命令行示例（端口以你本地为准；种子用户口令见迁移 `seed_users` 内注释）：
+
+```bash
+curl -sS "http://127.0.0.1:8080/livez"
+
+curl -sS -X POST "http://127.0.0.1:8080/api/v1/client/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"Admin@123456"}'
+```
+
 ## 7) 变更记录
 
 - 版本更新说明见：`docs/changelog.md`

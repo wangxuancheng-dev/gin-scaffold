@@ -37,3 +37,19 @@ docs/               # 文档中心（VitePress）
 - 默认可运行，关键能力可配置
 - 配置错误快速失败（fail fast）
 - 功能优先服务中小团队生产场景，避免过度平台化
+
+## 最小可运行验证（示例）
+
+更完整的步骤见 **[快速开始](/guide/quick-start)**。假设已完成迁移且本机 `8080` 起服务：
+
+```bash
+# 健康检查（无需鉴权）
+curl -sS "http://127.0.0.1:8080/livez"
+
+# 客户端登录（种子用户见迁移 seed；默认口令见 seed 注释，首登后请修改）
+curl -sS -X POST "http://127.0.0.1:8080/api/v1/client/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"Admin@123456"}'
+```
+
+响应 `data` 中含 `access_token`，管理端接口在 Header 中携带：`Authorization: Bearer <token>`（需对应 RBAC 权限）。

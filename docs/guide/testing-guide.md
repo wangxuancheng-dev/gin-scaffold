@@ -39,3 +39,32 @@
 ## Handler 与 Swagger
 
 - 修改 Swagger 注释后执行 `swag init`（参数与 CI 一致），否则 CI diff 会失败。
+
+## 单元测试片段（`testify`）
+
+```go
+import (
+    "testing"
+
+    "github.com/stretchr/testify/require"
+)
+
+func TestFoo(t *testing.T) {
+    cases := []struct {
+        name string
+        in   int
+        want int
+    }{
+        {"positive", 2, 4},
+    }
+    for _, tc := range cases {
+        t.Run(tc.name, func(t *testing.T) {
+            require.Equal(t, tc.want, tc.in*2)
+        })
+    }
+}
+```
+
+## 集成测试响应断言（思路）
+
+对 `INTEGRATION_BASE_URL` 发 HTTP 后，解析 JSON 根对象，断言 **`code`**、**`data`**（见 `api/response.Body`）。租户相关接口在 Header 增加 **`X-Tenant-ID`**。完整环境变量表见 `tests/integration/README.md`。

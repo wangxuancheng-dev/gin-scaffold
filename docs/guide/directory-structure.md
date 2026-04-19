@@ -45,3 +45,35 @@ api/handler → internal/service/port → internal/service → internal/dao → 
 4. `routes/adminroutes`（或 `client_router`）注册路由。
 5. `internal/app/bootstrap` 里 **构造依赖并传入** `routes.Build` 的 `Options`（与现有 User/Menu 等并列）。
 6. 补 Swagger 注释后执行 `swag init`（见 [命令系统](/guide/commands) 与 CI 校验说明）。
+
+## 代码穿行示例（对照源码）
+
+**Handler**：只做绑定、调 service、用统一错误出口与 `response.OK`（示例形态，与 `api/handler/admin/*` 一致；省略 `import`）：
+
+```go
+func (h *WidgetHandler) Get(c *gin.Context) {
+    var uri struct {
+        ID int64 `uri:"id" binding:"required,min=1"`
+    }
+    if err := c.ShouldBindUri(&uri); err != nil {
+        handler.FailInvalidParam(c, err)
+        return
+    }
+    row, err := h.svc.Get(c.Request.Context(), uri.ID)
+    if err != nil {
+        handler.FailInternal(c, err)
+        return
+    }
+    response.OK(c, row)
+}
+```
+
+**路由**（管理端 + 权限串，见 `routes/adminroutes/*.go`）：
+
+```go
+admin.GET("/widgets/:id", middleware.RequirePermission("widget:read"), h.Get)
+```
+
+**Bootstrap 接线**：在 `internal/app/bootstrap/bootstrap.go` 的 `InitServer` 中 `dao`/`service`/`handler` 与 `routes.Build(routes.Options{ ... })` 里为同一模块增加字段并传入（可对照 `AdminUser`、`AdminMenu` 的写法）。
+
+**异步任务消费**：新 Asynq 类型除 `internal/job` 定义常量与 payload 外，必须在 **`InitWorker`** 里 `mux.Handle(...)` 注册，否则任务会一直 `pending`（见 [异步队列](/guide/queues-asynq)）。

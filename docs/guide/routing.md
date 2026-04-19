@@ -43,6 +43,19 @@
 1. 在对应 `*_router.go` 增加一行，并选择合适的 `RequirePermission`（需在 seed 中配置权限码与菜单）。
 2. Handler 放在 `api/handler/admin/`；请求体放 `api/request/admin/`。
 
+### 代码形态示例（管理端）
+
+在 `routes/adminroutes/register.go` 中已为 `admin` 路由组挂上 `JWTAuth` 与 `RequireRoles("admin")`。子模块文件（如 `user_router.go`）内为小写 `registerAdmin*Routes` 函数，例如：
+
+```go
+func registerAdminUserRoutes(admin *gin.RouterGroup, h *adminhandler.UserHandler) {
+    admin.GET("/users", middleware.RequirePermission("user:read"), h.List)
+    admin.POST("/users", middleware.RequirePermission("user:create"), h.Create)
+}
+```
+
+`register.go` 中集中调用这些注册函数，保持「一组一个文件」便于 Code Review。
+
 ## 与 Swagger 的关系
 
 - 路由以代码为准；注释用于 `swag init` 生成 `docs/swagger.*`。
