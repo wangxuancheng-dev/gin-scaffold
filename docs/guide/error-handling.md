@@ -44,8 +44,23 @@
 统一使用 `api/handler/error_helper.go` 提供的 helper，避免每个 handler 重复编写 `errors.As` 分支：
 
 - 参数绑定/校验失败：`handler.FailInvalidParam(c, err)`
+- 资源不存在（明确 404）：`handler.FailNotFound(c, "xxx not found")`
 - 非业务错误（兜底）：`handler.FailInternal(c, err)`
 - 业务错误映射：`handler.FailByError(c, err, <defaultStatus>, <mapping>)`
+
+补充约定（高标准）：
+
+- 不把“资源不存在”归类为参数错误（避免返回 `400`），统一返回 `404`
+- 即使是 WebSocket/SSE 入口，在握手/协商失败前也走统一错误 helper，保持响应体一致
+
+## Service/DAO 错误语义矩阵（推荐）
+
+- **DAO 层**：保持技术错误原样返回（如 `gorm.ErrRecordNotFound`、驱动错误），不做 HTTP 语义判断
+- **Service 层**：把可预期业务分支转成 `errcode.BizError`
+  - 资源不存在 -> `errcode.NotFound`
+  - 参数非法/状态不允许 -> `errcode.BadRequest` / `errcode.Conflict` / `errcode.Forbidden`
+  - 基础设施异常（DB/Redis/网络）-> 原始 error 透传
+- **Handler 层**：只做 HTTP 映射（`FailByError` + mapping），不再根据底层技术细节做分支
 
 示例（`UserNotFound -> 404`，其余业务错误按默认 `400`）：
 

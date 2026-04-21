@@ -29,6 +29,9 @@
 - 默认阈值：`25%`；可通过环境变量 `COVERAGE_THRESHOLD` 覆盖，例如 `COVERAGE_THRESHOLD=30 bash ./scripts/go-cover.sh`。
 - 一键本地质量检查：`bash scripts/quality.sh`（`gofmt` + `go test ./...` + 覆盖率门禁）。
 - CI `test-build` 使用同一门禁，低于阈值会失败。
+- 规范守卫脚本：
+  - `bash ./scripts/check-handler-error-helper.sh .`：禁止在 `api/handler` 里绕过统一错误 helper
+  - `bash ./scripts/check-service-notfound-mapping.sh .`：检查 `internal/service` 中 `gorm.ErrRecordNotFound` 分支是否映射为业务语义错误（允许带 `// notfound-ok` 的特例）
 
 ## 写新集成用例建议
 

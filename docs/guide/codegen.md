@@ -24,6 +24,12 @@ go run ./cmd/gen crud --module order --field title:string:required,max=64 --fiel
 - `--preview-full`：配合 `--preview-file` 输出完整文件内容（默认会截断长内容）
 - `--out-dir`：指定生成输出目录（非项目根目录时需配合 `--no-wire`）
 
+生成器质量约束（v2）：
+
+- 生成的 Handler 统一走 `handler.Fail*` 错误出口（含 `gorm.ErrRecordNotFound -> 404` 映射）
+- 路由资源名和权限前缀基于 `snake_case module`
+- 自动 wiring 采用“锚点缺失即报错”策略，避免静默失败
+
 ## 生成内容
 
 - `internal/model/<module>.go`

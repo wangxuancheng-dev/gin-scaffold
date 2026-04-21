@@ -112,7 +112,7 @@ func runCRUD(opt crudOptions) error {
 		filepath.Join("internal", "service", moduleSnake+"_service.go"):         serviceTemplate(modelName, serviceName),
 		filepath.Join("api", "request", "admin", moduleSnake+"_request.go"):     requestTemplate(modelName, parsedFields),
 		filepath.Join("api", "handler", "admin", moduleSnake+"_handler.go"):     adminHandlerTemplate(modelName, serviceName, parsedFields),
-		filepath.Join("routes", "adminroutes", moduleSnake+"_router.go"):        adminRouteTemplate(modelName),
+		filepath.Join("routes", "adminroutes", moduleSnake+"_router.go"):        adminRouteTemplate(modelName, moduleSnake),
 	}
 	if opt.template == "full" {
 		files[filepath.Join("migrations", "mysql", "schema", migrationBase+".up.sql")] = schemaUpTemplate(opt.table, parsedFields)
@@ -272,30 +272,42 @@ func wireRouterOptions(modelName string) error {
 
 	fieldLine := fmt.Sprintf("\tAdmin%s  *adminhandler.%sHandler\n", modelName, modelName)
 	if !strings.Contains(text, fieldLine) {
-		text = strings.Replace(
+		var repErr error
+		text, repErr = replaceOnceOrError(
 			text,
 			"\tAdminQueue *adminhandler.TaskQueueHandler\n",
 			"\tAdminQueue *adminhandler.TaskQueueHandler\n"+fieldLine,
-			1,
+			path,
 		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	arg := fmt.Sprintf("opts.Admin%s", modelName)
 	if !strings.Contains(text, arg) {
 		if strings.Contains(text, "opts.AdminSys, opts.AdminQueue, opts.AdminAnnouncement, opts.WS, opts.SSE") {
-			text = strings.Replace(
+			var repErr error
+			text, repErr = replaceOnceOrError(
 				text,
 				"opts.AdminSys, opts.AdminQueue, opts.AdminAnnouncement, opts.WS, opts.SSE",
 				fmt.Sprintf("opts.AdminSys, opts.AdminQueue, %s, opts.AdminAnnouncement, opts.WS, opts.SSE", arg),
-				1,
+				path,
 			)
+			if repErr != nil {
+				return repErr
+			}
 		} else {
-			text = strings.Replace(
+			var repErr error
+			text, repErr = replaceOnceOrError(
 				text,
 				"opts.AdminSys, opts.AdminQueue, opts.WS, opts.SSE",
 				fmt.Sprintf("opts.AdminSys, opts.AdminQueue, %s, opts.WS, opts.SSE", arg),
-				1,
+				path,
 			)
+			if repErr != nil {
+				return repErr
+			}
 		}
 	}
 
@@ -312,22 +324,30 @@ func wireAPIRouter(modelName string) error {
 
 	paramLine := fmt.Sprintf("\tadmin%s *adminhandler.%sHandler,\n", modelName, modelName)
 	if !strings.Contains(text, paramLine) {
-		text = strings.Replace(
+		var repErr error
+		text, repErr = replaceOnceOrError(
 			text,
 			"\tadminQueue *adminhandler.TaskQueueHandler,\n",
 			"\tadminQueue *adminhandler.TaskQueueHandler,\n"+paramLine,
-			1,
+			path,
 		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	arg := fmt.Sprintf("admin%s", modelName)
 	if !strings.Contains(text, ", "+arg+")") {
-		text = strings.Replace(
+		var repErr error
+		text, repErr = replaceOnceOrError(
 			text,
 			"adminroutes.Register(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, adminAnnouncement)",
 			"adminroutes.Register(r, jwtMgr, adminUser, adminMenu, adminOps, adminTask, adminSys, adminQueue, "+arg+", adminAnnouncement)",
-			1,
+			path,
 		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	return os.WriteFile(path, []byte(text), 0o644)
@@ -355,17 +375,30 @@ func wireAdminRouter(modelName string) error {
 
 	param := fmt.Sprintf("generated%s *adminhandler.%sHandler", modelName, modelName)
 	if !strings.Contains(text, param) {
-		text = strings.Replace(
+		var repErr error
+		text, repErr = replaceOnceOrError(
 			text,
 			"generatedAnnouncement *adminhandler.AnnouncementHandler",
 			param+", generatedAnnouncement *adminhandler.AnnouncementHandler",
-			1,
+			path,
 		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	callLine := fmt.Sprintf("\tregisterAdmin%sRoutes(admin, generated%s)\n", modelName, modelName)
 	if !strings.Contains(text, callLine) {
-		text = strings.Replace(text, "\tregisterAdminAnnouncementRoutes(admin, generatedAnnouncement)\n", callLine+"\tregisterAdminAnnouncementRoutes(admin, generatedAnnouncement)\n", 1)
+		var repErr error
+		text, repErr = replaceOnceOrError(
+			text,
+			"\tregisterAdminAnnouncementRoutes(admin, generatedAnnouncement)\n",
+			callLine+"\tregisterAdminAnnouncementRoutes(admin, generatedAnnouncement)\n",
+			path,
+		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	return os.WriteFile(path, []byte(text), 0o644)
@@ -381,22 +414,58 @@ func wireBootstrap(moduleSnake, modelName, daoName, serviceName string) error {
 
 	daoLine := fmt.Sprintf("\t%sDAO := dao.New%s(gdb)\n", lowerFirst(modelName), daoName)
 	if !strings.Contains(text, daoLine) {
-		text = strings.Replace(text, "\tauthzDAO := dao.NewAuthzDAO(gdb)\n", daoLine+"\tauthzDAO := dao.NewAuthzDAO(gdb)\n", 1)
+		var repErr error
+		text, repErr = replaceOnceOrError(
+			text,
+			"\tauthzDAO := dao.NewAuthzDAO(gdb)\n",
+			daoLine+"\tauthzDAO := dao.NewAuthzDAO(gdb)\n",
+			path,
+		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	svcLine := fmt.Sprintf("\t%sSvc := service.New%s(%sDAO)\n", lowerFirst(modelName), serviceName, lowerFirst(modelName))
 	if !strings.Contains(text, svcLine) {
-		text = strings.Replace(text, "\tsysSettingSvc := service.NewSystemSettingService(sysSettingDAO)\n", "\tsysSettingSvc := service.NewSystemSettingService(sysSettingDAO)\n"+svcLine, 1)
+		var repErr error
+		text, repErr = replaceOnceOrError(
+			text,
+			"\tsysSettingSvc := service.NewSystemSettingService(sysSettingDAO)\n",
+			"\tsysSettingSvc := service.NewSystemSettingService(sysSettingDAO)\n"+svcLine,
+			path,
+		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	handlerLine := fmt.Sprintf("\tadmin%sH := adminhandler.New%sHandler(%sSvc)\n", modelName, modelName, lowerFirst(modelName))
 	if !strings.Contains(text, handlerLine) {
-		text = strings.Replace(text, "\tadminQueueH := adminhandler.NewTaskQueueHandler(inspector)\n", "\tadminQueueH := adminhandler.NewTaskQueueHandler(inspector)\n"+handlerLine, 1)
+		var repErr error
+		text, repErr = replaceOnceOrError(
+			text,
+			"\tadminQueueH := adminhandler.NewTaskQueueHandler(inspector)\n",
+			"\tadminQueueH := adminhandler.NewTaskQueueHandler(inspector)\n"+handlerLine,
+			path,
+		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	optLine := fmt.Sprintf("\t\tAdmin%s:  admin%sH,\n", modelName, modelName)
 	if !strings.Contains(text, optLine) {
-		text = strings.Replace(text, "\t\tAdminQueue: adminQueueH,\n", "\t\tAdminQueue: adminQueueH,\n"+optLine, 1)
+		var repErr error
+		text, repErr = replaceOnceOrError(
+			text,
+			"\t\tAdminQueue: adminQueueH,\n",
+			"\t\tAdminQueue: adminQueueH,\n"+optLine,
+			path,
+		)
+		if repErr != nil {
+			return repErr
+		}
 	}
 
 	return os.WriteFile(path, []byte(text), 0o644)
@@ -440,6 +509,13 @@ func lowerFirst(s string) string {
 	r := []rune(s)
 	r[0] = unicode.ToLower(r[0])
 	return string(r)
+}
+
+func replaceOnceOrError(text, old, new, filePath string) (string, error) {
+	if !strings.Contains(text, old) {
+		return text, fmt.Errorf("auto-wire anchor not found in %s: %q", filePath, old)
+	}
+	return strings.Replace(text, old, new, 1), nil
 }
 
 func parseFields(raw []string) ([]genField, error) {
@@ -744,15 +820,15 @@ func adminHandlerTemplate(modelName, serviceName string, fields []genField) stri
 	tpl := `package adminhandler
 
 import (
-	"net/http"
+	"errors"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
-	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/handler"
+	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/response"
 	"gin-scaffold/internal/model"
-	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/internal/service/port"
 )
 
@@ -773,7 +849,7 @@ func (h *{{Model}}Handler) List(c *gin.Context) {
 	}
 	rows, total, err := h.svc.List(c.Request.Context(), q.Page, q.PageSize)
 	if err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, gin.H{"total": total, "list": rows})
@@ -782,12 +858,16 @@ func (h *{{Model}}Handler) List(c *gin.Context) {
 func (h *{{Model}}Handler) Get(c *gin.Context) {
 	var uri adminreq.{{Model}}IDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	row, err := h.svc.GetByID(c.Request.Context(), uri.ID)
 	if err != nil {
-		response.FailHTTP(c, http.StatusNotFound, errcode.NotFound, errcode.KeyInvalidParam, err.Error())
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			handler.FailNotFound(c, "")
+			return
+		}
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, row)
@@ -796,13 +876,13 @@ func (h *{{Model}}Handler) Get(c *gin.Context) {
 func (h *{{Model}}Handler) Create(c *gin.Context) {
 	var req adminreq.{{Model}}CreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	in := &model.{{Model}}{
 {{CreateAssign}}	}
 	if err := h.svc.Create(c.Request.Context(), in); err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, in)
@@ -811,17 +891,17 @@ func (h *{{Model}}Handler) Create(c *gin.Context) {
 func (h *{{Model}}Handler) Update(c *gin.Context) {
 	var uri adminreq.{{Model}}IDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	var req adminreq.{{Model}}UpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	in := &model.{{Model}}{ID: uri.ID}
 {{UpdateAssign}}	if err := h.svc.Update(c.Request.Context(), in); err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, in)
@@ -830,11 +910,11 @@ func (h *{{Model}}Handler) Update(c *gin.Context) {
 func (h *{{Model}}Handler) Delete(c *gin.Context) {
 	var uri adminreq.{{Model}}IDURI
 	if err := c.ShouldBindUri(&uri); err != nil {
-		response.FailHTTP(c, http.StatusBadRequest, errcode.BadRequest, errcode.KeyInvalidParam, err.Error())
+		handler.FailInvalidParam(c, err)
 		return
 	}
 	if err := h.svc.Delete(c.Request.Context(), uri.ID); err != nil {
-		response.FailHTTP(c, http.StatusInternalServerError, errcode.InternalError, errcode.KeyInternal, err.Error())
+		handler.FailInternal(c, err)
 		return
 	}
 	response.OK(c, gin.H{"deleted": true})
@@ -849,8 +929,7 @@ func (h *{{Model}}Handler) Delete(c *gin.Context) {
 	return replacer.Replace(tpl)
 }
 
-func adminRouteTemplate(modelName string) string {
-	lower := strings.ToLower(modelName)
+func adminRouteTemplate(modelName, moduleSnake string) string {
 	tpl := `package adminroutes
 
 import (
@@ -871,8 +950,8 @@ func registerAdmin{{Model}}Routes(admin *gin.RouterGroup, h *adminhandler.{{Mode
 `
 	replacer := strings.NewReplacer(
 		"{{Model}}", modelName,
-		"{{resource}}", lower,
-		"{{perm}}", lower,
+		"{{resource}}", moduleSnake,
+		"{{perm}}", moduleSnake,
 	)
 	return replacer.Replace(tpl)
 }

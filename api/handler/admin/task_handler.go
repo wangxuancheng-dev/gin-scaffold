@@ -8,6 +8,7 @@ import (
 	"gin-scaffold/api/handler"
 	adminreq "gin-scaffold/api/request/admin"
 	"gin-scaffold/api/response"
+	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/internal/pkg/validator"
 	"gin-scaffold/internal/service/port"
 )
@@ -151,5 +152,11 @@ func (h *TaskHandler) Logs(c *gin.Context) {
 }
 
 func (h *TaskHandler) failWithErr(c *gin.Context, err error) {
-	handler.FailByError(c, err, http.StatusBadRequest, nil)
+	handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+		errcode.NotFound: {Status: http.StatusNotFound},
+		errcode.Forbidden: {
+			Status: http.StatusForbidden,
+		},
+		errcode.Conflict: {Status: http.StatusConflict},
+	})
 }

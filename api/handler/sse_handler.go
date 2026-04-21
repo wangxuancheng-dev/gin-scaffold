@@ -31,7 +31,7 @@ func (h *SSEHandler) Stream(c *gin.Context) {
 	c.Writer.Header().Set("Connection", "keep-alive")
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		c.Status(http.StatusInternalServerError)
+		FailInternal(c, fmt.Errorf("streaming unsupported by response writer"))
 		return
 	}
 	ch := h.svc.TickMessages(c.Request.Context(), 2*time.Second)

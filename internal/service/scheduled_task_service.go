@@ -115,7 +115,7 @@ func (s *ScheduledTaskService) Update(ctx context.Context, id int64, name, spec,
 	task, err := s.dao.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
+			return nil, errcode.New(errcode.NotFound, errcode.KeyNotFound)
 		}
 		return nil, err
 	}
@@ -180,6 +180,9 @@ func isValidCronSpec(spec string, withSeconds bool) bool {
 
 func (s *ScheduledTaskService) Delete(ctx context.Context, id int64) error {
 	if err := s.dao.Delete(ctx, id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errcode.New(errcode.NotFound, errcode.KeyNotFound)
+		}
 		return err
 	}
 	s.onChanged()
@@ -189,7 +192,7 @@ func (s *ScheduledTaskService) Delete(ctx context.Context, id int64) error {
 func (s *ScheduledTaskService) SetEnabled(ctx context.Context, id int64, enabled bool) error {
 	if _, err := s.dao.GetByID(ctx, id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
+			return errcode.New(errcode.NotFound, errcode.KeyNotFound)
 		}
 		return err
 	}
@@ -204,7 +207,7 @@ func (s *ScheduledTaskService) RunNow(ctx context.Context, id int64) error {
 	task, err := s.dao.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errcode.New(errcode.BadRequest, errcode.KeyInvalidParam)
+			return errcode.New(errcode.NotFound, errcode.KeyNotFound)
 		}
 		return err
 	}
@@ -239,6 +242,9 @@ func (s *ScheduledTaskService) ListLogs(ctx context.Context, taskID int64, page,
 func (s *ScheduledTaskService) ExecuteTaskByID(ctx context.Context, taskID int64) error {
 	task, err := s.dao.GetByID(ctx, taskID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errcode.New(errcode.NotFound, errcode.KeyNotFound)
+		}
 		return err
 	}
 	return s.executeTask(ctx, task)

@@ -176,3 +176,32 @@ func TestWireAdminRouter_CreatesRegisterWhenMissing(t *testing.T) {
 		t.Fatalf("missing generated demo route registration in register.go: %s", text)
 	}
 }
+
+func TestAdminHandlerTemplate_UsesUnifiedErrorHelpers(t *testing.T) {
+	t.Parallel()
+	src := adminHandlerTemplate("Ticket", "TicketService", []genField{
+		{Name: "Title", JSONName: "title", GoType: "string"},
+	})
+	wants := []string{
+		"handler.FailInvalidParam(c, err)",
+		"handler.FailInternal(c, err)",
+		"errors.Is(err, gorm.ErrRecordNotFound)",
+		"handler.FailNotFound(c, \"\")",
+	}
+	for _, want := range wants {
+		if !strings.Contains(src, want) {
+			t.Fatalf("handler template should contain %q, got: %s", want, src)
+		}
+	}
+}
+
+func TestAdminRouteTemplate_UsesSnakeCaseResource(t *testing.T) {
+	t.Parallel()
+	src := adminRouteTemplate("OrderItem", "order_item")
+	if !strings.Contains(src, "/order_items") {
+		t.Fatalf("route template should use snake_case resource name, got: %s", src)
+	}
+	if !strings.Contains(src, "order_item:read") || !strings.Contains(src, "order_item:write") {
+		t.Fatalf("route template should use snake_case permission prefix, got: %s", src)
+	}
+}

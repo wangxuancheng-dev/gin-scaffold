@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -179,7 +180,7 @@ func (h *OpsHandler) AuditLogsExportTaskStatus(c *gin.Context) {
 		return
 	}
 	if st == nil {
-		handler.FailInvalidParam(c, fmt.Errorf("task not found"))
+		handler.FailNotFound(c, "task not found")
 		return
 	}
 	out := buildAuditExportStatusResponse(c, st, taskID)
@@ -221,7 +222,7 @@ func (h *OpsHandler) AuditLogsExportTaskDownload(c *gin.Context) {
 	defer rc.Close()
 	c.Header("Content-Type", "text/csv; charset=utf-8")
 	c.Header("Content-Disposition", "attachment; filename=\""+strutil.AttachmentFilename(st.FileKey)+"\"")
-	c.Status(200)
+	c.Status(http.StatusOK)
 	_, _ = io.Copy(c.Writer, rc)
 }
 

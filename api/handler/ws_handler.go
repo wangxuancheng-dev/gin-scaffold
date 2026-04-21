@@ -30,7 +30,7 @@ func NewWSHandler(s *service.WSService, checkOrigin func(*http.Request) bool) *W
 func (h *WSHandler) Handle(c *gin.Context) {
 	cl, ok := middleware.Claims(c)
 	if !ok || cl == nil || cl.UserID <= 0 {
-		c.Status(http.StatusUnauthorized)
+		FailUnauthorized(c, "missing claims")
 		return
 	}
 	uid := cl.UserID
@@ -45,7 +45,7 @@ func (h *WSHandler) Handle(c *gin.Context) {
 	}
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		c.Status(http.StatusBadRequest)
+		FailInvalidParam(c, err)
 		return
 	}
 

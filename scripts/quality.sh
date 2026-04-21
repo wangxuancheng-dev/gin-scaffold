@@ -17,6 +17,12 @@ if [[ -n "${GOTEST_PARALLEL:-}" ]]; then
 fi
 go test "${gotest_p[@]}" ./...
 
+echo "== handler error helper check =="
+bash ./scripts/check-handler-error-helper.sh .
+
+echo "== service notfound mapping check =="
+bash ./scripts/check-service-notfound-mapping.sh .
+
 echo "== coverage gate =="
 bash ./scripts/go-cover.sh
 

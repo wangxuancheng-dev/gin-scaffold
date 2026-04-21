@@ -247,7 +247,7 @@ func (h *UserHandler) ExportTaskStatus(c *gin.Context) {
 		return
 	}
 	if st == nil {
-		handler.FailInvalidParam(c, fmt.Errorf("task not found"))
+		handler.FailNotFound(c, "task not found")
 		return
 	}
 	out := gin.H{

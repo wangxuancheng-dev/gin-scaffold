@@ -20,6 +20,13 @@ go run ./cmd/gen crud \
 - seed（权限，**仅** `migrations/mysql/seed/`）
 - 自动 wiring（routes + bootstrap）
 
+生成代码默认满足以下基线：
+
+- Handler 使用统一错误辅助函数（`FailInvalidParam` / `FailNotFound` / `FailInternal`）
+- `Get` 接口自动将 `gorm.ErrRecordNotFound` 映射为 404
+- 路由资源名与权限前缀采用模块 `snake_case`
+- auto-wire 找不到锚点会直接报错，避免“生成成功但未接线”
+
 若使用 PostgreSQL，请在 `migrations/postgres/schema/`、`migrations/postgres/seed/` 中按同名时间戳补充等价 SQL（本仓库已提供与 MySQL 对齐的基线，可参考方言差异）。
 
 ## 2) 执行迁移

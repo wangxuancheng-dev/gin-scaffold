@@ -120,7 +120,20 @@ func TestTaskHandler_Create_bizError(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPost, "http://localhost/admin/tasks", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 	h.Create(c)
-	if w.Code != http.StatusBadRequest {
+	if w.Code != http.StatusConflict {
+		t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestTaskHandler_NotFoundErrorMappedTo404(t *testing.T) {
+	svc := &stubScheduledTaskService{runNowErr: errcode.New(errcode.NotFound, errcode.KeyNotFound)}
+	h := NewTaskHandler(svc)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "3"}}
+	c.Request = httptest.NewRequest(http.MethodPost, "http://localhost/admin/tasks/3/run", nil)
+	h.RunNow(c)
+	if w.Code != http.StatusNotFound {
 		t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
 	}
 }

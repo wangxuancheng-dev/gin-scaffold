@@ -37,6 +37,13 @@ api/handler → internal/service/port → internal/service → internal/dao → 
 - **Handler 不写 SQL**；复杂查询放在 DAO。
 - **跨模块复用**优先沉到 `pkg/` 或 `internal/pkg/`（如 `errcode`、`jwt`、`tenant`）。
 
+## 高标准约束（建议作为代码评审基线）
+
+- **封装边界**：`internal/*` 为业务核心与基础设施，`api/*`/`routes/*`/`middleware/*` 仅承担 HTTP 适配职责，不反向依赖具体 DAO。
+- **错误出口统一**：Handler 层优先使用 `api/handler/error_helper.go` 的 `FailInvalidParam` / `FailNotFound` / `FailInternal`，避免散落 `response.FailHTTP(...)` 常量组合。
+- **自动接线可失败不可静默**：代码生成自动 wiring 若锚点缺失应直接报错，禁止“看似成功但未真正接线”。
+- **命名稳定性**：路由资源名、权限前缀、文件名统一基于 `snake_case module`，避免 `OrderItem -> orderitem` 这类不可读路径。
+
 ## 新增业务模块的推荐顺序
 
 1. `migrations/` 建表 + seed 权限（若需后台菜单）。
