@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -86,7 +86,7 @@ jobs:
           test "$sha" = "$(cat pkg/sdk/openapi/swagger.sha256)"
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
 
