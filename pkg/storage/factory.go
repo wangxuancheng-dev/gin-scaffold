@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 // NewFromConfig 根据配置创建存储 Provider。

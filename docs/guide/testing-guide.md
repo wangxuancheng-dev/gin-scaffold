@@ -2,10 +2,10 @@
 
 ## 单元测试
 
-- 目录：`tests/unit/`。
-- 运行：`go test ./tests/unit/...` 或 `go test ./...`（默认不包含 `integration` build tag）。
+- 目录：`tests/scenario/`。
+- 运行：`go test ./tests/scenario/...` 或 `go test ./...`（默认不包含 `integration` build tag）。
 - 风格：表驱动 + `testify` 按需。
-- 包内测试：`internal/pkg/*`、`pkg/db`、`pkg/cache`/`policy`、`pkg/httpclient`/`limiter`、`routes`、`api/handler`、`internal/console/commands` 已补充基础用例。
+- 包内测试：`internal/pkg/*`、`pkg/db`、`pkg/cache`/`policy`、`pkg/httpclient`/`limiter`、`internal/routes`、`internal/api/handler`、`internal/console/commands` 已补充基础用例。
 
 ## 集成测试
 
@@ -30,7 +30,7 @@
 - 一键本地质量检查：`bash scripts/quality.sh`（`gofmt` + `go test ./...` + 覆盖率门禁）。
 - CI `test-build` 使用同一门禁，低于阈值会失败。
 - 规范守卫脚本：
-  - `bash ./scripts/check-handler-error-helper.sh .`：禁止在 `api/handler` 里绕过统一错误 helper
+  - `bash ./scripts/check-handler-error-helper.sh .`：禁止在 `internal/api/handler` 里绕过统一错误 helper
   - `bash ./scripts/check-service-notfound-mapping.sh .`：检查 `internal/service` 中 `gorm.ErrRecordNotFound` 分支是否映射为业务语义错误（允许带 `// notfound-ok` 的特例）
 
 ## 写新集成用例建议
@@ -70,4 +70,4 @@ func TestFoo(t *testing.T) {
 
 ## 集成测试响应断言（思路）
 
-对 `INTEGRATION_BASE_URL` 发 HTTP 后，解析 JSON 根对象，断言 **`code`**、**`data`**（见 `api/response.Body`）。租户相关接口在 Header 增加 **`X-Tenant-ID`**。完整环境变量表见 `tests/integration/README.md`。
+对 `INTEGRATION_BASE_URL` 发 HTTP 后，解析 JSON 根对象，断言 **`code`**、**`data`**（见 `internal/api/response.Body`）。租户相关接口在 Header 增加 **`X-Tenant-ID`**。完整环境变量表见 `tests/integration/README.md`。

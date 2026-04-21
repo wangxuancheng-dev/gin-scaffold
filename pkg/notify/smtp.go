@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 // SMTPNotifier 通过 SMTP 发送纯文本邮件。

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/pkg/redis"
 )
 

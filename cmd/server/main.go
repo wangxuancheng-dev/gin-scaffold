@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
-	"gin-scaffold/config"
 	"gin-scaffold/internal/app/bootstrap"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/pkg/logger"
 
 	_ "gin-scaffold/docs"

@@ -8,21 +8,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 
-	"gin-scaffold/api/handler"
-	adminhandler "gin-scaffold/api/handler/admin"
-	clienthandler "gin-scaffold/api/handler/client"
-	"gin-scaffold/config"
+	"gin-scaffold/internal/api/handler"
+	adminhandler "gin-scaffold/internal/api/handler/admin"
+	clienthandler "gin-scaffold/internal/api/handler/client"
 	"gin-scaffold/internal/app/platform"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
 	jobhandler "gin-scaffold/internal/job/handler"
 	"gin-scaffold/internal/job/scheduler"
+	"gin-scaffold/internal/middleware"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"
 	"gin-scaffold/internal/pkg/snowflake"
 	websocketpkg "gin-scaffold/internal/pkg/websocket"
+	"gin-scaffold/internal/routes"
 	"gin-scaffold/internal/service"
 	"gin-scaffold/internal/service/authz"
-	"gin-scaffold/middleware"
 	"gin-scaffold/pkg/db"
 	"gin-scaffold/pkg/httpclient"
 	"gin-scaffold/pkg/limiter"
@@ -30,7 +31,6 @@ import (
 	"gin-scaffold/pkg/redis"
 	"gin-scaffold/pkg/storage"
 	"gin-scaffold/pkg/tracer"
-	"gin-scaffold/routes"
 )
 
 type ServerDeps struct {
@@ -167,13 +167,13 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 	cleanups = append(cleanups, func(context.Context) { stopOutboxDispatcher() })
 
 	var lim limiter.Backend = limiter.NewStoreWithOptions(limiter.StoreOptions{
-		WindowSec:            cfg.Limiter.WindowSec,
-		IPMaxPerWindow:       cfg.Limiter.IPMaxPerWindow,
-		RouteMaxPerWindow:    cfg.Limiter.RouteMaxPerWindow,
-		IPRPS:                cfg.Limiter.IPRPS,
-		IPBurst:              cfg.Limiter.IPBurst,
-		RouteRPS:             cfg.Limiter.RouteRPS,
-		RouteBurst:           cfg.Limiter.RouteBurst,
+		WindowSec:         cfg.Limiter.WindowSec,
+		IPMaxPerWindow:    cfg.Limiter.IPMaxPerWindow,
+		RouteMaxPerWindow: cfg.Limiter.RouteMaxPerWindow,
+		IPRPS:             cfg.Limiter.IPRPS,
+		IPBurst:           cfg.Limiter.IPBurst,
+		RouteRPS:          cfg.Limiter.RouteRPS,
+		RouteBurst:        cfg.Limiter.RouteBurst,
 	})
 	if strings.ToLower(strings.TrimSpace(cfg.Limiter.Mode)) == "redis" {
 		ws := cfg.Limiter.WindowSec

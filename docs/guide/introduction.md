@@ -27,7 +27,7 @@ config/             # 配置加载与校验
 configs/            # 各环境配置模板
 internal/           # 核心业务（dao/service/job/console 等）
 api/                # handler/request/response
-routes/             # 路由注册
+internal/routes/             # 路由注册
 migrations/         # DB 迁移（schema/seed）
 docs/               # 文档中心（VitePress）
 ```

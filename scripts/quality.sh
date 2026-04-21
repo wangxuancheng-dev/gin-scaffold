@@ -23,6 +23,12 @@ bash ./scripts/check-handler-error-helper.sh .
 echo "== service notfound mapping check =="
 bash ./scripts/check-service-notfound-mapping.sh .
 
+echo "== pkg boundary check =="
+bash ./scripts/check-pkg-boundary.sh .
+
+echo "== test layout check =="
+bash ./scripts/check-test-layout.sh .
+
 echo "== coverage gate =="
 bash ./scripts/go-cover.sh
 

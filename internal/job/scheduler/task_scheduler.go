@@ -11,7 +11,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/service"
 	"gin-scaffold/pkg/logger"

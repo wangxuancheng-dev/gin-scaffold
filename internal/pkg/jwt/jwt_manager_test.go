@@ -3,7 +3,7 @@ package jwt
 import (
 	"testing"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 func TestManager_IssueParseAccess(t *testing.T) {

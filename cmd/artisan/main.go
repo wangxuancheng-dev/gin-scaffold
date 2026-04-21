@@ -13,7 +13,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/spf13/cobra"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/internal/console"
 	_ "gin-scaffold/internal/console/commands"
 )

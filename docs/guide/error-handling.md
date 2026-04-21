@@ -2,7 +2,7 @@
 
 ## 响应结构
 
-统一响应体定义在 `api/response/response.go`：
+统一响应体定义在 `internal/api/response/response.go`：
 
 - `code`: 业务错误码（成功固定 `200`）
 - `msg`: 面向前端/调用方的可读错误信息（支持 i18n）
@@ -41,7 +41,7 @@
 
 ## Handler 错误映射约定
 
-统一使用 `api/handler/error_helper.go` 提供的 helper，避免每个 handler 重复编写 `errors.As` 分支：
+统一使用 `internal/api/handler/error_helper.go` 提供的 helper，避免每个 handler 重复编写 `errors.As` 分支：
 
 - 参数绑定/校验失败：`handler.FailInvalidParam(c, err)`
 - 资源不存在（明确 404）：`handler.FailNotFound(c, "xxx not found")`
@@ -99,7 +99,7 @@ func (h *UserHandler) Get(c *gin.Context) {
 
 ## CI 自动检查
 
-仓库包含脚本 `scripts/check-handler-error-helper.sh`，会在 CI 中扫描 `api/handler`：
+仓库包含脚本 `scripts/check-handler-error-helper.sh`，会在 CI 中扫描 `internal/api/handler`：
 
 - 禁止新增直接 `response.FailHTTP(...)` / `response.FailBiz(...)`（`error_helper.go` 除外）
 - 检测到后直接失败，提示改用 `error_helper` 统一 helper

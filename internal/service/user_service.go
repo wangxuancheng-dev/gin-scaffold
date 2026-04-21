@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/model"

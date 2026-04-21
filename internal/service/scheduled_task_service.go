@@ -15,7 +15,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/internal/console"
 	_ "gin-scaffold/internal/console/commands"
 	"gin-scaffold/internal/model"

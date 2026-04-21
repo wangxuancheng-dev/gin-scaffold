@@ -15,7 +15,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/tenant"

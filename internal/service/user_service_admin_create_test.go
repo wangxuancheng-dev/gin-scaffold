@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
 	jwtpkg "gin-scaffold/internal/pkg/jwt"

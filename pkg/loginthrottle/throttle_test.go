@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 func TestRedisKeyPrefix_loginSecurityPrefix(t *testing.T) {

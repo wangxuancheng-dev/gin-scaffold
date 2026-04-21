@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 var global atomic.Value // *Client

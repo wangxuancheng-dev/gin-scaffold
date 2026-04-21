@@ -41,7 +41,7 @@
 
 ## 6. 代码规范核查
 
-- [ ] 新增/修改 handler 未绕过 `api/handler/error_helper.go`
+- [ ] 新增/修改 handler 未绕过 `internal/api/handler/error_helper.go`
 - [ ] 业务错误码与 HTTP 状态码语义一致
 - [ ] 执行 `bash ./scripts/check-handler-error-helper.sh .` 通过
 - [ ] 执行 `bash ./scripts/check-service-notfound-mapping.sh .` 通过

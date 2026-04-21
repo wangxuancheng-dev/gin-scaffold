@@ -10,7 +10,7 @@ import (
 
 	redislib "github.com/go-redis/redis/v8"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	appredis "gin-scaffold/pkg/redis"
 )
 

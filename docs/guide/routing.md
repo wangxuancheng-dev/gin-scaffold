@@ -2,12 +2,12 @@
 
 ## 总入口
 
-- 引擎在 `routes.Build`（`routes/router.go`）中创建：全局中间件 → 健康检查 →（可选）Swagger → `registerAPIV1`。
+- 引擎在 `routes.Build`（`internal/routes/router.go`）中创建：全局中间件 → 健康检查 →（可选）Swagger → `registerAPIV1`。
 - API 前缀：**`/api/v1`**。
 
 ## 客户端（无需登录 / 需登录）
 
-源码：`routes/client_router.go`。
+源码：`internal/routes/client_router.go`。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -32,7 +32,7 @@
 
 ## 管理端（admin）
 
-源码：`routes/adminroutes/register.go`。
+源码：`internal/routes/adminroutes/register.go`。
 
 - 前缀：`/api/v1/admin`。
 - 中间件顺序：`JWTAuth` → **`RequireRoles("admin")`** → 各子路由文件（`user_router.go`、`menu_router.go` …）。
@@ -41,11 +41,11 @@
 新增后台接口时：
 
 1. 在对应 `*_router.go` 增加一行，并选择合适的 `RequirePermission`（需在 seed 中配置权限码与菜单）。
-2. Handler 放在 `api/handler/admin/`；请求体放 `api/request/admin/`。
+2. Handler 放在 `internal/api/handler/admin/`；请求体放 `internal/api/request/admin/`。
 
 ### 代码形态示例（管理端）
 
-在 `routes/adminroutes/register.go` 中已为 `admin` 路由组挂上 `JWTAuth` 与 `RequireRoles("admin")`。子模块文件（如 `user_router.go`）内为小写 `registerAdmin*Routes` 函数，例如：
+在 `internal/routes/adminroutes/register.go` 中已为 `admin` 路由组挂上 `JWTAuth` 与 `RequireRoles("admin")`。子模块文件（如 `user_router.go`）内为小写 `registerAdmin*Routes` 函数，例如：
 
 ```go
 func registerAdminUserRoutes(admin *gin.RouterGroup, h *adminhandler.UserHandler) {

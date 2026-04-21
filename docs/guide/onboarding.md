@@ -25,9 +25,9 @@ flowchart LR
 
 典型顺序（简化）：
 
-1. **Gin** 匹配路由，进入全局中间件（恢复、日志、限流、租户解析等，以 `routes` 与 `middleware` 为准）。
+1. **Gin** 匹配路由，进入全局中间件（恢复、日志、限流、租户解析等，以 `internal/routes` 与 `middleware` 为准）。
 2. **鉴权**：客户端 JWT、管理端权限（如 `RequirePermission`）在路由或中间件中校验。
-3. **Handler**（`api/handler`）：解析请求、调用 **Service**。
+3. **Handler**（`internal/api/handler`）：解析请求、调用 **Service**。
 4. **Service**（`internal/service`）：业务规则、事务、调用 **DAO** 或外部组件（Redis、队列、通知等）。
 5. **DAO**（`internal/dao`）：GORM 访问数据库；复杂 SQL 可集中在 DAO。
 
@@ -42,8 +42,8 @@ flowchart LR
 | `cmd/gen` | 后台 CRUD 代码与 **MySQL** 迁移/权限 seed 生成 |
 | `cmd/artisan` | 控制台命令（可挂定时/运维任务） |
 | `config` + `configs/` | 配置加载、校验、多环境模板 |
-| `routes/`、`routes/adminroutes/` | 路由注册（新模块常要在这接线） |
-| `api/handler`、`api/request`、`api/response` | HTTP 层 |
+| `internal/routes/`、`internal/routes/adminroutes/` | 路由注册（新模块常要在这接线） |
+| `internal/api/handler`、`internal/api/request`、`internal/api/response` | HTTP 层 |
 | `internal/service`、`internal/dao`、`internal/model` | 业务与持久化 |
 | `migrations/mysql`、`migrations/postgres` | 按库的 schema / seed SQL |
 | `docs/` | 文档站（VitePress） |

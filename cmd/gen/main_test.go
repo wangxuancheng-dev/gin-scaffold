@@ -164,7 +164,7 @@ func TestWireAdminRouter_CreatesRegisterWhenMissing(t *testing.T) {
 		t.Fatalf("wireAdminRouter error: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join("routes", "adminroutes", "register.go"))
+	data, err := os.ReadFile(filepath.Join("internal", "routes", "adminroutes", "register.go"))
 	if err != nil {
 		t.Fatalf("read register.go: %v", err)
 	}

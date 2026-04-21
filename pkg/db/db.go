@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/plugin/dbresolver"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 var global *gorm.DB

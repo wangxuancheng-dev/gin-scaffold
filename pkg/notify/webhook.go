@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"strings"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/pkg/httpclient"
 )
 

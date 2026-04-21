@@ -6,7 +6,7 @@
 - 全局与单文件轮转策略
 - 自定义日志通道
 - 支持按时区做按天切割
-- 请求链路字段：`request_id` / `trace_id`（响应体见 `api/response` 的 `fillTrace`）
+- 请求链路字段：`request_id` / `trace_id`（响应体见 `internal/api/response` 的 `fillTrace`）
 
 ## 配置项速查（`log:`）
 

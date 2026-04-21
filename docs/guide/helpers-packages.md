@@ -69,11 +69,11 @@ _ = numconv.ParseInt64("not-a-number", -1) // => -1
 - **字符串**：标准库 `strings` / `strconv`；复杂格式化用 `fmt`。标签类「按分隔符切、去空、再拼回」见 **`pkg/strutil`**（`SplitClean` / `JoinClean` / `StringValue`）。
 - **时间**：展示与序列化继续用 **`time.RFC3339`** 与 `time.Time.Format`；**解析** HTTP/任务载荷里的 RFC3339 用 **`timefmt.ParseRFC3339`**；可空或未设置时间（`nil` / 零值）写 JSON 可用 **`timefmt.FormatPtr`**。限流等仍用 `golang.org/x/time/rate`（`pkg/limiter`）。
 - **数字（query / 表单字符串）**：需要「解析失败就用默认」时用 **`pkg/numconv`**（`ParseInt` / `ParseInt64` / `ParseUint64` / `ParseFloat64`），避免手写重复 `strconv` + `if err`。
-- **结构体拷贝**：DTO 层可用 `github.com/jinzhu/copier`（与现有 `api/response` 一致）。
+- **结构体拷贝**：DTO 层可用 `github.com/jinzhu/copier`（与现有 `internal/api/response` 一致）。
 
 ## Handler 错误出口
 
-- **禁止**在 `api/handler/**`（除 `error_helper.go`）直接调用 `response.FailHTTP` / `FailBiz`；统一用 `api/handler` 包中 `Fail*` 辅助函数（CI 脚本会检查）。
+- **禁止**在 `internal/api/handler/**`（除 `error_helper.go`）直接调用 `response.FailHTTP` / `FailBiz`；统一用 `internal/api/handler` 包中 `Fail*` 辅助函数（CI 脚本会检查）。
 
 ## Artisan 自定义命令
 

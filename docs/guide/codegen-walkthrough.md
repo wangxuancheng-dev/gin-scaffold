@@ -69,7 +69,7 @@ go run ./cmd/server worker --env dev
 
 ```bash
 go test ./...
-go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs -d ./cmd/server,./api
+go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs -d ./cmd/server,./internal/api
 ```
 
 ## 常见问题

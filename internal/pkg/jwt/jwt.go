@@ -10,14 +10,14 @@ import (
 	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 // Claims 访问令牌载荷。
 type Claims struct {
-	UserID    int64  `json:"uid"`
-	Role      string `json:"role"`
-	TenantID  string `json:"tenant_id,omitempty"`
+	UserID   int64  `json:"uid"`
+	Role     string `json:"role"`
+	TenantID string `json:"tenant_id,omitempty"`
 	jwtlib.RegisteredClaims
 }
 

@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 var tp *sdktrace.TracerProvider

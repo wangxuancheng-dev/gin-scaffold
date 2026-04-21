@@ -46,7 +46,7 @@ switch ($Target) {
         if ([string]::IsNullOrWhiteSpace($Dsn)) { throw "Dsn is required for migrate-down" }
         go run ./cmd/migrate down --driver $Driver --dsn $Dsn --time-zone $TimeZone
     }
-    "test-unit" { go test ./tests/unit/... }
+    "test-unit" { go test ./tests/scenario/... }
     "test" {
         $p = if ($env:GOTEST_PARALLEL) { @("-p", $env:GOTEST_PARALLEL.Trim()) } else { @() }
         & go test @p ./...
@@ -64,7 +64,7 @@ switch ($Target) {
         }
         & ".\scripts\go-cover.ps1"
     }
-    "swagger" { go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs -d ./cmd/server,./api }
+    "swagger" { go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs -d ./cmd/server,./internal/api }
     "integration-test" { & ".\scripts\integration.ps1" -Action test }
     "integration-all" { & ".\scripts\integration.ps1" -Action all }
     "clean" {

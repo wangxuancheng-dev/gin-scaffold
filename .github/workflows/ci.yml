@@ -37,7 +37,7 @@ jobs:
         run: bash ./scripts/check-handler-error-helper.sh
 
       - name: Run unit tests
-        run: go test ./tests/unit/...
+        run: go test ./tests/scenario/...
 
       - name: Run code generator tests
         run: go test ./cmd/gen
@@ -57,7 +57,7 @@ jobs:
         run: |
           set -e
           tmpdir=$(mktemp -d)
-          go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o "$tmpdir" -d ./cmd/server,./api
+          go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o "$tmpdir" -d ./cmd/server,./internal/api
           diff -q docs/swagger.json "$tmpdir/swagger.json"
           diff -q docs/docs.go "$tmpdir/docs.go"
           diff -q docs/swagger.yaml "$tmpdir/swagger.yaml"

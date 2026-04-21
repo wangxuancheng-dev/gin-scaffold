@@ -4,7 +4,7 @@ package platform
 import (
 	"strings"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/pkg/eventbus"
 	"gin-scaffold/pkg/notify"
 )

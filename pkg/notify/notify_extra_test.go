@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 func TestChain_Notify_joinsErrors(t *testing.T) {

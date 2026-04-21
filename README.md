@@ -72,7 +72,7 @@ config/             # 配置加载 + 校验（fail fast）
 configs/            # 多环境配置模板
 internal/           # 业务核心层
 api/                # handler/request/response
-routes/             # 路由注册
+internal/routes/             # 路由注册
 migrations/         # schema + seed
 docs/               # VitePress 文档站
 ```

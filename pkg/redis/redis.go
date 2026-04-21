@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 var client *redis.Client

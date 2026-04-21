@@ -6,7 +6,8 @@
 
 | 主题 | 说明 |
 |------|------|
-| [目录结构与分层](/guide/directory-structure) | `cmd/`、`internal/`、`api/`、`routes/`、`pkg/` 职责与依赖方向 |
+| [目录结构与分层](/guide/directory-structure) | `cmd/`、`internal/`、`api/`、`internal/routes/`、`pkg/` 职责与依赖方向 |
+| [架构术语词汇表](/guide/architecture-glossary) | 统一 `DAO/Service/Handler` 语义，避免术语混用 |
 | [路由与分组](/guide/routing) | `/api/v1/client`、`/api/v1/admin`、JWT 分组、如何加路由 |
 | [中间件参考](/guide/middleware-reference) | 全局中间件顺序、租户、审计、幂等、限流等 |
 | [错误与响应](/guide/error-handling) | 统一 `Body`、`errcode`、handler 辅助函数 |

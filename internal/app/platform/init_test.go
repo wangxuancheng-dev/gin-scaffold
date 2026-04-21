@@ -3,7 +3,7 @@ package platform
 import (
 	"testing"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/pkg/notify"
 )
 

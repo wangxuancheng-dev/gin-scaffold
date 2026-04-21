@@ -13,7 +13,7 @@
 - `metrics.allowed_networks`: optional CIDR allowlist for `/metrics` by TCP source IP.
 - `scripts/integration.sh` and CI job `integration` (Docker MySQL/Redis + integration tests).
 - `deploy/systemd/gin-scaffold-worker.service.example`: standalone worker unit.
-- Test coverage additions for `internal/pkg/*`, `pkg/db` / `pkg/cache` / `pkg/policy` / `pkg/httpclient` / `pkg/limiter`, `routes`, `api/handler`, `internal/model`, `internal/console/commands`, `internal/dao` (sqlmock), `pkg/redis` (miniredis), `pkg/loginthrottle`, `internal/app/bootstrap`, `internal/service` (menu/system settings/WS/SSE/announcement/outbox dispatcher/admin create), `internal/service/authz`.
+- Test coverage additions for `internal/pkg/*`, `pkg/db` / `pkg/cache` / `pkg/policy` / `pkg/httpclient` / `pkg/limiter`, `internal/routes`, `internal/api/handler`, `internal/model`, `internal/console/commands`, `internal/dao` (sqlmock), `pkg/redis` (miniredis), `pkg/loginthrottle`, `internal/app/bootstrap`, `internal/service` (menu/system settings/WS/SSE/announcement/outbox dispatcher/admin create), `internal/service/authz`.
 - OSS hygiene: `LICENSE` (MIT), `CONTRIBUTING.md`, `SECURITY.md`, Dependabot (`gomod` + GitHub Actions), PR template, `.editorconfig`, `scripts/quality.sh`, `make.ps1 -Target quality`; CI runs `go test -race ./...` on Linux.
 
 ### Changed

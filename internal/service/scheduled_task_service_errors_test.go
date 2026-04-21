@@ -8,7 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
 )

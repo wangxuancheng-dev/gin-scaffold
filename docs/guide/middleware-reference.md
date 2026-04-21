@@ -1,6 +1,6 @@
 # 中间件参考
 
-以下顺序以 `routes/router.go` 中 **`r.Use` 注册顺序**为准（自上而下执行）。
+以下顺序以 `internal/routes/router.go` 中 **`r.Use` 注册顺序**为准（自上而下执行）。
 
 ## 全局中间件（所有请求）
 
@@ -35,7 +35,7 @@
 
 ### 路由组挂载示例（源码摘录）
 
-客户端「公开」与「需 JWT」分组（`routes/client_router.go`）：
+客户端「公开」与「需 JWT」分组（`internal/routes/client_router.go`）：
 
 ```go
 client := r.Group("/api/v1/client")
@@ -47,7 +47,7 @@ clientAuth.Use(middleware.JWTAuth(jwtMgr))
 clientAuth.GET("/users/:id", user.Get)
 ```
 
-管理端在 `routes/adminroutes/register.go` 内对 `admin` 组依次 `Use(middleware.JWTAuth(...))`、`Use(middleware.RequireRoles("admin"))`，再在子路由文件里挂 `RequirePermission`。
+管理端在 `internal/routes/adminroutes/register.go` 内对 `admin` 组依次 `Use(middleware.JWTAuth(...))`、`Use(middleware.RequireRoles("admin"))`，再在子路由文件里挂 `RequirePermission`。
 
 ## 新增中间件的建议
 

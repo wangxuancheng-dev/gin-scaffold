@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 func TestServerDeps_Cleanup_nilReceiver(t *testing.T) {

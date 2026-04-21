@@ -19,7 +19,7 @@ help:
 	@echo "  make run-worker   - run Asynq worker (ENV/PROFILE)"
 	@echo "  make migrate-up   - run schema then seed up (set DSN; optional DRIVER, TIME_ZONE for DB session; shell TZ defaults to UTC)"
 	@echo "  make migrate-down - run DB schema migration down one step (set DSN; optional DRIVER, TIME_ZONE for DB session; shell TZ defaults to UTC)"
-	@echo "  make test-unit    - run tests under tests/unit"
+	@echo "  make test-unit    - run tests under tests/scenario"
 	@echo "  make test         - run all tests"
 	@echo "  make swagger      - generate swagger docs"
 	@echo "  make clean        - remove built binaries"
@@ -44,13 +44,13 @@ migrate-down:
 	go run ./cmd/migrate down --driver "$(DRIVER)" --dsn "$(DSN)" --time-zone "$(TIME_ZONE)"
 
 test-unit:
-	go test ./tests/unit/...
+	go test ./tests/scenario/...
 
 test:
 	go test ./...
 
 swagger:
-	go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs -d ./cmd/server,./api
+	go run github.com/swaggo/swag/cmd/swag@latest init -g main.go -o docs -d ./cmd/server,./internal/api
 
 clean:
 	rm -rf $(BIN_DIR)

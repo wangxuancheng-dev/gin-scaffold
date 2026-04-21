@@ -1,0 +1,279 @@
+package adminhandler
+
+import (
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
+	"gin-scaffold/internal/api/handler"
+	adminreq "gin-scaffold/internal/api/request/admin"
+	"gin-scaffold/internal/api/response"
+	"gin-scaffold/internal/middleware"
+	"gin-scaffold/internal/model"
+	"gin-scaffold/internal/pkg/errcode"
+	"gin-scaffold/internal/pkg/validator"
+	"gin-scaffold/internal/service/port"
+)
+
+type SystemSettingHandler struct {
+	svc port.SystemSettingService
+}
+
+func NewSystemSettingHandler(s port.SystemSettingService) *SystemSettingHandler {
+	return &SystemSettingHandler{svc: s}
+}
+
+// List 系统参数分页（后台）。
+// @Summary 系统参数列表（后台）
+// @Tags admin-system-setting
+// @Produce json
+// @Param page query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Param key query string false "键名模糊匹配"
+// @Param group_name query string false "分组名精确匹配"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings [get]
+func (h *SystemSettingHandler) List(c *gin.Context) {
+	var q adminreq.SystemSettingListQuery
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	rows, total, err := h.svc.List(c.Request.Context(), model.SystemSettingQuery{
+		KeyLike:   strings.TrimSpace(q.Key),
+		GroupName: strings.TrimSpace(q.GroupName),
+	}, q.Page, q.PageSize)
+	if err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	response.OK(c, gin.H{"total": total, "list": rows})
+}
+
+// Get 系统参数详情（后台）。
+// @Summary 系统参数详情（后台）
+// @Tags admin-system-setting
+// @Produce json
+// @Param id path int true "参数ID"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id} [get]
+func (h *SystemSettingHandler) Get(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	row, err := h.svc.GetByID(c.Request.Context(), uri.ID)
+	if err != nil {
+		handler.FailByError(c, err, http.StatusNotFound, map[int]handler.BizMapping{
+			errcode.NotFound: {Status: http.StatusNotFound},
+		})
+		return
+	}
+	response.OK(c, row)
+}
+
+// Create 新增系统参数（后台）。
+// @Summary 新增系统参数（后台）
+// @Tags admin-system-setting
+// @Accept json
+// @Produce json
+// @Param body body adminreq.SystemSettingCreateRequest true "创建参数"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings [post]
+func (h *SystemSettingHandler) Create(c *gin.Context) {
+	var req adminreq.SystemSettingCreateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	if err := validator.V().Struct(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	row, err := h.svc.Create(c.Request.Context(), req.Key, req.Value, req.ValueType, req.GroupName, req.Remark, currentSettingActor(c))
+	if err != nil {
+		handler.FailByError(c, err, http.StatusBadRequest, nil)
+		return
+	}
+	response.OK(c, row)
+}
+
+// Update 更新系统参数（后台）。
+// @Summary 更新系统参数（后台）
+// @Tags admin-system-setting
+// @Accept json
+// @Produce json
+// @Param id path int true "参数ID"
+// @Param body body adminreq.SystemSettingUpdateRequest true "更新参数"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id} [put]
+func (h *SystemSettingHandler) Update(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	var req adminreq.SystemSettingUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	if err := validator.V().Struct(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	row, err := h.svc.Update(c.Request.Context(), uri.ID, req.Value, req.ValueType, req.GroupName, req.Remark, currentSettingActor(c))
+	if err != nil {
+		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+			errcode.NotFound: {Status: http.StatusNotFound},
+		})
+		return
+	}
+	response.OK(c, row)
+}
+
+// Delete 删除系统参数（后台）。
+// @Summary 删除系统参数（后台）
+// @Tags admin-system-setting
+// @Produce json
+// @Param id path int true "参数ID"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id} [delete]
+func (h *SystemSettingHandler) Delete(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	if err := h.svc.Delete(c.Request.Context(), uri.ID, currentSettingActor(c)); err != nil {
+		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+			errcode.NotFound: {Status: http.StatusNotFound},
+		})
+		return
+	}
+	response.OK(c, gin.H{"deleted": true})
+}
+
+// History 系统参数变更历史（后台）。
+// @Summary 系统参数变更历史（后台）
+// @Tags admin-system-setting
+// @Produce json
+// @Param id path int true "参数ID"
+// @Param page query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id}/history [get]
+func (h *SystemSettingHandler) History(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	var q adminreq.SystemSettingHistoryQuery
+	if err := c.ShouldBindQuery(&q); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	rows, total, err := h.svc.ListHistory(c.Request.Context(), uri.ID, q.Page, q.PageSize)
+	if err != nil {
+		handler.FailInternal(c, err)
+		return
+	}
+	response.OK(c, gin.H{"total": total, "list": rows})
+}
+
+// Rollback 回滚系统参数到历史版本（后台）。
+// @Summary 回滚系统参数（后台）
+// @Tags admin-system-setting
+// @Accept json
+// @Produce json
+// @Param id path int true "参数ID"
+// @Param body body adminreq.SystemSettingRollbackRequest true "回滚请求"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id}/rollback [post]
+func (h *SystemSettingHandler) Rollback(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	var req adminreq.SystemSettingRollbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	if err := validator.V().Struct(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	row, err := h.svc.Rollback(c.Request.Context(), uri.ID, req.HistoryID, req.Reason, currentSettingActor(c))
+	if err != nil {
+		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+			errcode.NotFound: {Status: http.StatusNotFound},
+		})
+		return
+	}
+	if row == nil {
+		response.OK(c, gin.H{"rolled_back": true, "deleted": true})
+		return
+	}
+	response.OK(c, gin.H{"rolled_back": true, "item": row})
+}
+
+// Publish 发布系统参数草稿（后台）。
+// @Summary 发布系统参数（后台）
+// @Tags admin-system-setting
+// @Accept json
+// @Produce json
+// @Param id path int true "参数ID"
+// @Param body body adminreq.SystemSettingPublishRequest false "发布备注"
+// @Success 200 {object} response.Body
+// @Router /api/v1/admin/system-settings/{id}/publish [post]
+func (h *SystemSettingHandler) Publish(c *gin.Context) {
+	var uri adminreq.SystemSettingIDURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	var req adminreq.SystemSettingPublishRequest
+	_ = c.ShouldBindJSON(&req)
+	if err := validator.V().Struct(&req); err != nil {
+		handler.FailInvalidParam(c, err)
+		return
+	}
+	row, err := h.svc.Publish(c.Request.Context(), uri.ID, req.Note, currentSettingActor(c))
+	if err != nil {
+		handler.FailByError(c, err, http.StatusBadRequest, map[int]handler.BizMapping{
+			errcode.NotFound: {Status: http.StatusNotFound},
+		})
+		return
+	}
+	response.OK(c, row)
+}
+
+func currentSettingActor(c *gin.Context) model.SettingActor {
+	claims, ok := middleware.Claims(c)
+	if !ok || claims == nil {
+		if v, ok := c.Get("tenant_id"); ok {
+			if tid, ok := v.(string); ok {
+				return model.SettingActor{TenantID: strings.TrimSpace(tid)}
+			}
+		}
+		return model.SettingActor{}
+	}
+	tenantID := strings.TrimSpace(claims.TenantID)
+	if tenantID == "" {
+		if v, ok := c.Get("tenant_id"); ok {
+			if tid, ok := v.(string); ok {
+				tenantID = strings.TrimSpace(tid)
+			}
+		}
+	}
+	return model.SettingActor{
+		UserID:   claims.UserID,
+		Role:     claims.Role,
+		TenantID: tenantID,
+	}
+}

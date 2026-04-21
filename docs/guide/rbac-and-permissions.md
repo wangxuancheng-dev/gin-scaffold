@@ -8,7 +8,7 @@
 
 ## 管理端路由两层控制
 
-1. **`RequireRoles("admin")`**：挂在 `/api/v1/admin` 整组（`routes/adminroutes/register.go`），先保证「管理员角色」。
+1. **`RequireRoles("admin")`**：挂在 `/api/v1/admin` 整组（`internal/routes/adminroutes/register.go`），先保证「管理员角色」。
 2. **`RequirePermission("xxx")`**：挂在具体路由上，做细粒度授权。
 
 示例（任务队列）：
@@ -24,7 +24,7 @@ admin.GET("/task-queues/summary", middleware.RequirePermission("task:read"), h.S
 
 ## 新增接口时的 checklist
 
-1. 在 `routes/adminroutes/*_router.go` 为路由增加 **`RequirePermission("your:action")`**。
+1. 在 `internal/routes/adminroutes/*_router.go` 为路由增加 **`RequirePermission("your:action")`**。
 2. 在 **`migrations/*/seed/`** 增加权限记录与（可选）菜单项，使角色可分配到该权限。
 3. 本地执行 **`migrate seed up`** 或等价命令，验证非超管账号在 UI/接口上行为符合预期。
 

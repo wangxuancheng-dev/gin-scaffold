@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 var (

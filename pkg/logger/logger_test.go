@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 func TestLogger_syncNoPanicWhenUnconfigured(t *testing.T) {

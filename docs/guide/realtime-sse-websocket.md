@@ -9,12 +9,12 @@
 | WebSocket | GET | `/api/v1/client/ws` |
 | SSE | GET | `/api/v1/client/sse/stream` |
 
-源码：`routes/client_router.go` → `handler.WSHandler` / `handler.SSEHandler`。
+源码：`internal/routes/client_router.go` → `handler.WSHandler` / `handler.SSEHandler`。
 
 ## WebSocket
 
 - 依赖 **`github.com/gorilla/websocket`**。
-- 演示 Handler：`api/handler/ws_handler.go`；`CheckOrigin` 与 **`cors.allow_origins`** 对齐（`middleware.WebSocketCheckOrigin`）。`allow_origins` 为 `*` 或未配置时仍较宽松，生产请列出明确前端源或交给网关校验。
+- 演示 Handler：`internal/api/handler/ws_handler.go`；`CheckOrigin` 与 **`cors.allow_origins`** 对齐（`middleware.WebSocketCheckOrigin`）。`allow_origins` 为 `*` 或未配置时仍较宽松，生产请列出明确前端源或交给网关校验。
 - **鉴权**：与受保护 client 路由一致，需 **`Authorization: Bearer <access>`**；连接用户 ID 来自 JWT，**不再**使用 `uid` 查询参数（避免任意冒充）。
 
 可使用支持自定义 Header 的 WebSocket 客户端；调试时注意 `ws://` / `wss://` 与端口、路径一致：
@@ -24,7 +24,7 @@
 ## SSE
 
 - `Content-Type: text/event-stream`，定时 `tick` 推送示例字符串。
-- Handler：`api/handler/sse_handler.go`；业务侧可替换为订阅 `internal/service` 中 channel。
+- Handler：`internal/api/handler/sse_handler.go`；业务侧可替换为订阅 `internal/service` 中 channel。
 
 ### 命令行快速验证
 

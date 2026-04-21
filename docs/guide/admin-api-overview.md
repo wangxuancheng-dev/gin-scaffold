@@ -12,15 +12,15 @@
 
 | 模块 | 路由注册文件 | 典型权限前缀 |
 |------|----------------|----------------|
-| 用户 | `routes/adminroutes/user_router.go` | `user:*` 等（以 seed 为准） |
-| 菜单 | `routes/adminroutes/menu_router.go` | 菜单/目录相关 |
-| 运维 / 审计 / 导出 | `routes/adminroutes/ops_router.go` | `audit:*` 等 |
-| 定时任务 | `routes/adminroutes/task_router.go` | `task:*` |
-| 任务队列（Asynq） | `routes/adminroutes/task_queue_router.go` | `task:read` 等 |
-| 系统参数 | `routes/adminroutes/system_setting_router.go` | `sys:config:*` |
-| 公告（示例 CRUD） | `routes/adminroutes/announcement_router.go` | 以 seed 为准 |
+| 用户 | `internal/routes/adminroutes/user_router.go` | `user:*` 等（以 seed 为准） |
+| 菜单 | `internal/routes/adminroutes/menu_router.go` | 菜单/目录相关 |
+| 运维 / 审计 / 导出 | `internal/routes/adminroutes/ops_router.go` | `audit:*` 等 |
+| 定时任务 | `internal/routes/adminroutes/task_router.go` | `task:*` |
+| 任务队列（Asynq） | `internal/routes/adminroutes/task_queue_router.go` | `task:read` 等 |
+| 系统参数 | `internal/routes/adminroutes/system_setting_router.go` | `sys:config:*` |
+| 公告（示例 CRUD） | `internal/routes/adminroutes/announcement_router.go` | 以 seed 为准 |
 
-入口聚合：`routes/adminroutes/register.go`。
+入口聚合：`internal/routes/adminroutes/register.go`。
 
 ## 调用示例（curl）
 

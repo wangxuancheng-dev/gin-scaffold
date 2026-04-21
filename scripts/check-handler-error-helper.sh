@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root="${1:-.}"
-target="${root}/api/handler"
+target="${root}/internal/api/handler"
 
 if [[ ! -d "${target}" ]]; then
   echo "skip: ${target} not found"
@@ -14,12 +14,12 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
-matches="$(git -C "${root}" grep -nE 'response\.FailHTTP\(|response\.FailBiz\(' -- 'api/handler' ':!api/handler/error_helper.go' || true)"
+matches="$(git -C "${root}" grep -nE 'response\.FailHTTP\(|response\.FailBiz\(' -- 'internal/api/handler' ':!internal/api/handler/error_helper.go' || true)"
 if [[ -n "${matches}" ]]; then
   echo "Found direct response.FailHTTP/FailBiz outside error_helper:"
   echo "${matches}"
   echo
-  echo "Please use api/handler/error_helper.go helpers instead."
+  echo "Please use internal/api/handler/error_helper.go helpers instead."
   exit 1
 fi
 

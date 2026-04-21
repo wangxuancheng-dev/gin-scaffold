@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 var s3MetaKeyRe = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)

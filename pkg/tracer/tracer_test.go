@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"gin-scaffold/config"
+	"gin-scaffold/internal/config"
 )
 
 func TestInit_disabled(t *testing.T) {

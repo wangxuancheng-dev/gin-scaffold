@@ -2,7 +2,7 @@
 
 ## 行为概述
 
-- 中间件在 `routes/router.go` 注册；若 bootstrap 注入了自定义 `limiter.Backend`（如 Redis），则使用 **`LimiterWithBackend`**。
+- 中间件在 `internal/routes/router.go` 注册；若 bootstrap 注入了自定义 `limiter.Backend`（如 Redis），则使用 **`LimiterWithBackend`**。
 - 默认算法：**每 IP + 每路由** 两层检查（见 `middleware/limiter.go` 与 `pkg/limiter`）。一次请求需 **先后通过** IP 维度与路由维度，任一不通过即返回 **429**。
 - **内存模式（`mode: memory`）**：默认 **`ip_rps` / `ip_burst`（及路由同理）** 为 `golang.org/x/time/rate` 令牌桶；若配置了 **`ip_max_per_window` / `route_max_per_window`**（>0），对应维度改为 **固定窗口计数**（与 Redis 语义对齐，见下节）。
 - **Redis 模式（`mode: redis`）**：固定窗口计数，多副本共享（见 `pkg/limiter/redis_store.go`）；亦可对某一维使用 `*_max_per_window` 直接指定每窗口上限。
@@ -102,7 +102,7 @@ orders.Use(middleware.LimiterWithBackendKeys(lim, &middleware.LimiterKeys{
 import (
     "github.com/gin-gonic/gin"
 
-    "gin-scaffold/middleware"
+    "gin-scaffold/internal/middleware"
     "gin-scaffold/pkg/limiter"
 )
 
@@ -170,4 +170,4 @@ limiter:
 | Gin 中间件 | `middleware/limiter.go` |
 | 内存令牌桶 | `pkg/limiter/limiter.go` |
 | Redis 窗口 | `pkg/limiter/redis_store.go` |
-| 注册与 Redis 注入 | `routes/router.go`、`internal/app/bootstrap/bootstrap.go` |
+| 注册与 Redis 注入 | `internal/routes/router.go`、`internal/app/bootstrap/bootstrap.go` |

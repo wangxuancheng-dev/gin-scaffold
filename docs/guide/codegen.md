@@ -36,9 +36,9 @@ go run ./cmd/gen crud --module order --field title:string:required,max=64 --fiel
 - `internal/dao/<module>_dao.go`
 - `internal/service/port/<module>_service.go`
 - `internal/service/<module>_service.go`
-- `api/request/admin/<module>_request.go`
-- `api/handler/admin/<module>_handler.go`
-- `routes/adminroutes/<module>_router.go`
+- `internal/api/request/admin/<module>_request.go`
+- `internal/api/handler/admin/<module>_handler.go`
+- `internal/routes/adminroutes/<module>_router.go`
 - **仅 MySQL**：`migrations/mysql/schema/*_create_<table>.{up,down}.sql`
 - **仅 MySQL**：`migrations/mysql/seed/*_seed_role_permissions_<module>.{up,down}.sql`（向表 `role_permissions` 写入该模块的 `*:read` / `*:write`；与本仓库「每表一对」基线种子并存时，可按需手工合并进 `*_seed_role_permissions.*`）
 
