@@ -3,30 +3,19 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 
-	"gin-scaffold/internal/api/handler"
-	adminhandler "gin-scaffold/internal/api/handler/admin"
-	clienthandler "gin-scaffold/internal/api/handler/client"
 	"gin-scaffold/internal/app/platform"
 	"gin-scaffold/internal/config"
-	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
-	jobhandler "gin-scaffold/internal/job/handler"
 	"gin-scaffold/internal/job/scheduler"
-	"gin-scaffold/internal/middleware"
-	jwtpkg "gin-scaffold/internal/pkg/jwt"
 	"gin-scaffold/internal/pkg/snowflake"
-	websocketpkg "gin-scaffold/internal/pkg/websocket"
 	"gin-scaffold/internal/routes"
 	"gin-scaffold/internal/service"
-	"gin-scaffold/internal/service/authz"
 	"gin-scaffold/pkg/db"
 	"gin-scaffold/pkg/httpclient"
-	"gin-scaffold/pkg/limiter"
 	"gin-scaffold/pkg/logger"
 	"gin-scaffold/pkg/redis"
 	"gin-scaffold/pkg/storage"
@@ -122,96 +111,19 @@ func InitServer(env, profile string) (*ServerDeps, error) {
 		cleanups = append(cleanups, func(context.Context) { _ = q.Close() })
 	}
 
-	jm := jwtpkg.NewManager(&cfg.JWT)
-	userDAO := dao.NewUserDAO(gdb)
-	menuDAO := dao.NewMenuDAO(gdb)
-	taskDAO := dao.NewScheduledTaskDAO(gdb)
-	auditDAO := dao.NewAuditLogDAO(gdb)
-	outboxDAO := dao.NewOutboxDAO(gdb)
-	sysSettingDAO := dao.NewSystemSettingDAO(gdb)
-	announcementDAO := dao.NewAnnouncementDAO(gdb)
-	authzDAO := dao.NewAuthzDAO(gdb)
-	middleware.SetPermissionChecker(authz.NewDBPermissionChecker(authzDAO, cfg.RBAC.SuperAdminUserID))
-	middleware.SetSuperAdminUserID(cfg.RBAC.SuperAdminUserID)
-	userSvc := service.NewUserService(userDAO, q, jm, cfg.RBAC.SuperAdminUserID, gdb, outboxDAO, cfg.Outbox)
-	menuSvc := service.NewMenuService(menuDAO)
-	taskSvc := service.NewScheduledTaskService(taskDAO, cfg.Scheduler)
-	sysSettingSvc := service.NewSystemSettingService(sysSettingDAO)
-	announcementSvc := service.NewAnnouncementService(announcementDAO)
-	hub := websocketpkg.NewHub()
-	wsSvc := service.NewWSService(hub)
-	sseSvc := service.NewSSEService()
+	providers := buildServerProviders(cfg, gdb, q, inspector)
 
-	baseH := &handler.BaseHandler{DB: gdb, Storage: &cfg.Storage}
-	clientUserH := clienthandler.NewUserHandler(userSvc)
-	clientFileH := clienthandler.NewFileHandler(&cfg.Storage)
-	adminUserH := adminhandler.NewUserHandler(userSvc, q)
-	adminMenuH := adminhandler.NewMenuHandler(menuSvc)
-	adminOpsH := adminhandler.NewOpsHandler(auditDAO, q)
-	adminTaskH := adminhandler.NewTaskHandler(taskSvc)
-	adminSysH := adminhandler.NewSystemSettingHandler(sysSettingSvc)
-	adminQueueH := adminhandler.NewTaskQueueHandler(inspector)
-	adminAnnouncementH := adminhandler.NewAnnouncementHandler(announcementSvc)
-	wsH := handler.NewWSHandler(wsSvc, middleware.WebSocketCheckOrigin(cfg.CORS.AllowOrigins))
-	sseH := handler.NewSSEHandler(sseSvc)
-
-	stopTaskScheduler, notifyTaskScheduler, err := scheduler.StartTaskScheduler(taskSvc, cfg.Scheduler)
+	stopTaskScheduler, notifyTaskScheduler, err := scheduler.StartTaskScheduler(providers.taskSvc, cfg.Scheduler)
 	if err != nil {
 		runCleanups(context.Background(), cleanups)
 		return nil, fmt.Errorf("task scheduler: %w", err)
 	}
-	taskSvc.SetOnChanged(notifyTaskScheduler)
+	providers.taskSvc.SetOnChanged(notifyTaskScheduler)
 	cleanups = append(cleanups, func(context.Context) { stopTaskScheduler() })
 
-	stopOutboxDispatcher := service.NewOutboxDispatcher(outboxDAO, cfg.Outbox).Start()
+	stopOutboxDispatcher := service.NewOutboxDispatcher(providers.outboxDAO, cfg.Outbox).Start()
 	cleanups = append(cleanups, func(context.Context) { stopOutboxDispatcher() })
-
-	var lim limiter.Backend = limiter.NewStoreWithOptions(limiter.StoreOptions{
-		WindowSec:         cfg.Limiter.WindowSec,
-		IPMaxPerWindow:    cfg.Limiter.IPMaxPerWindow,
-		RouteMaxPerWindow: cfg.Limiter.RouteMaxPerWindow,
-		IPRPS:             cfg.Limiter.IPRPS,
-		IPBurst:           cfg.Limiter.IPBurst,
-		RouteRPS:          cfg.Limiter.RouteRPS,
-		RouteBurst:        cfg.Limiter.RouteBurst,
-	})
-	if strings.ToLower(strings.TrimSpace(cfg.Limiter.Mode)) == "redis" {
-		ws := cfg.Limiter.WindowSec
-		if ws <= 0 {
-			ws = 1
-		}
-		prefix := strings.TrimSpace(cfg.Limiter.RedisKeyPrefix)
-		if prefix == "" {
-			prefix = strings.TrimSpace(cfg.Platform.Cache.KeyPrefix)
-		}
-		if prefix != "" && !strings.HasSuffix(prefix, ":") {
-			prefix += ":"
-		}
-		if prefix == "" {
-			prefix = "app:"
-		}
-		lim = limiter.NewRedisStore(prefix, ws, cfg.Limiter.IPRPS, cfg.Limiter.IPBurst, cfg.Limiter.RouteRPS, cfg.Limiter.RouteBurst,
-			cfg.Limiter.IPMaxPerWindow, cfg.Limiter.RouteMaxPerWindow)
-	}
-
-	engine, err := routes.Build(routes.Options{
-		Cfg:               cfg,
-		JWT:               jm,
-		Base:              baseH,
-		ClientUser:        clientUserH,
-		ClientFile:        clientFileH,
-		AdminUser:         adminUserH,
-		AdminMenu:         adminMenuH,
-		AdminOps:          adminOpsH,
-		AdminTask:         adminTaskH,
-		AdminSys:          adminSysH,
-		AdminQueue:        adminQueueH,
-		AdminAnnouncement: adminAnnouncementH,
-		WS:                wsH,
-		SSE:               sseH,
-		TraceOn:           cfg.Trace.Enabled,
-		Limiter:           lim,
-	})
+	engine, err := routes.Build(providers.routeOpts)
 	if err != nil {
 		runCleanups(context.Background(), cleanups)
 		return nil, fmt.Errorf("routes: %w", err)
@@ -258,27 +170,12 @@ func InitWorker(env, profile string) (*WorkerDeps, error) {
 		func(context.Context) { _ = redis.Close() },
 	}
 
-	srv := asynq.NewServer(
-		asynq.RedisClientOpt{
-			Addr:     cfg.Asynq.RedisAddr,
-			Password: cfg.Asynq.RedisPassword,
-			DB:       cfg.Asynq.RedisDB,
-		},
-		asynq.Config{
-			Concurrency:    cfg.Asynq.Concurrency,
-			StrictPriority: cfg.Asynq.StrictPriority,
-			Queues:         resolveAsynqQueues(cfg.Asynq),
-		},
-	)
-	mux := asynq.NewServeMux()
-	mux.Handle(job.TypeWelcomeEmail, jobhandler.WelcomeHandler{})
-	mux.Handle(job.TypeAuditExport, jobhandler.AuditExportHandler{})
-	mux.Handle(job.TypeUserExport, jobhandler.UserExportHandler{})
+	providers := buildWorkerProviders(cfg)
 
 	return &WorkerDeps{
 		Cfg:    cfg,
-		Server: srv,
-		Mux:    mux,
+		Server: providers.server,
+		Mux:    providers.mux,
 		cleanup: func(ctx context.Context) {
 			runCleanups(ctx, cleanups)
 		},

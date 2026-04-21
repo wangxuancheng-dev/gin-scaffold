@@ -45,6 +45,11 @@
 - [ ] 业务错误码与 HTTP 状态码语义一致
 - [ ] 执行 `bash ./scripts/check-handler-error-helper.sh .` 通过
 - [ ] 执行 `bash ./scripts/check-service-notfound-mapping.sh .` 通过
+- [ ] 执行 `bash ./scripts/check-test-layering.sh .` 通过（防测试分层漂移）
+- [ ] 执行 `bash ./scripts/check-config-compat.sh .` 通过（配置键兼容）
+- [ ] 执行 `bash ./scripts/check-security-baseline.sh .` 通过（生产安全基线）
+- [ ] 执行 `bash ./scripts/check-pkg-stability.sh .` 通过（pkg 稳定性清单）
+- [ ] 执行 `bash ./scripts/check-migration-lint.sh .` 通过（迁移治理）
 
 ## 7. 回滚准备
 

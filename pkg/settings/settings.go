@@ -10,9 +10,9 @@ import (
 
 	"gorm.io/gorm"
 
+	"gin-scaffold/internal/pkg/tenant"
 	"gin-scaffold/pkg/cache"
 	"gin-scaffold/pkg/db"
-	"gin-scaffold/internal/pkg/tenant"
 )
 
 var ErrNotFound = errors.New("setting not found")
@@ -104,13 +104,6 @@ func parseBool(s string) (bool, error) {
 	default:
 		return false, fmt.Errorf("invalid bool value %q", s)
 	}
-}
-
-func cacheKey(c *cache.Client, key string) string {
-	if c == nil {
-		return ""
-	}
-	return c.Key("sys_setting", tenantIDFromContext(context.Background()), key)
 }
 
 func getCached(ctx context.Context, key string) (*valueRow, bool) {

@@ -162,12 +162,29 @@ func (d *OutboxDispatcher) failOne(ctx context.Context, row *model.OutboxEvent, 
 		backoff = 5
 	}
 	if attempts >= row.MaxAttempts {
+		logger.WarnX("outbox event reached max attempts",
+			zap.Int64("id", row.ID),
+			zap.String("topic", row.Topic),
+			zap.Int("attempt", attempts),
+			zap.Int("max_attempts", row.MaxAttempts),
+			zap.String("tenant_id", row.TenantID),
+			zap.String("error", safeErr(err)),
+		)
 		if markErr := d.dao.MarkDead(ctx, row.ID, attempts, safeErr(err)); markErr != nil {
 			logger.ErrorX("outbox mark dead failed", zap.Int64("id", row.ID), zap.Error(markErr))
 		}
 		return
 	}
 	nextRun := time.Now().Add(time.Duration(backoff*attempts) * time.Second)
+	logger.WarnX("outbox event retry scheduled",
+		zap.Int64("id", row.ID),
+		zap.String("topic", row.Topic),
+		zap.Int("attempt", attempts),
+		zap.Int("max_attempts", row.MaxAttempts),
+		zap.Duration("retry_after", time.Until(nextRun)),
+		zap.String("tenant_id", row.TenantID),
+		zap.String("error", safeErr(err)),
+	)
 	if markErr := d.dao.MarkRetry(ctx, row.ID, attempts, nextRun, safeErr(err)); markErr != nil {
 		logger.ErrorX("outbox mark retry failed", zap.Int64("id", row.ID), zap.Error(markErr))
 	}

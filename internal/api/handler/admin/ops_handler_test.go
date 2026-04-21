@@ -1,7 +1,6 @@
 package adminhandler
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,7 +11,6 @@ import (
 
 	"gin-scaffold/internal/dao"
 	"gin-scaffold/internal/job"
-	"gin-scaffold/internal/model"
 )
 
 func TestParseAuditQueryExportDefaultWindow(t *testing.T) {
@@ -68,22 +66,6 @@ func TestParseAuditQueryInvalidFrom(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", w.Code)
 	}
-}
-
-type fakeAuditStore struct {
-	rows []model.AuditLog
-}
-
-func (f *fakeAuditStore) Create(context.Context, *model.AuditLog) error {
-	return nil
-}
-
-func (f *fakeAuditStore) List(context.Context, dao.AuditLogListQuery) ([]model.AuditLog, int64, error) {
-	return []model.AuditLog{}, 0, nil
-}
-
-func (f *fakeAuditStore) ListForExport(context.Context, dao.AuditLogListQuery, int) ([]model.AuditLog, error) {
-	return f.rows, nil
 }
 
 func TestBuildExportFilterSummary(t *testing.T) {

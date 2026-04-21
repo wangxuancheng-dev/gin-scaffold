@@ -102,3 +102,16 @@ func logWithRequest(c *gin.Context, msg string) {
 - 在监控中至少覆盖：`5xx 比例`、`P95 延迟`、`队列积压`、`DB 连接池利用率`
 - **勿在热路径打印超大结构体**；必要时分字段或采样。
 - **敏感信息**（密码、token）禁止写入日志字段。
+
+## 埋点规范（从可查到秒查）
+
+- 统一关联键：`request_id` + `trace_id` + `tenant_id` + `user_id`（如可用）必须尽量同时出现。
+- 关键事件命名建议：
+  - `access` / `slow_access`
+  - `outbox_retry_scheduled`（语义上对应当前实现的 outbox retry 日志）
+  - `outbox_dead_letter`
+  - `task_scheduler_execute_failed`
+- 慢路径约定：
+  - HTTP：访问日志耗时 >= 1s 记为 `slow_access`（当前已实现）。
+  - DB：依赖 `db.slow_threshold_ms` 的慢 SQL 日志，阈值变更应走配置评审。
+  - Queue：记录重试链路（attempt/max_attempt/retry_after/error 摘要），支持按事件 ID 回溯。

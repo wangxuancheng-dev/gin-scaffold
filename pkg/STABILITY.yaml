@@ -1,0 +1,19 @@
+packages:
+  cache: stable
+  db: stable
+  eventbus: stable
+  httpclient: stable
+  limiter: stable
+  logger: stable
+  loginthrottle: stable
+  metrics: stable
+  notify: experimental
+  numconv: stable
+  policy: stable
+  redis: stable
+  settings: experimental
+  sliceutil: stable
+  storage: stable
+  strutil: stable
+  swagger: stable
+  tracer: stable

@@ -170,7 +170,7 @@ platform:
     export_default_days: 7
     export_max_days: 31
   idempotency:
-    enabled: false
+    enabled: true
     ttl_seconds: 86400
     lock_seconds: 120
     max_body_bytes: 262144
@@ -180,7 +180,7 @@ platform:
   notify:
     driver: log
   login_security:
-    enabled: false
+    enabled: true
     max_failed_per_window: 10
     window_sec: 900
     lockout_sec: 600

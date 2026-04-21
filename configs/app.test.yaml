@@ -79,6 +79,7 @@ jwt:
 metrics:
   enabled: true
   path: /metrics
+  allowed_networks: []
 
 trace:
   enabled: false

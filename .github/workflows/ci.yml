@@ -36,6 +36,21 @@ jobs:
       - name: Enforce handler error helper
         run: bash ./scripts/check-handler-error-helper.sh
 
+      - name: Enforce test layering
+        run: bash ./scripts/check-test-layering.sh
+
+      - name: Enforce config compatibility
+        run: bash ./scripts/check-config-compat.sh
+
+      - name: Enforce security baseline
+        run: bash ./scripts/check-security-baseline.sh
+
+      - name: Enforce pkg stability manifest
+        run: bash ./scripts/check-pkg-stability.sh
+
+      - name: Enforce migration lint
+        run: bash ./scripts/check-migration-lint.sh
+
       - name: Run unit tests
         run: go test ./tests/scenario/...
 

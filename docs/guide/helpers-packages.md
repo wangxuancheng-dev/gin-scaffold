@@ -22,6 +22,13 @@
 | `pkg/sliceutil` | 去重保序、过滤、`Coalesce` 默认值 |
 | `pkg/numconv` | 从字符串安全解析数字（失败/空串用默认值） |
 
+### 稳定性等级与兼容承诺
+
+- 稳定性清单：`pkg/STABILITY.yaml`（CI 会通过 `scripts/check-pkg-stability.sh` 强制校验目录与清单一致）。
+- `stable`：遵循最小兼容承诺（公开函数签名/返回语义变更需走兼容期或 major 变更说明）。
+- `experimental`：允许快速演进，但升级说明必须在 PR/变更日志写明破坏点。
+- 新增 `pkg/*` 包时必须同步声明稳定性等级，避免“默认稳定”造成后续重构摩擦。
+
 GORM 事务、租户 scope、只读副本等见 **[数据库与 GORM 实践](/guide/database-patterns)**。
 
 ## 小示例（`pkg/sliceutil` / `pkg/numconv`）

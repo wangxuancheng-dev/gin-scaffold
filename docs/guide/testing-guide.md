@@ -32,6 +32,11 @@
 - 规范守卫脚本：
   - `bash ./scripts/check-handler-error-helper.sh .`：禁止在 `internal/api/handler` 里绕过统一错误 helper
   - `bash ./scripts/check-service-notfound-mapping.sh .`：检查 `internal/service` 中 `gorm.ErrRecordNotFound` 分支是否映射为业务语义错误（允许带 `// notfound-ok` 的特例）
+  - `bash ./scripts/check-test-layering.sh .`：强制 `tests/integration` 使用 `//go:build integration`，并禁止 `tests/scenario` 漂移成 integration
+  - `bash ./scripts/check-config-compat.sh .`：检查 `app.yaml` / `app.test.yaml` / `app.prod.yaml` 的键兼容性
+  - `bash ./scripts/check-security-baseline.sh .`：生产安全基线（Swagger、shell command、登录防护等）自动门禁
+  - `bash ./scripts/check-pkg-stability.sh .`：校验 `pkg/STABILITY.yaml` 与真实包目录同步
+  - `bash ./scripts/check-migration-lint.sh .`：迁移 up/down 对称性与基础索引风险检查
 
 ## 写新集成用例建议
 

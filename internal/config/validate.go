@@ -32,6 +32,7 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateLimiter()...)
 	errs = append(errs, a.validatePlatform()...)
 	errs = append(errs, a.validateOutbox()...)
+	errs = append(errs, a.validateProdSecurity()...)
 	if len(errs) > 0 {
 		return fmt.Errorf("invalid config: %s", strings.Join(errs, "; "))
 	}
@@ -268,6 +269,26 @@ func (a *App) validatePlatform() []string {
 		if p.LoginSecurity.LockoutSec <= 0 {
 			errs = append(errs, "platform.login_security.lockout_sec must be > 0 when login_security is enabled")
 		}
+	}
+	return errs
+}
+
+func (a *App) validateProdSecurity() []string {
+	var errs []string
+	if strings.ToLower(strings.TrimSpace(a.Env)) != "prod" {
+		return errs
+	}
+	if a.Debug {
+		errs = append(errs, "debug must be false in prod")
+	}
+	if a.HTTP.SwaggerEnabled {
+		errs = append(errs, "http.swagger_enabled must be false in prod")
+	}
+	if a.Scheduler.ShellCommandsEnabled {
+		errs = append(errs, "scheduler.shell_commands_enabled must be false in prod")
+	}
+	if strings.TrimSpace(a.Storage.SignSecret) == "" || strings.Contains(strings.ToLower(a.Storage.SignSecret), "change-me") {
+		errs = append(errs, "storage.sign_secret must be a non-placeholder value in prod")
 	}
 	return errs
 }

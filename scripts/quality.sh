@@ -29,6 +29,21 @@ bash ./scripts/check-pkg-boundary.sh .
 echo "== test layout check =="
 bash ./scripts/check-test-layout.sh .
 
+echo "== test layering check =="
+bash ./scripts/check-test-layering.sh .
+
+echo "== config compatibility check =="
+bash ./scripts/check-config-compat.sh .
+
+echo "== security baseline check =="
+bash ./scripts/check-security-baseline.sh .
+
+echo "== pkg stability check =="
+bash ./scripts/check-pkg-stability.sh .
+
+echo "== migration lint check =="
+bash ./scripts/check-migration-lint.sh .
+
 echo "== coverage gate =="
 bash ./scripts/go-cover.sh
 
