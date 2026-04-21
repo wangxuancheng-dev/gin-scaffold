@@ -154,6 +154,9 @@ storage:
   url_expire_sec: 120
   readyz_check: false
 
+encryption:
+  key: "base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+
 platform:
   audit:
     enabled: false

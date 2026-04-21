@@ -22,9 +22,16 @@ type App struct {
 	Scheduler SchedulerConfig `mapstructure:"scheduler"`
 	Outbound  OutboundConfig  `mapstructure:"outbound"`
 	Storage   StorageConfig   `mapstructure:"storage"`
+	Encryption EncryptionConfig `mapstructure:"encryption"`
 	Platform  PlatformConfig  `mapstructure:"platform"`
 	Tenant    TenantConfig    `mapstructure:"tenant"`
 	Outbox    OutboxConfig    `mapstructure:"outbox"`
+}
+
+// EncryptionConfig 可逆加密配置。
+type EncryptionConfig struct {
+	// Key 支持 base64:<32字节key的base64> 或明文 32 字节 key。
+	Key string `mapstructure:"key"`
 }
 
 type TenantConfig struct {

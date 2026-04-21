@@ -42,6 +42,9 @@ go run ./cmd/gen crud --module order --no-wire --out-dir ./tmp/scaffold-preview
 go run ./cmd/artisan list
 go run ./cmd/artisan run ping
 go run ./cmd/artisan make:command report:daily
+go run ./cmd/artisan key:generate
+# 输出纯 base64（不带 base64: 前缀）
+go run ./cmd/artisan key:generate --raw
 # 查看死信（归档）任务
 go run ./cmd/artisan queue:failed list --env dev
 # 指定某个队列查看
@@ -62,6 +65,21 @@ artisan report:daily --date=2026-04-16
 ```
 
 这样任务调度与本地命令运行走同一套命令注册体系。
+
+### 生成可逆加密密钥
+
+`key:generate` 会生成 32 字节随机密钥，并输出为可直接落配置的格式：
+
+```bash
+go run ./cmd/artisan key:generate
+# 示例输出：
+# base64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+```
+
+可用于：
+
+- `configs/*.yaml` 的 `encryption.key`
+- 环境变量 `ENCRYPTION_KEY`
 
 ## Integration Test（关键链路）
 

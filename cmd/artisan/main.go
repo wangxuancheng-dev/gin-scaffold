@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -29,12 +31,36 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "配置画像: 多实例标识，如 order/crm")
 	rootCmd.AddCommand(newListCommand())
 	rootCmd.AddCommand(newMakeCommandCommand())
+	rootCmd.AddCommand(newGenerateEncryptionKeyCommand())
 	rootCmd.AddCommand(newRunCommand())
 	rootCmd.AddCommand(newQueueFailedCommand(&env, &profile))
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func newGenerateEncryptionKeyCommand() *cobra.Command {
+	var raw bool
+	c := &cobra.Command{
+		Use:   "key:generate",
+		Short: "generate ENCRYPTION_KEY for config",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			buf := make([]byte, 32)
+			if _, err := rand.Read(buf); err != nil {
+				return err
+			}
+			encoded := base64.StdEncoding.EncodeToString(buf)
+			if raw {
+				fmt.Fprintln(cmd.OutOrStdout(), encoded)
+				return nil
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "base64:%s\n", encoded)
+			return nil
+		},
+	}
+	c.Flags().BoolVar(&raw, "raw", false, "print raw base64 without prefix")
+	return c
 }
 
 func newListCommand() *cobra.Command {

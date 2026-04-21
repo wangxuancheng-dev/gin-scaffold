@@ -16,6 +16,12 @@ go mod tidy
 
 ## 3) 准备 `.env.local`
 
+先生成可逆加密密钥（可直接粘贴到 `.env.local`）：
+
+```bash
+go run ./cmd/artisan key:generate
+```
+
 ```text
 APP_ENV=dev
 DB_DSN=root:root@tcp(127.0.0.1:3306)/gin_scaffold?charset=utf8mb4&parseTime=True
@@ -28,6 +34,7 @@ HTTP_SHUTDOWN_TIMEOUT_SEC=10
 REDIS_ADDR=127.0.0.1:6379
 REDIS_PASSWORD=
 JWT_SECRET=replace-with-your-own-secret
+ENCRYPTION_KEY=base64:replace-with-generated-key
 TENANT_ENABLED=false
 TENANT_HEADER=X-Tenant-ID
 TENANT_DEFAULT_ID=default

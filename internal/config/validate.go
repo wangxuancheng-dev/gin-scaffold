@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net"
 	"strings"
@@ -28,6 +29,7 @@ func (a *App) Validate() error {
 	errs = append(errs, a.validateCORS()...)
 	errs = append(errs, a.validateOutbound()...)
 	errs = append(errs, a.validateStorage()...)
+	errs = append(errs, a.validateEncryption()...)
 	errs = append(errs, a.validateMetrics()...)
 	errs = append(errs, a.validateLimiter()...)
 	errs = append(errs, a.validatePlatform()...)
@@ -289,6 +291,33 @@ func (a *App) validateProdSecurity() []string {
 	}
 	if strings.TrimSpace(a.Storage.SignSecret) == "" || strings.Contains(strings.ToLower(a.Storage.SignSecret), "change-me") {
 		errs = append(errs, "storage.sign_secret must be a non-placeholder value in prod")
+	}
+	if strings.TrimSpace(a.Encryption.Key) == "" || strings.Contains(strings.ToLower(a.Encryption.Key), "change-me") {
+		errs = append(errs, "encryption.key must be a non-placeholder value in prod")
+	}
+	return errs
+}
+
+func (a *App) validateEncryption() []string {
+	var errs []string
+	key := strings.TrimSpace(a.Encryption.Key)
+	if key == "" {
+		errs = append(errs, "encryption.key is required")
+		return errs
+	}
+	if strings.HasPrefix(key, "base64:") {
+		decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(key, "base64:"))
+		if err != nil {
+			errs = append(errs, "encryption.key base64 payload is invalid")
+			return errs
+		}
+		if len(decoded) != 32 {
+			errs = append(errs, "encryption.key decoded length must be 32 bytes for aes-256-cbc")
+		}
+		return errs
+	}
+	if len(key) != 32 {
+		errs = append(errs, "encryption.key length must be 32 bytes for aes-256-cbc")
 	}
 	return errs
 }

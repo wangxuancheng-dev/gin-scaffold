@@ -164,6 +164,9 @@ storage:
   url_expire_sec: 300
   readyz_check: false
 
+encryption:
+  key: "${ENCRYPTION_KEY}"
+
 platform:
   audit:
     enabled: false

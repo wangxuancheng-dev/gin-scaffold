@@ -93,6 +93,29 @@ http:
 - `s3_insecure`：是否跳过 TLS 证书校验（仅内网/开发）
 - `readyz_check`：`true` 时 `/readyz` 会探测存储（本地目录或 S3 HeadBucket），需 `enabled=true`
 
+## `encryption`
+
+- `key`：可逆加密密钥，格式为 `base64:<32字节key的base64>`（建议通过命令生成，勿手写）
+
+示例：
+
+```yaml
+encryption:
+  key: "base64:REPLACE_WITH_32_BYTE_KEY_BASE64"
+```
+
+生成方式（可直接复制到配置或 `.env`）：
+
+```bash
+go run ./cmd/artisan key:generate
+```
+
+`.env` 示例：
+
+```env
+ENCRYPTION_KEY=base64:REPLACE_WITH_32_BYTE_KEY_BASE64
+```
+
 ## `platform`
 
 审计、幂等、缓存键前缀、通知驱动等；详见 [平台横切能力](/guide/platform)。

@@ -57,6 +57,9 @@ func TestValidate_Ok(t *testing.T) {
 			AllowedMIME:  "text/plain",
 			URLExpireSec: 60,
 		},
+		Encryption: EncryptionConfig{
+			Key: "base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
+		},
 		Platform: PlatformConfig{
 			Audit: AuditConfig{
 				ExportDefaultDays: 7,
@@ -359,6 +362,9 @@ func minimalValidApp() *App {
 			MaxUploadMB:  5,
 			AllowedMIME:  "text/plain",
 			URLExpireSec: 60,
+		},
+		Encryption: EncryptionConfig{
+			Key: "base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
 		},
 		Platform: PlatformConfig{
 			Audit: AuditConfig{

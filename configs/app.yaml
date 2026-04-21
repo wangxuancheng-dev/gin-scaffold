@@ -156,6 +156,10 @@ storage:
   url_expire_sec: 300
   readyz_check: false
 
+encryption:
+  # key 格式：base64:<32字节key的base64>；启用时必须提供。
+  key: "base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+
 platform:
   audit:
     enabled: false
