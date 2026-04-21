@@ -28,6 +28,7 @@
 - `stable`：遵循最小兼容承诺（公开函数签名/返回语义变更需走兼容期或 major 变更说明）。
 - `experimental`：允许快速演进，但升级说明必须在 PR/变更日志写明破坏点。
 - 新增 `pkg/*` 包时必须同步声明稳定性等级，避免“默认稳定”造成后续重构摩擦。
+- 版本策略与模板：见 [pkg 稳定性治理](/guide/pkg-stability-policy) 与 [变更模板](/guide/pkg-stability-change-template)。
 
 GORM 事务、租户 scope、只读副本等见 **[数据库与 GORM 实践](/guide/database-patterns)**。
 

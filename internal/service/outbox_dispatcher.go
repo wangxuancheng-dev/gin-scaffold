@@ -22,6 +22,7 @@ import (
 	"gin-scaffold/pkg/eventbus"
 	"gin-scaffold/pkg/httpclient"
 	"gin-scaffold/pkg/logger"
+	"gin-scaffold/pkg/metrics"
 )
 
 type OutboxDispatcher struct {
@@ -85,6 +86,7 @@ func (d *OutboxDispatcher) handleOne(ctx context.Context, row *model.OutboxEvent
 	payload := map[string]any{}
 	if strings.TrimSpace(row.Payload) != "" {
 		if err := json.Unmarshal([]byte(row.Payload), &payload); err != nil {
+			metrics.OutboxEventsTotal.WithLabelValues(row.Topic, "bad_payload").Inc()
 			d.failOne(runCtx, row, fmt.Errorf("decode payload: %w", err))
 			return
 		}
@@ -96,6 +98,7 @@ func (d *OutboxDispatcher) handleOne(ctx context.Context, row *model.OutboxEvent
 	switch pm {
 	case "http":
 		if err := d.publishHTTP(runCtx, row, payload); err != nil {
+			metrics.OutboxEventsTotal.WithLabelValues(row.Topic, "publish_failed").Inc()
 			d.failOne(runCtx, row, err)
 			return
 		}
@@ -107,7 +110,10 @@ func (d *OutboxDispatcher) handleOne(ctx context.Context, row *model.OutboxEvent
 	}
 	if err := d.dao.MarkPublished(runCtx, row.ID); err != nil {
 		logger.ErrorX("outbox mark published failed", zap.Int64("id", row.ID), zap.Error(err))
+		metrics.OutboxEventsTotal.WithLabelValues(row.Topic, "mark_published_failed").Inc()
+		return
 	}
+	metrics.OutboxEventsTotal.WithLabelValues(row.Topic, "published").Inc()
 }
 
 func (d *OutboxDispatcher) publishHTTP(ctx context.Context, row *model.OutboxEvent, payload map[string]any) error {
@@ -162,6 +168,7 @@ func (d *OutboxDispatcher) failOne(ctx context.Context, row *model.OutboxEvent, 
 		backoff = 5
 	}
 	if attempts >= row.MaxAttempts {
+		metrics.OutboxEventsTotal.WithLabelValues(row.Topic, "dead").Inc()
 		logger.WarnX("outbox event reached max attempts",
 			zap.Int64("id", row.ID),
 			zap.String("topic", row.Topic),
@@ -176,6 +183,8 @@ func (d *OutboxDispatcher) failOne(ctx context.Context, row *model.OutboxEvent, 
 		return
 	}
 	nextRun := time.Now().Add(time.Duration(backoff*attempts) * time.Second)
+	metrics.OutboxEventsTotal.WithLabelValues(row.Topic, "retry").Inc()
+	metrics.OutboxRetryDelaySeconds.WithLabelValues(row.Topic).Observe(time.Until(nextRun).Seconds())
 	logger.WarnX("outbox event retry scheduled",
 		zap.Int64("id", row.ID),
 		zap.String("topic", row.Topic),

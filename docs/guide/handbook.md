@@ -59,6 +59,7 @@
 | [日志与可观测](/guide/logging-observability) | **Zap 在代码中的用法**、访问日志、轮转、自定义通道、Prometheus、OTel |
 | [测试指南](/guide/testing-guide) | 单元测试、集成测试、build tag、CI、本地 `golangci-lint` 脚本 |
 | [常用包与辅助能力](/guide/helpers-packages) | `pkg/*`、`internal/pkg/*` 速查 |
+| [pkg 稳定性治理](/guide/pkg-stability-policy) | `stable/experimental` 兼容承诺、弃用流程、评审模板 |
 | [生产运行手册](/ops/production-runbook) | systemd、Nginx、迁移、回滚 |
 | [上线检查清单](/checklist) | 发布前打勾项（含 Worker、网关） |
 

@@ -15,6 +15,7 @@ import (
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/service"
 	"gin-scaffold/pkg/logger"
+	"gin-scaffold/pkg/metrics"
 	appredis "gin-scaffold/pkg/redis"
 )
 
@@ -152,10 +153,22 @@ func (s *taskScheduler) notifySync() {
 }
 
 func (s *taskScheduler) executeWithGuards(taskID int64, policy string) error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		metrics.SchedulerTaskExecutionsTotal.WithLabelValues(status).Inc()
+		metrics.SchedulerTaskDurationSeconds.WithLabelValues(status).Observe(time.Since(start).Seconds())
+	}()
+
 	if policy == "allow" {
-		return s.svc.ExecuteTaskByID(context.Background(), taskID)
+		if err := s.svc.ExecuteTaskByID(context.Background(), taskID); err != nil {
+			status = "failed"
+			return err
+		}
+		return nil
 	}
 	if !s.enterLocal(taskID) {
+		status = "skipped_local_running"
 		return nil
 	}
 	defer s.leaveLocal(taskID)
@@ -165,9 +178,11 @@ func (s *taskScheduler) executeWithGuards(taskID int64, policy string) error {
 	if s.lockEnabled {
 		u, renewStop, ok, err := s.acquireDistributedLock(context.Background(), taskID)
 		if err != nil {
+			status = "lock_error"
 			return err
 		}
 		if !ok {
+			status = "skipped_distributed_locked"
 			return nil
 		}
 		unlock = u
@@ -176,7 +191,11 @@ func (s *taskScheduler) executeWithGuards(taskID int64, policy string) error {
 	defer stopRenew()
 	defer unlock()
 
-	return s.svc.ExecuteTaskByID(context.Background(), taskID)
+	if err := s.svc.ExecuteTaskByID(context.Background(), taskID); err != nil {
+		status = "failed"
+		return err
+	}
+	return nil
 }
 
 func (s *taskScheduler) enterLocal(taskID int64) bool {

@@ -93,6 +93,12 @@ func logWithRequest(c *gin.Context, msg string) {
 - 链路追踪：OpenTelemetry（可开关）
 - 告警规则模板：`deploy/observability/prometheus-rules.example.yml`
 - 看板模板：`deploy/observability/grafana-dashboard-ops.example.json`
+- 队列/任务关键指标：
+  - `asynq_task_duration_seconds`
+  - `outbox_events_total`
+  - `outbox_retry_delay_seconds`
+  - `scheduler_task_executions_total`
+  - `scheduler_task_duration_seconds`
 
 ## 建议实践
 

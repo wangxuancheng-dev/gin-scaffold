@@ -18,6 +18,7 @@ import (
 	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/pkg/timefmt"
 	"gin-scaffold/pkg/db"
+	"gin-scaffold/pkg/metrics"
 	"gin-scaffold/pkg/storage"
 )
 
@@ -26,8 +27,20 @@ type AuditExportHandler struct{}
 
 // ProcessTask 实现 asynq.Handler。
 func (AuditExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		metrics.ObserveAsynqTask(job.TypeAuditExport, status, start)
+	}()
+
+	fail := func(taskID string, err error) error {
+		status = "failed"
+		return markExportFailed(ctx, taskID, err)
+	}
+
 	var p job.AuditExportPayload
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
+		status = "bad_payload"
 		return err
 	}
 	now := time.Now().UTC()
@@ -41,19 +54,19 @@ func (AuditExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error 
 
 	gdb := db.DB()
 	if gdb == nil {
-		return markExportFailed(ctx, p.TaskID, fmt.Errorf("db not initialized"))
+		return fail(p.TaskID, fmt.Errorf("db not initialized"))
 	}
 	sp, err := storage.Require()
 	if err != nil {
-		return markExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	from, err := timefmt.ParseRFC3339(p.From)
 	if err != nil {
-		return markExportFailed(ctx, p.TaskID, fmt.Errorf("invalid from"))
+		return fail(p.TaskID, fmt.Errorf("invalid from"))
 	}
 	to, err := timefmt.ParseRFC3339(p.To)
 	if err != nil {
-		return markExportFailed(ctx, p.TaskID, fmt.Errorf("invalid to"))
+		return fail(p.TaskID, fmt.Errorf("invalid to"))
 	}
 	q := dao.AuditLogListQuery{
 		UserID:    p.UserID,
@@ -69,7 +82,7 @@ func (AuditExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error 
 	tmpFile := filepath.Join(os.TempDir(), "audit-export-"+p.TaskID+".csv")
 	f, err := os.Create(tmpFile)
 	if err != nil {
-		return markExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	defer func() {
 		_ = f.Close()
@@ -85,7 +98,7 @@ func (AuditExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error 
 	for {
 		rows, qErr := daoObj.ListExportChunk(ctx, q, lastID, 1000)
 		if qErr != nil {
-			return markExportFailed(ctx, p.TaskID, qErr)
+			return fail(p.TaskID, qErr)
 		}
 		if len(rows) == 0 {
 			break
@@ -109,18 +122,18 @@ func (AuditExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error 
 	}
 	w.Flush()
 	if err := w.Error(); err != nil {
-		return markExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	if _, err := f.Seek(0, 0); err != nil {
-		return markExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	key := "exports/audit/" + time.Now().UTC().Format("20060102") + "/" + uuid.NewString() + ".csv"
 	if pc, ok := sp.(storage.PutContentTyper); ok {
 		if err := pc.PutContentType(ctx, key, "text/csv", f); err != nil {
-			return markExportFailed(ctx, p.TaskID, err)
+			return fail(p.TaskID, err)
 		}
 	} else if err := sp.Put(ctx, key, f); err != nil {
-		return markExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	return job.SetAuditExportStatus(ctx, &job.AuditExportStatus{
 		TaskID:       p.TaskID,

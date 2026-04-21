@@ -18,6 +18,7 @@ import (
 	"gin-scaffold/internal/job"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/pkg/db"
+	"gin-scaffold/pkg/metrics"
 	"gin-scaffold/pkg/storage"
 )
 
@@ -25,8 +26,20 @@ import (
 type UserExportHandler struct{}
 
 func (UserExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		metrics.ObserveAsynqTask(job.TypeUserExport, status, start)
+	}()
+
+	fail := func(taskID string, err error) error {
+		status = "failed"
+		return markUserExportFailed(ctx, taskID, err)
+	}
+
 	var p job.UserExportPayload
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
+		status = "bad_payload"
 		return err
 	}
 	now := time.Now().UTC()
@@ -40,17 +53,17 @@ func (UserExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 
 	gdb := db.DB()
 	if gdb == nil {
-		return markUserExportFailed(ctx, p.TaskID, fmt.Errorf("db not initialized"))
+		return fail(p.TaskID, fmt.Errorf("db not initialized"))
 	}
 	sp, err := storage.Require()
 	if err != nil {
-		return markUserExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	userDAO := dao.NewUserDAO(gdb)
 	tmpFile := filepath.Join(os.TempDir(), "user-export-"+p.TaskID+".csv")
 	f, err := os.Create(tmpFile)
 	if err != nil {
-		return markUserExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	defer func() {
 		_ = f.Close()
@@ -69,7 +82,7 @@ func (UserExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	for {
 		rows, qErr := userDAO.ListAfterID(ctx, query, lastID, 1000)
 		if qErr != nil {
-			return markUserExportFailed(ctx, p.TaskID, qErr)
+			return fail(p.TaskID, qErr)
 		}
 		if len(rows) == 0 {
 			break
@@ -82,7 +95,7 @@ func (UserExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 			}
 			roleMap, qErr = userDAO.GetPrimaryRoles(ctx, ids)
 			if qErr != nil {
-				return markUserExportFailed(ctx, p.TaskID, qErr)
+				return fail(p.TaskID, qErr)
 			}
 		}
 		for _, u := range rows {
@@ -120,18 +133,18 @@ func (UserExportHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	}
 	w.Flush()
 	if err := w.Error(); err != nil {
-		return markUserExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	if _, err := f.Seek(0, 0); err != nil {
-		return markUserExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	key := "exports/users/" + time.Now().UTC().Format("20060102") + "/" + uuid.NewString() + ".csv"
 	if pc, ok := sp.(storage.PutContentTyper); ok {
 		if err := pc.PutContentType(ctx, key, "text/csv", f); err != nil {
-			return markUserExportFailed(ctx, p.TaskID, err)
+			return fail(p.TaskID, err)
 		}
 	} else if err := sp.Put(ctx, key, f); err != nil {
-		return markUserExportFailed(ctx, p.TaskID, err)
+		return fail(p.TaskID, err)
 	}
 	return job.SetUserExportStatus(ctx, &job.UserExportStatus{
 		TaskID:       p.TaskID,

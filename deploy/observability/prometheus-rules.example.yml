@@ -46,3 +46,37 @@ groups:
         annotations:
           summary: "Asynq queue backlog is too high"
           description: "Scale workers or inspect blocked task handlers."
+
+      - alert: GinScaffoldOutboxRetryBurst
+        expr: |
+          sum(rate(outbox_events_total{status="retry"}[10m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox retry burst detected"
+          description: "Outbox retries exceed normal baseline; inspect downstream dependency and outbox dead-letter growth."
+
+      - alert: GinScaffoldOutboxDeadLetterGrowth
+        expr: |
+          sum(increase(outbox_events_total{status="dead"}[15m])) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox dead-letter events detected"
+          description: "At least one outbox event reached max attempts; immediate triage is required."
+
+      - alert: GinScaffoldSchedulerFailureRateHigh
+        expr: |
+          (
+            sum(rate(scheduler_task_executions_total{status="failed"}[10m]))
+            /
+            clamp_min(sum(rate(scheduler_task_executions_total[10m])), 1)
+          ) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scheduler task failure ratio is high"
+          description: "More than 20% scheduled task executions are failing in the last 10 minutes."
