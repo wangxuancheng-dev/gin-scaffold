@@ -58,11 +58,34 @@ _ = numconv.ParseInt64("not-a-number", -1) // => -1
 | `internal/pkg/timefmt` | `ParseRFC3339`、`FormatPtr`（`nil` 或零值 → `""`，否则 RFC3339） |
 | `internal/pkg/websocket` | WebSocket Hub（见 [SSE/WebSocket](/guide/realtime-sse-websocket)） |
 
+## pkg 与 internal/pkg 决策表
+
+| 场景 | 放哪 | 判断标准 |
+|---|---|---|
+| 未来可能跨项目复用，且语义稳定 | `pkg/*` | 与业务域弱耦合，可给出最小兼容承诺 |
+| 强依赖当前业务上下文（租户、权限、领域模型） | `internal/pkg/*` | 只服务本仓应用，不承诺外部复用 |
+| 仍在探索，可能频繁破坏性调整 | `internal/pkg/*` 或 `pkg/*(experimental)` | 优先避免把不稳定能力暴露成稳定 API |
+| 只是某模块内部小工具 | 就近放模块目录 | 不必提前抽公共包 |
+
 ## 助手封装：要不要加、加在哪
 
 - **够用的现状**：按 **领域** 拆在 `pkg/*` 与 `internal/pkg/*`（JWT、租户、错误码、校验、时间解析等），比一个大杂烩 `util` 更可维护。
 - **何时新建小包**：同一逻辑在 **≥3 处** 复制、或带 **明确策略**（租户、时区、错误映射）时再抽到 `internal/pkg/xxx`；避免仅为别名而封装（例如不要再包一层「等于 `time.RFC3339`」的常量）。
 - **不必做的**：巨型 `helpers`、与业务无关的「全家桶」字符串/切片库；切片/映射优先标准库（见下节）。
+
+## 最小可复制示例
+
+选择包归属的经验法则：
+
+```text
+若一个能力离开当前业务上下文仍成立 -> 优先 pkg/*
+若能力必须依赖当前业务上下文才能成立 -> 优先 internal/pkg/*
+```
+
+例如：
+
+- `ParseInt64("x", -1)` 属于通用能力 -> `pkg/numconv`
+- `tenant.WithContext(...)` 依赖项目租户语义 -> `internal/pkg/tenant`
 
 ### 字符串按符号切 / 切片拼成串，新增放哪？
 
@@ -82,6 +105,12 @@ _ = numconv.ParseInt64("not-a-number", -1) // => -1
 ## Handler 错误出口
 
 - **禁止**在 `internal/api/handler/**`（除 `error_helper.go`）直接调用 `response.FailHTTP` / `FailBiz`；统一用 `internal/api/handler` 包中 `Fail*` 辅助函数（CI 脚本会检查）。
+
+## 常见问题与排查
+
+- `pkg/*` 不小心依赖了业务层：运行 `bash ./scripts/check-pkg-boundary.sh .`。
+- 新增 `pkg/*` 后 CI 报稳定性清单缺失：更新 `pkg/STABILITY.yaml` 并标注 `stable/experimental`。
+- 不确定放哪：先就近实现，出现稳定复用后再抽包，避免“过早抽象”。
 
 ## Artisan 自定义命令
 

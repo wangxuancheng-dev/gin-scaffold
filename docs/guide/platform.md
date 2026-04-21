@@ -6,6 +6,22 @@
 
 顶层 `platform:`，环境变量见 `config/loader.go` 中 `platform.*` 绑定（如 `PLATFORM_AUDIT_ENABLED`）。
 
+## 最小可复制检查
+
+快速验证横切能力是否启用：
+
+```bash
+# 审计导出（需管理端权限）
+curl -H "Authorization: Bearer <admin-jwt>" "http://127.0.0.1:8080/api/v1/admin/audit-logs"
+
+# 幂等（同一 key 重放）
+curl -X POST "http://127.0.0.1:8080/api/v1/client/some-endpoint" \
+  -H "Authorization: Bearer <jwt>" \
+  -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: demo-001" \
+  -d '{"foo":"bar"}'
+```
+
 ## 审计日志（`platform.audit`）
 
 - `enabled: true` 时，对 `POST`/`PUT`/`PATCH`/`DELETE` 异步写入表 `audit_logs`（需执行迁移 `202504171400_create_audit_logs`）。
@@ -155,6 +171,20 @@ func publishDemo(ctx context.Context, payload any) {
   - 默认 seed 全部写入租户 `default`
   - 权限判断（RBAC）按当前租户查询，不跨租户复用
   - 建议生产环境启用 `tenant.enabled=true`，并统一由网关注入 `X-Tenant-ID`
+
+## 运行阈值建议（起步）
+
+- `platform.idempotency.ttl_seconds`：建议 >= 300 秒（避免短抖动期间重复请求穿透）。
+- `platform.login_security.window_sec`：建议 10~30 分钟。
+- `platform.login_security.max_failed_per_window`：建议 5~10 次。
+- `outbox.max_attempts`：建议 >= 8，结合 `retry_backoff_sec` 评估最大重试时间窗。
+
+## 常见问题与排查
+
+- 审计开了但没数据：先确认写请求是否命中过滤白名单路径，再检查异步写库错误日志。
+- 幂等未命中：检查是否 JSON POST、是否传 `X-Idempotency-Key`、以及 `Content-Length` 是否已知。
+- Outbox 长期 retry/dead：优先看 `outbox_events_total` 指标与下游可用性，再检查 `publish_mode` 与签名配置。
+- 登录防爆破无效：确认 `ClientIPContext` 中间件已挂载且 Redis key 前缀配置正确。
 
 ## 用户异步导出（仅任务模式）
 

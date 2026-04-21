@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	i18nres "gin-scaffold/i18n"
 	"gin-scaffold/internal/config"
 	ginI18n "github.com/gin-contrib/i18n"
 	"github.com/gin-gonic/gin"
@@ -56,6 +57,7 @@ func I18n(cfg *config.I18nConfig) gin.HandlerFunc {
 			}
 		}
 	}
+	rootPath = ensureI18nRootPath(rootPath)
 
 	return ginI18n.Localize(
 		ginI18n.WithBundle(&ginI18n.BundleCfg{
@@ -67,6 +69,18 @@ func I18n(cfg *config.I18nConfig) gin.HandlerFunc {
 			Loader:           nil,
 		}),
 	)
+}
+
+func ensureI18nRootPath(path string) string {
+	if st, err := os.Stat(path); err == nil && st.IsDir() {
+		return path
+	}
+	if embedded, err := i18nres.ExtractToTempDir(); err == nil {
+		if st, statErr := os.Stat(embedded); statErr == nil && st.IsDir() {
+			return embedded
+		}
+	}
+	return path
 }
 
 func resolveI18nRootPath(paths ...string) string {

@@ -70,6 +70,7 @@ export default defineConfig({
             { text: "文件存储", link: "/guide/file-storage" },
             { text: "SSE 与 WebSocket", link: "/guide/realtime-sse-websocket" },
             { text: "本地化（i18n）", link: "/guide/i18n" },
+            { text: "验证器与多语言", link: "/guide/validation-i18n" },
             { text: "全局限流", link: "/guide/rate-limiting" },
           ],
         },

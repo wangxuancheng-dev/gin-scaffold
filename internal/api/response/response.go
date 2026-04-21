@@ -41,6 +41,17 @@ func FailHTTP(c *gin.Context, httpStatus int, code int, msgKey, defaultMsg strin
 	c.JSON(httpStatus, resp)
 }
 
+// FailHTTPWithData 使用 HTTP 状态码与业务码返回错误，并携带结构化 data。
+func FailHTTPWithData(c *gin.Context, httpStatus int, code int, msgKey, defaultMsg string, data any) {
+	resp := Body{
+		Code: code,
+		Msg:  i18nhelper.T(c, msgKey, defaultMsg),
+		Data: data,
+	}
+	fillTrace(c, &resp)
+	c.JSON(httpStatus, resp)
+}
+
 // FailBiz 业务错误（默认 HTTP 400）。
 func FailBiz(c *gin.Context, code int, msgKey, defaultMsg string) {
 	FailHTTP(c, http.StatusBadRequest, code, msgKey, defaultMsg)

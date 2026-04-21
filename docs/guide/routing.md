@@ -65,3 +65,20 @@ func registerAdminUserRoutes(admin *gin.RouterGroup, h *adminhandler.UserHandler
 
 - **新版本 API**：可复制 `registerAPIV1` 模式增加 `registerAPIV2`，或在大组下再分 `Group("/billing")`。
 - **公开与鉴权分离**：参考 `client` 先注册无鉴权组，再注册 `Use(JWTAuth)` 的子组。
+
+## 最小可复制验证
+
+```bash
+# 公开路由
+curl -sS "http://127.0.0.1:8080/api/v1/client/ping"
+
+# 鉴权路由（需替换 token）
+curl -sS "http://127.0.0.1:8080/api/v1/client/users/1" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+## 常见问题与排查
+
+- 新增路由 404：确认已在对应 `registerAdmin*Routes` / `client_router.go` 注册。
+- 明明有 token 仍 401：检查路由是否挂在 `JWTAuth` 组，以及 token 类型/过期时间。
+- 管理端 403：检查 `RequirePermission("...")` 与 seed 权限码是否一致。

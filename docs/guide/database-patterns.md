@@ -69,3 +69,32 @@ func (d *WidgetDAO) Get(ctx context.Context, id int64) (*model.Widget, error) {
 ## 迁移与结构演进
 
 - 表结构变更走 **`cmd/migrate`** 与 `migrations/` SQL，见 [数据库迁移与填充](/guide/database-and-migrations)。
+
+## 最小可复制验证
+
+```bash
+# 1) 启动服务（包含 DB 初始化）
+go run ./cmd/server server --env dev
+
+# 2) 执行一轮结构 + 种子迁移（确保数据可用）
+go run ./cmd/migrate up --env dev
+go run ./cmd/migrate seed up --env dev
+
+# 3) 访问一个依赖 DB 的管理接口（示例）
+curl -sS "http://127.0.0.1:8080/api/v1/admin/users?page=1&page_size=10" \
+  -H "Authorization: Bearer <admin-jwt>"
+```
+
+验证点：
+
+- 服务启动日志中 DB 连接成功，且无 `validate config` 相关错误；
+- 接口可正常返回分页数据（非 5xx）；
+- 在启用租户场景下，仅返回当前租户数据（`tenant_id` 生效）。
+
+## 常见问题与排查
+
+- 启动即报 DB 连接失败：优先核对 `db.driver` 与 DSN 是否匹配（MySQL/PostgreSQL 不可混用）。
+- 读写一致性异常：启用了 `db.replicas` 时，强一致读取需显式走主库或放在事务内。
+- 多租户数据串读：DAO 查询/更新遗漏 `tenant.ApplyScope`，需统一补齐租户过滤。
+- 慢查询明显增多：先检查索引与 SQL 条件，再结合 `db.slow_threshold_ms` 与日志定位热点语句。
+- 回滚或发布异常：结构变更应通过迁移脚本治理，并先运行 [数据库迁移与填充](/guide/database-and-migrations) 与 [配置说明（关键组）](/guide/configuration) 的检查流程。

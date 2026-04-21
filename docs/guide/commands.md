@@ -100,3 +100,10 @@ bash ./scripts/gen-openapi-sdk.sh
 - `docs/docs.go`
 - `pkg/sdk/openapi/swagger.json`
 - `pkg/sdk/openapi/swagger.sha256`
+
+## 常见问题与排查
+
+- `migrate up` 报连接错误：优先检查 `--driver` 与 `--dsn` 是否匹配。
+- `artisan` 找不到命令：先执行 `go run ./cmd/artisan list` 确认命令已注册。
+- 集成测试卡住：确认 API、worker、MySQL、Redis 均已启动，再执行 `scripts/integration.*`。
+- Swagger/SDK CI diff 失败：本地先执行 `scripts/gen-openapi-sdk.sh` 并提交生成物。

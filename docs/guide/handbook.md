@@ -47,6 +47,7 @@
 | [文件存储](/guide/file-storage) | 本地上传、S3/MinIO、预签名、下载验签 |
 | [SSE 与 WebSocket](/guide/realtime-sse-websocket) | 演示端点、**生产化 WebSocket/Hub**、SSE 反代注意 |
 | [本地化（i18n）](/guide/i18n) | 语言包、`Accept-Language`、响应文案 |
+| [验证器与多语言](/guide/validation-i18n) | `binding` 规则、自定义规则、`validation.*` 语言包键与占位符 |
 | [全局限流](/guide/rate-limiting) | IP + 路由两层、路由键、`memory` / `redis`、下单等敏感路径加组级限流示例 |
 
 ## 安全、可观测、测试、部署

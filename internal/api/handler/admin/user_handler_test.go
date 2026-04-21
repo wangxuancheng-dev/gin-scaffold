@@ -7,11 +7,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 
 	adminreq "gin-scaffold/internal/api/request/admin"
+	"gin-scaffold/internal/api/response"
 	"gin-scaffold/internal/model"
 	"gin-scaffold/internal/pkg/errcode"
 	"gin-scaffold/internal/service/port"
@@ -146,6 +148,109 @@ func TestUserHandler_Create_flow(t *testing.T) {
 		h.Create(c)
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("code=%d", w.Code)
+		}
+	})
+	t.Run("validation_error_has_detail_message", func(t *testing.T) {
+		h := NewUserHandler(&stubUserService{})
+		body, _ := json.Marshal(adminreq.UserCreateRequest{
+			Username: "1",
+			Password: "123",
+			Nickname: "A",
+			Role:     "super",
+		})
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "http://localhost/admin/users", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		h.Create(c)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp response.Body
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal response: %v", err)
+		}
+		if resp.Msg == "" || resp.Msg == "参数错误" {
+			t.Fatalf("expected detailed validation message, got=%q", resp.Msg)
+		}
+		if !strings.Contains(resp.Msg, "长度不能少于 3") {
+			t.Fatalf("expected zh default/friendly min message, got=%q", resp.Msg)
+		}
+		dataMap, ok := resp.Data.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map data for validation errors, got=%T", resp.Data)
+		}
+		rawErrors, ok := dataMap["errors"]
+		if !ok {
+			t.Fatalf("expected errors in response data, got=%v", dataMap)
+		}
+		errList, ok := rawErrors.([]any)
+		if !ok || len(errList) == 0 {
+			t.Fatalf("expected non-empty errors list, got=%T %#v", rawErrors, rawErrors)
+		}
+	})
+	t.Run("validation_error_respects_english_language", func(t *testing.T) {
+		h := NewUserHandler(&stubUserService{})
+		body, _ := json.Marshal(adminreq.UserCreateRequest{
+			Username: "1",
+			Password: "123",
+			Nickname: "A",
+			Role:     "super",
+		})
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "http://localhost/admin/users", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Request.Header.Set("Accept-Language", "en-US,en;q=0.9")
+		h.Create(c)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp response.Body
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal response: %v", err)
+		}
+		if !strings.Contains(strings.ToLower(resp.Msg), "validation failed") {
+			t.Fatalf("expected english validation prefix, got=%q", resp.Msg)
+		}
+		if !strings.Contains(strings.ToLower(resp.Msg), "must be at least 3") {
+			t.Fatalf("expected english default/friendly min message, got=%q", resp.Msg)
+		}
+		dataMap, ok := resp.Data.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map data for validation errors, got=%T", resp.Data)
+		}
+		rawErrors, ok := dataMap["errors"]
+		if !ok {
+			t.Fatalf("expected errors in response data, got=%v", dataMap)
+		}
+		errList, ok := rawErrors.([]any)
+		if !ok || len(errList) == 0 {
+			t.Fatalf("expected non-empty errors list, got=%T %#v", rawErrors, rawErrors)
+		}
+	})
+	t.Run("validation_custom_rule_not_admin", func(t *testing.T) {
+		h := NewUserHandler(&stubUserService{})
+		body, _ := json.Marshal(adminreq.UserCreateRequest{
+			Username: "admin",
+			Password: "123456",
+			Nickname: "A",
+			Role:     "user",
+		})
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "http://localhost/admin/users", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		h.Create(c)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp response.Body
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal response: %v", err)
+		}
+		if !strings.Contains(resp.Msg, "用户名不能使用 admin") {
+			t.Fatalf("expected custom not_admin message, got=%q", resp.Msg)
 		}
 	})
 	t.Run("biz_error", func(t *testing.T) {

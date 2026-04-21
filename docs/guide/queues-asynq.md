@@ -183,3 +183,31 @@ mux.Handle(job.TypeWelcomeEmail, jobhandler.WelcomeHandler{})
 |--|--------|---------------------------|
 | 触发 | 入队后由 worker 消费；支持 **立即**、**延迟**、**定时** | Cron 表达式到点执行 shell/artisan |
 | 典型用途 | 异步导出、邮件、慢 IO、**每单一次的延迟关单** | 周期清理、报表、调用 `migrate` 等 |
+
+## 最小可复制验证
+
+```bash
+# 终端 1：启动 API
+go run ./cmd/server server --env dev
+
+# 终端 2：启动 worker（必须）
+go run ./cmd/server worker --env dev
+
+# 终端 3：触发一个会入队的接口（示例）
+curl -sS "http://127.0.0.1:8080/api/v1/admin/task-queues/summary" \
+  -H "Authorization: Bearer <admin-jwt>"
+```
+
+验证点：
+
+- worker 日志出现对应任务 `task_type` 的消费记录；
+- Redis 中 `pending/scheduled` 不持续堆积（可配合后台死信接口观察）；
+- 若使用 `EnqueueUnique*`，同窗口重复触发不会产生重复任务。
+
+## 常见问题与排查
+
+- API 已调用但任务不执行：通常是没启动 `worker`，或 worker 连接到了错误的 Redis/DB。
+- 任务大量积压：先看 `asynq.queues` 权重和 `concurrency`，再核对慢任务是否缺少拆分与幂等。
+- 重复点击产生多条任务：改用 `EnqueueUnique*`，并确认 `asynq.dedup_window_sec` > 0。
+- 任务频繁超时：检查 `asynq.timeout_sec` 是否过小，并排查 handler 内外部 IO（DB/HTTP）耗时。
+- 死信持续增长：使用 [定时任务中心](/guide/scheduler) 的死信运维接口/命令重试，并结合 [日志与可观测](/guide/logging-observability) 指标定位失败原因。

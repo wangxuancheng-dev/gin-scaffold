@@ -20,7 +20,7 @@ type UserIDURI struct {
 
 // UserCreateRequest 后台创建用户。
 type UserCreateRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=32"`
+	Username string `json:"username" binding:"required,min=3,max=32,not_admin"`
 	Password string `json:"password" binding:"required,min=6,max=64"`
 	Nickname string `json:"nickname" binding:"max=64"`
 	Role     string `json:"role" binding:"omitempty,oneof=admin user"`

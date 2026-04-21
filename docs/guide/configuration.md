@@ -107,3 +107,25 @@ http:
 ## 启动校验（Fail Fast）
 
 服务启动时会进行关键配置校验，校验失败直接退出，并聚合输出全部错误项，避免带病运行。
+
+## 最小可复制验证
+
+本地快速验证配置是否生效：
+
+```bash
+# 查看配置来源与基本健康（启动后）
+curl -sS "http://127.0.0.1:8080/livez"
+curl -sS "http://127.0.0.1:8080/readyz"
+
+# 运行配置相关守卫（本地/CI）
+bash ./scripts/check-config-compat.sh .
+bash ./scripts/check-security-baseline.sh .
+```
+
+## 常见问题与排查
+
+- 改了 YAML 但行为没变化：优先检查同名环境变量是否覆盖了 YAML。
+- `test/prod` 没读 `.env.*`：确认设置 `LOAD_DOTENV_NON_DEV=true`。
+- 服务启动即退出：查看启动日志中的 `validate config` 聚合错误。
+- `/metrics` 返回 404：检查 `metrics.enabled` 与 `metrics.allowed_networks` 是否符合当前来源 IP。
+- 限流模式异常：生产建议 `limiter.mode=redis`，并检查 Redis 连接及前缀配置。

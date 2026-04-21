@@ -171,3 +171,29 @@ limiter:
 | 内存令牌桶 | `pkg/limiter/limiter.go` |
 | Redis 窗口 | `pkg/limiter/redis_store.go` |
 | 注册与 Redis 注入 | `internal/routes/router.go`、`internal/app/bootstrap/bootstrap.go` |
+
+## 最小可复制验证
+
+```bash
+# 启动服务
+go run ./cmd/server server --env dev
+
+# 连续压测同一路由（示例）
+for i in $(seq 1 30); do
+  curl -s -o /dev/null -w "%{http_code}\n" "http://127.0.0.1:8080/livez"
+done
+```
+
+验证点：
+
+- 在阈值附近出现 429，且响应码为 `too_many_req`；
+- 调整 `limiter` 配置后，429 出现频率与预期一致；
+- 多实例下使用 Redis 模式时，各实例共享限流效果一致。
+
+## 常见问题与排查
+
+- 本地可用、线上失效：通常是多副本仍在用 `memory` 模式，需切到 `redis` 并设置 `window_sec`。
+- 明明没高并发也频繁 429：检查是否叠加了组级二次限流，或 `ip_burst/route_burst` 设得过小。
+- 只想限制某个接口却全站都受影响：全局参数是共享的，需对目标路由组单独挂更严格 limiter。
+- 反向代理后限流不准：确认 Gin 可信代理配置，避免所有请求都识别成同一出口 IP。
+- 需要“按用户”限流：使用 `LimiterKeys` 结合 JWT claims 构造 `RouteKey`/`IPKey`，不要直接依赖未鉴权参数。

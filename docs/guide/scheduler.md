@@ -140,3 +140,37 @@ go run ./cmd/artisan queue:failed retry-all 50 --env prod
 - `lock_ttl_seconds` 根据任务最长耗时设置（并预留续期窗口）
 - `log_retention_days` 根据审计周期设置
 - `asynq.queues` 支持多队列优先级权重，例如 `critical:8, default:3, low:1`
+
+## 最小可复制验证
+
+```bash
+# 终端 1：启动 API
+go run ./cmd/server server --env dev
+
+# 终端 2：创建一个每分钟执行一次的任务（示例）
+curl -sS -X POST "http://127.0.0.1:8080/api/v1/admin/scheduler-tasks" \
+  -H "Authorization: Bearer <admin-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"demo-cleanup",
+    "spec":"*/1 * * * *",
+    "command":"artisan data:cleanup",
+    "enabled":true,
+    "timeout_sec":30,
+    "concurrency":"forbid"
+  }'
+```
+
+验证点：
+
+- 任务创建后约 10 秒内被调度器同步并开始按 `spec` 触发；
+- 执行日志可在后台列表查询；
+- 多实例下同一时刻仅有一个实例执行（锁生效）。
+
+## 常见问题与排查
+
+- 任务创建成功但不触发：优先确认 `spec` 与 `with_seconds` 的段数匹配（5 段/6 段）。
+- 任务重复执行：检查 `concurrency` 是否误用 `allow`，并确认 `lock_enabled` 在多实例环境开启。
+- 命令执行失败：生产默认禁止 shell，若 `command` 非 `artisan` 需确认 `shell_commands_enabled=true`（见 [安全实践](/guide/security-practices)）。
+- 执行超时被中断：增大 `timeout_sec` 并拆分长任务，避免一次任务包含过多慢 IO。
+- 队列死信处理不顺：使用 `queue:failed` 命令并参考 [异步队列（Asynq）](/guide/queues-asynq) 的运维章节联动排查。

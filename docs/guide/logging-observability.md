@@ -100,6 +100,22 @@ func logWithRequest(c *gin.Context, msg string) {
   - `scheduler_task_executions_total`
   - `scheduler_task_duration_seconds`
 
+## 最小可复制检查
+
+查看健康与指标：
+
+```bash
+curl -s "http://localhost:8080/livez"
+curl -s "http://localhost:8080/readyz"
+curl -s "http://localhost:8080/metrics" | rg "gin_requests_total|outbox_events_total|scheduler_task_executions_total"
+```
+
+按请求 ID 追日志（示例）：
+
+```bash
+rg "request_id=<your-request-id>" logs/
+```
+
 ## 建议实践
 
 - 生产关闭 `debug`
@@ -121,3 +137,18 @@ func logWithRequest(c *gin.Context, msg string) {
   - HTTP：访问日志耗时 >= 1s 记为 `slow_access`（当前已实现）。
   - DB：依赖 `db.slow_threshold_ms` 的慢 SQL 日志，阈值变更应走配置评审。
   - Queue：记录重试链路（attempt/max_attempt/retry_after/error 摘要），支持按事件 ID 回溯。
+
+## 告警阈值起步建议
+
+- `5xx 比例`：5 分钟窗口 > 5%，持续 10 分钟告警。
+- `P95 延迟`：> 1s，持续 10 分钟告警。
+- `Outbox dead-letter`：15 分钟窗口内出现 > 0 直接告警。
+- `Scheduler 失败率`：10 分钟窗口失败率 > 20% 告警。
+
+具体规则见：`deploy/observability/prometheus-rules.example.yml`。
+
+## 常见问题与排查
+
+- 有日志无指标：确认 `metrics.enabled=true` 且 `/metrics` 未被网络策略拦截。
+- 有指标无 trace_id：确认 `trace.enabled=true` 且 OTel middleware 已启用。
+- 队列积压但无明显错误：优先看 `outbox_events_total{status="retry|dead"}` 与 `scheduler_task_executions_total{status="failed"}`。

@@ -75,11 +75,18 @@ curl -sS -X POST "http://127.0.0.1:8080/api/v1/client/auth/login" \
   -d '{"username":"admin","password":"Admin@123456"}'
 ```
 
-## 7) 变更记录
+## 7) 常见问题与排查
+
+- `readyz` 失败：优先检查数据库/Redis 连接与 `DB_DSN`、`REDIS_ADDR`。
+- 登录 401：确认 seed 用户口令与环境一致，并检查 `JWT_SECRET` 是否变化。
+- worker 没消费任务：确认已启动 `go run ./cmd/server worker --env dev`。
+- 非 dev 环境没读取 `.env.*`：确认设置了 `LOAD_DOTENV_NON_DEV=true`。
+
+## 8) 变更记录
 
 - 版本更新说明见：`docs/changelog.md`
 
-## 8) 多租户启用（可选）
+## 9) 多租户启用（可选）
 
 ```bash
 export TENANT_ENABLED=true

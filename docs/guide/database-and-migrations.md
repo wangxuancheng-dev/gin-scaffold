@@ -76,6 +76,28 @@ AND NOT EXISTS (
 
 - 集成测试脚本会创建 `scaffold_test` 并执行 migrate + seed + fixture，见 `tests/integration/README.md` 与 `scripts/integration.sh`。
 
+## 最小可复制验证
+
+```bash
+# 结构迁移
+go run ./cmd/migrate up --env dev
+
+# 种子迁移
+go run ./cmd/migrate seed up --env dev
+
+# 可选：回滚一轮（谨慎）
+go run ./cmd/migrate seed down --env dev
+go run ./cmd/migrate down --env dev
+```
+
+## 常见问题与排查
+
+- `up` 成功但登录失败：通常是漏执行 `seed up`。
+- `driver` 不匹配：MySQL DSN 却传了 `--driver postgres` 会直接失败。
+- 迁移脚本回滚不对称：运行 `bash ./scripts/check-migration-lint.sh .` 检查 up/down 与高风险语句。
+- 线上锁表风险：避免在一个事务里堆叠多条 `ALTER TABLE`；必要时分批发布。
+- 权限菜单不生效：确认执行了 seed 且当前租户数据正确（默认 `default`）。
+
 ## 下一步
 
 - 运行期访问数据库、事务与多租户：**[数据库与 GORM 实践](/guide/database-patterns)**。
