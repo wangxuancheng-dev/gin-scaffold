@@ -42,6 +42,9 @@ go run ./cmd/gen crud --module order --no-wire --out-dir ./tmp/scaffold-preview
 go run ./cmd/artisan list
 go run ./cmd/artisan run ping
 go run ./cmd/artisan make:command report:daily
+go run ./cmd/artisan make:model user_profile
+go run ./cmd/artisan make:model order_item --table order_items --with-soft-delete
+go run ./cmd/artisan make:dao user_profile --with-tenant --tx
 go run ./cmd/artisan key:generate
 # 输出纯 base64（不带 base64: 前缀）
 go run ./cmd/artisan key:generate --raw
@@ -80,6 +83,40 @@ go run ./cmd/artisan key:generate
 
 - `configs/*.yaml` 的 `encryption.key`
 - 环境变量 `ENCRYPTION_KEY`
+
+### 生成 Model 模板
+
+`make:model` 用于生成 `internal/model` 模板文件。
+
+```bash
+go run ./cmd/artisan make:model user_profile
+go run ./cmd/artisan make:model order_item --table order_items
+go run ./cmd/artisan make:model audit_log --with-soft-delete
+go run ./cmd/artisan make:model audit_log --force
+```
+
+参数：
+
+- `--table`：指定表名（默认 snake_case 复数）
+- `--with-soft-delete`：生成 `DeletedAt gorm.DeletedAt`
+- `--force`：覆盖已存在文件
+
+### 生成 DAO 模板
+
+`make:dao` 用于生成 `internal/dao` 模板文件（含 CRUD 骨架）。
+
+```bash
+go run ./cmd/artisan make:dao user_profile
+go run ./cmd/artisan make:dao order_item --with-tenant
+go run ./cmd/artisan make:dao order_item --with-tenant --tx
+go run ./cmd/artisan make:dao audit_log --force
+```
+
+参数：
+
+- `--with-tenant`：查询路径默认使用 `tenant.ApplyScope`
+- `--tx`：生成 `WithTx(tx *gorm.DB)` 事务传播方法
+- `--force`：覆盖已存在文件
 
 ## Integration Test（关键链路）
 
@@ -125,3 +162,4 @@ bash ./scripts/gen-openapi-sdk.sh
 - `artisan` 找不到命令：先执行 `go run ./cmd/artisan list` 确认命令已注册。
 - 集成测试卡住：确认 API、worker、MySQL、Redis 均已启动，再执行 `scripts/integration.*`。
 - Swagger/SDK CI diff 失败：本地先执行 `scripts/gen-openapi-sdk.sh` 并提交生成物。
+

@@ -31,6 +31,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "", "配置画像: 多实例标识，如 order/crm")
 	rootCmd.AddCommand(newListCommand())
 	rootCmd.AddCommand(newMakeCommandCommand())
+	rootCmd.AddCommand(newMakeModelCommand())
+	rootCmd.AddCommand(newMakeDAOCommand())
 	rootCmd.AddCommand(newGenerateEncryptionKeyCommand())
 	rootCmd.AddCommand(newRunCommand())
 	rootCmd.AddCommand(newQueueFailedCommand(&env, &profile))
@@ -97,6 +99,46 @@ func newMakeCommandCommand() *cobra.Command {
 		},
 	}
 	c.Flags().BoolVar(&force, "force", false, "overwrite existing command file")
+	return c
+}
+
+func newMakeModelCommand() *cobra.Command {
+	var (
+		tableName      string
+		force          bool
+		withSoftDelete bool
+	)
+	c := &cobra.Command{
+		Use:   "make:model <name>",
+		Short: "generate model template in internal/model",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return generateModelTemplate(args[0], tableName, withSoftDelete, force)
+		},
+	}
+	c.Flags().StringVar(&tableName, "table", "", "custom table name (default: snake_case plural)")
+	c.Flags().BoolVar(&force, "force", false, "overwrite existing model file")
+	c.Flags().BoolVar(&withSoftDelete, "with-soft-delete", false, "include DeletedAt gorm.DeletedAt field")
+	return c
+}
+
+func newMakeDAOCommand() *cobra.Command {
+	var (
+		force      bool
+		withTenant bool
+		withTx     bool
+	)
+	c := &cobra.Command{
+		Use:   "make:dao <name>",
+		Short: "generate dao template in internal/dao",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return generateDAOTemplate(args[0], withTenant, withTx, force)
+		},
+	}
+	c.Flags().BoolVar(&force, "force", false, "overwrite existing dao file")
+	c.Flags().BoolVar(&withTenant, "with-tenant", false, "include tenant.ApplyScope in query paths")
+	c.Flags().BoolVar(&withTx, "tx", false, "include WithTx(tx *gorm.DB) helper")
 	return c
 }
 
@@ -264,6 +306,178 @@ func init() {
 	return nil
 }
 
+func generateModelTemplate(rawName, tableName string, withSoftDelete, force bool) error {
+	name := normalizeModelName(rawName)
+	if name == "" {
+		return fmt.Errorf("invalid model name: %s", rawName)
+	}
+	structName := toPascal(name)
+	filePath := filepath.Join("internal", "model", name+".go")
+	if _, err := os.Stat(filePath); err == nil && !force {
+		return fmt.Errorf("file exists: %s (use --force)", filePath)
+	}
+	finalTable := strings.TrimSpace(tableName)
+	if finalTable == "" {
+		finalTable = pluralizeSnake(name)
+	}
+	nowFields := "CreatedAt time.Time `json:\"created_at\"`\n\tUpdatedAt time.Time `json:\"updated_at\"`"
+	softDeleteField := ""
+	gormImport := ""
+	if withSoftDelete {
+		gormImport = "\n\t\"gorm.io/gorm\""
+		softDeleteField = "\n\tDeletedAt gorm.DeletedAt `gorm:\"index\" json:\"-\"`"
+	}
+	content := fmt.Sprintf(`package model
+
+import (
+	"time"%s
+)
+
+// %s 对应表 %s。
+type %s struct {
+	ID int64 `+"`gorm:\"primaryKey;autoIncrement\" json:\"id\"`"+`
+	%s%s
+}
+
+// TableName 指定表名。
+func (%s) TableName() string {
+	return %q
+}
+`, gormImport, structName, finalTable, structName, nowFields, softDeleteField, structName, finalTable)
+	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		return err
+	}
+	fmt.Println("generated:", filePath)
+	return nil
+}
+
+func generateDAOTemplate(rawName string, withTenant, withTx, force bool) error {
+	name := normalizeModelName(rawName)
+	if name == "" {
+		return fmt.Errorf("invalid dao name: %s", rawName)
+	}
+	structName := toPascal(name) + "DAO"
+	modelName := toPascal(name)
+	filePath := filepath.Join("internal", "dao", name+"_dao.go")
+	if _, err := os.Stat(filePath); err == nil && !force {
+		return fmt.Errorf("file exists: %s (use --force)", filePath)
+	}
+
+	tenantImport := ""
+	scopeAssign := "q := d.db.WithContext(ctx)"
+	if withTenant {
+		tenantImport = "\n\t\"gin-scaffold/internal/pkg/tenant\""
+		scopeAssign = "q := tenant.ApplyScope(ctx, d.db.WithContext(ctx), \"tenant_id\")"
+	}
+	withTxMethod := ""
+	if withTx {
+		withTxMethod = fmt.Sprintf(`
+func (d *%s) WithTx(tx *gorm.DB) *%s {
+	if tx == nil {
+		return d
+	}
+	return &%s{db: tx}
+}
+`, structName, structName, structName)
+	}
+
+	content := fmt.Sprintf(`package dao
+
+import (
+	"context"
+
+	"gin-scaffold/internal/model"%s
+	"gorm.io/gorm"
+)
+
+type %s struct {
+	db *gorm.DB
+}
+
+func New%s(db *gorm.DB) *%s {
+	return &%s{db: db}
+}
+%s
+func (d *%s) Create(ctx context.Context, in *model.%s) error {
+	return d.db.WithContext(ctx).Create(in).Error
+}
+
+func (d *%s) GetByID(ctx context.Context, id int64) (*model.%s, error) {
+	%s
+	var row model.%s
+	if err := q.Where("id = ?", id).First(&row).Error; err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+func (d *%s) List(ctx context.Context, page, pageSize int) ([]model.%s, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+	%s
+	base := q.Model(&model.%s{})
+	var total int64
+	if err := base.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var list []model.%s
+	if err := base.Order("id desc").Offset((page-1)*pageSize).Limit(pageSize).Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
+}
+
+func (d *%s) Update(ctx context.Context, id int64, patch map[string]any) error {
+	if len(patch) == 0 {
+		return nil
+	}
+	%s
+	return q.Model(&model.%s{}).Where("id = ?", id).Updates(patch).Error
+}
+
+func (d *%s) Delete(ctx context.Context, id int64) error {
+	%s
+	return q.Where("id = ?", id).Delete(&model.%s{}).Error
+}
+`,
+		tenantImport,
+		structName,
+		structName, structName,
+		structName,
+		withTxMethod,
+		structName, modelName,
+		structName, modelName,
+		scopeAssign,
+		modelName,
+		structName, modelName,
+		scopeAssign,
+		modelName,
+		modelName,
+		structName,
+		scopeAssign,
+		modelName,
+		structName,
+		scopeAssign,
+		modelName,
+	)
+
+	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		return err
+	}
+	fmt.Println("generated:", filePath)
+	return nil
+}
+
 func normalizeCommandName(name string) string {
 	name = strings.TrimSpace(strings.ToLower(name))
 	name = strings.ReplaceAll(name, " ", ":")
@@ -287,6 +501,46 @@ func normalizeCommandName(name string) string {
 		out = append(out, part)
 	}
 	return strings.Join(out, ":")
+}
+
+func normalizeModelName(name string) string {
+	name = strings.TrimSpace(strings.ToLower(name))
+	name = strings.ReplaceAll(name, "-", "_")
+	name = strings.ReplaceAll(name, " ", "_")
+	parts := strings.Split(name, "_")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		var b strings.Builder
+		for _, r := range p {
+			if unicode.IsLower(r) || unicode.IsDigit(r) {
+				b.WriteRune(r)
+			}
+		}
+		part := b.String()
+		if part == "" {
+			return ""
+		}
+		out = append(out, part)
+	}
+	return strings.Join(out, "_")
+}
+
+func pluralizeSnake(s string) string {
+	if strings.HasSuffix(s, "s") || strings.HasSuffix(s, "x") || strings.HasSuffix(s, "z") ||
+		strings.HasSuffix(s, "ch") || strings.HasSuffix(s, "sh") {
+		return s + "es"
+	}
+	if strings.HasSuffix(s, "y") && len(s) > 1 {
+		prev := s[len(s)-2]
+		if !strings.ContainsRune("aeiou", rune(prev)) {
+			return s[:len(s)-1] + "ies"
+		}
+	}
+	return s + "s"
 }
 
 func toPascal(s string) string {
